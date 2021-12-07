@@ -6,6 +6,14 @@ import site_path
 from modules.data import dataset_utils
 
 
+def cv2_imshow(img):
+    # pass
+    cv2.imshow('My Image', img)
+    cv2.imwrite('sample.png', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
 def convert_npy_to_png(src, dst, src_format, dst_format):
     src_files = dataset_utils.get_files(src, src_format)
     if not os.path.isdir(dst):
@@ -29,4 +37,5 @@ if __name__ == '__main__':
     src_format = 'npy'
     dst_format = 'png'
     
-    convert_npy_to_png(src, dst, src_format, dst_format)
+    # convert_npy_to_png(src, dst, src_format, dst_format)
+    pass

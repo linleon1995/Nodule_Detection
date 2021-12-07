@@ -59,31 +59,25 @@ def coco_structure(train_df):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
-def lidc_to_coco_structure(df, data_path):
+def lidc_to_coco_structure(df, data_root, seg_root=None):
     cat_ids = {'benign': 1,
                'malignant': 2}    
     cats = [{'name': 'benign', 'id': 1}, 
             {'name': 'malignant', 'id': 2}]
     images = []
-    # for id, row in df.iterrows():
-    #     file_name = f'{row.original_image}.npy'
-    #     _dir = 'LIDC-IDRI-' + row.original_image.split('_')[0]
-    #     image = {'id':id, 'file_name': f'{os.path.join(data_path, _dir, file_name)}'}
-
-    #     images.append(image)
 
     annotations=[]
     for idx, row in tqdm(df.iterrows()):
         if 'CN' in row.original_image:
             continue
         
-        # if idx > 2000:
-        #     break
-        
         # mask = rle_decode(row.annotation, (row.height, row.width))
         file_name = f'{row.original_image}.png'
         _dir = 'LIDC-IDRI-' + row.original_image.split('_')[0]
-        image = {'id': row.original_image, 'width':512, 'height':512, 'file_name': f'{os.path.join(data_path, _dir, file_name)}'}
+        image = {'id': row.original_image, 'width':512, 'height':512, 'file_name': f'{os.path.join(data_root, _dir, file_name)}'}
+        if seg_root:
+            seg_file_name = file_name.replace('NI', 'MA')
+            image['sem_seg_file_name'] = f'{os.path.join(seg_root, _dir, seg_file_name)}'
 
         images.append(image)
 
@@ -109,8 +103,29 @@ def lidc_to_coco_structure(df, data_path):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
+def lidc_to_datacatlog_valid():
+    # mode = 'valid'
+    # CSV_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Metameta_info.csv'
+    # df = pd.read_csv(CSV_PATH)
+    # split = 16219
+    # all_ids = df.original_image.unique()
+    # if mode == 'train':
+    #     samples = df[df.original_image.isin(all_ids[:split])]
+    # elif mode == 'valid':
+    #     samples = df[df.original_image.isin(all_ids[split:])]
+    # data_root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
+    # seg_root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
+    # with open('annotations_valid.json', 'w', encoding='utf-8') as jsonfile:
+    #     json.load(valid_root, jsonfile, ensure_ascii=True, indent=4)
+
+    with open('annotations_valid.json', newline='') as jsonfile:
+        data_dict = json.load(jsonfile)
+    return data_dict['images']
+
+
 def main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
+    GT_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
     CSV_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Metameta_info.csv'
 
     ## run it on first three images for demonstration:
@@ -120,14 +135,14 @@ def main():
     train_sample = df[df.original_image.isin(all_ids[:split])]
     valid_sample = df[df.original_image.isin(all_ids[split:])]
 
-    train_root = lidc_to_coco_structure(train_sample, data_path=DATA_PATH)
-    valid_root = lidc_to_coco_structure(valid_sample, data_path=DATA_PATH)
+    train_root = lidc_to_coco_structure(train_sample, data_root=DATA_PATH, seg_root=GT_PATH)
+    valid_root = lidc_to_coco_structure(valid_sample, data_root=DATA_PATH, seg_root=GT_PATH)
 
-    with open('annotations_train.json', 'w', encoding='utf-8') as f:
-        json.dump(train_root, f, ensure_ascii=True, indent=4)
+    with open('annotations_train.json', 'w', encoding='utf-8') as jsonfile:
+        json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
 
-    with open('annotations_valid.json', 'w', encoding='utf-8') as f:
-        json.dump(valid_root, f, ensure_ascii=True, indent=4)
+    with open('annotations_valid.json', 'w', encoding='utf-8') as jsonfile:
+        json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
 if __name__ == '__main__':
     main()

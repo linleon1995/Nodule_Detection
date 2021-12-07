@@ -18,21 +18,14 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.engine import DefaultTrainer
 import matplotlib.pyplot as plt
+from utils import cv2_imshow
 
-def cv2_imshow(img):
-    # pass
-    
-    cv2.imshow('My Image', img)
-
-    # 按下任意鍵則關閉所有視窗
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
 
 def main():
     # Prepare the dataset
     register_coco_instances("my_dataset_train", {}, "annotations_train.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
-    register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
+    # register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
 
     metadata = MetadataCatalog.get("my_dataset_train")
 
