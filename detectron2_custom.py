@@ -20,7 +20,8 @@ from detectron2.engine import DefaultTrainer
 import matplotlib.pyplot as plt
 from utils import cv2_imshow
 
-
+import site_path
+from modules.utils import train_utils
 
 def main():
     # Prepare the dataset
@@ -50,11 +51,12 @@ def main():
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
     cfg.SOLVER.IMS_PER_BATCH = 8
     cfg.SOLVER.BASE_LR = 0.00025  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 4000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 16000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
+    cfg.OUTPUT_DIR = train_utils.create_training_path('output')
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)

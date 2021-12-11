@@ -21,10 +21,17 @@ def convert_npy_to_png(src, dst, src_format, dst_format):
     for idx, f in enumerate(src_files):
         print(idx, f)
         img = np.load(f)
-        if img.dtype == bool:
-            img = np.uint8(img)
-        else:
-            img = np.uint8(255*((img-np.min(img))/(np.max(img)-np.min(img))))
+        # if np.sum(img==1):
+        #     print(3)
+        #     import matplotlib.pyplot as plt
+        #     plt.imshow(img)
+        #     plt.show()
+
+        # TODO:
+        # if img.dtype == bool:
+        #     img = np.uint8(img)
+        # else:
+        #     img = np.uint8(255*((img-np.min(img))/(np.max(img)-np.min(img))))
         new_f = os.path.join(os.path.split(f)[0].replace(src, dst), os.path.split(f)[1].replace(src_format, dst_format))
         if not os.path.isdir(os.path.split(new_f)[0]):
             os.makedirs(os.path.split(new_f)[0])
@@ -32,10 +39,10 @@ def convert_npy_to_png(src, dst, src_format, dst_format):
 
 
 if __name__ == '__main__':
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Mask'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
+    src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Semantic_Mask'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Semantic_Mask'
     src_format = 'npy'
     dst_format = 'png'
     
-    # convert_npy_to_png(src, dst, src_format, dst_format)
+    convert_npy_to_png(src, dst, src_format, dst_format)
     pass
