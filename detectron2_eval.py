@@ -21,6 +21,8 @@ logging.basicConfig(level=logging.INFO)
 
 import site_path
 from modules.utils import metrics
+from modules.utils import metrics2
+from modules.utils import evaluator
 
 
 def eval(cfg):
@@ -161,9 +163,11 @@ def save_mask(cfg):
     dataset_dicts = DatasetCatalog.get("my_dataset_valid")
     metadata = MetadataCatalog.get("my_dataset_valid")
 
-    evaluator = metrics.SegmentationMetrics(num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES)
+    # evaluator = metrics.SegmentationMetrics(num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES)
     total_iou, total_dsc = [], []
     total_cm = 0
+    lidc_evaluator = evaluator.ClassificationEvaluator(num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES+1)
+    lidc_evaluator.register_new_metrics({"DSC": metrics2.mean_dsc, 'IoU': metrics2.mean_iou})
     for idx, d in enumerate(dataset_dicts):
 
         img_file_name = d["file_name"]
@@ -197,15 +201,15 @@ def save_mask(cfg):
         # cv2_imshow((gt_mask+np.uint8(np.tile(pred_mask[...,np.newaxis], [1,1,3])))*63)
 
         # Evaluation
-        if idx == 42:
-            print(3)
+        # if idx == 42:
+        #     print(3)
         gt_mask = np.int32(gt_mask[...,0])
         pred_mask = np.int32(pred_mask)
         # gt_mask = np.reshape(gt_mask, [-1])
         # pred_mask = np.reshape(pred_mask, [-1])
-        cm = confusion_matrix(np.reshape(gt_mask, [-1]), np.reshape(pred_mask, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1))
-        
-        total_cm += cm
+        # cm = confusion_matrix(np.reshape(gt_mask, [-1]), np.reshape(pred_mask, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1))
+        lidc_evaluator.evaluate(np.reshape(gt_mask, [-1]), np.reshape(pred_mask, [-1]))
+        # total_cm += cm
         # iou, dsc = eval_test(gt_mask, pred_mask, num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES+1)
         # print(f'IoU: {iou} DSC: {dsc}')
         # mean_iou = np.mean([x for x in iou if x > 0])
@@ -214,19 +218,19 @@ def save_mask(cfg):
         # total_dsc.append(mean_dsc)
         # if idx > 10: break
 
-        # Save figure
-        fig, ax = plt.subplots(1,3)
-        # if np.sum(gt_mask==1):
-        # num_class = 3
-        ax[0].imshow(gt_mask, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
-        ax[0].set_title('gt')
-        ax[1].imshow(pred_mask, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
-        ax[1].set_title('pred')
-        ax[2].imshow(gt_mask, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
-        ax[2].imshow(pred_mask, alpha=0.2, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
-        ax[2].set_title('compare')
-        plt.savefig(f'vis/show2/{mask_file_name}.png')
-        plt.close(fig)
+        # # Save figure
+        # fig, ax = plt.subplots(1,3)
+        # # if np.sum(gt_mask==1):
+        # # num_class = 3
+        # ax[0].imshow(gt_mask, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
+        # ax[0].set_title('gt')
+        # ax[1].imshow(pred_mask, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
+        # ax[1].set_title('pred')
+        # ax[2].imshow(gt_mask, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
+        # ax[2].imshow(pred_mask, alpha=0.2, vmin=0, vmax=cfg.MODEL.ROI_HEADS.NUM_CLASSES-1)
+        # ax[2].set_title('compare')
+        # plt.savefig(f'vis/show2/{mask_file_name}.png')
+        # plt.close(fig)
 
         
         
@@ -241,12 +245,14 @@ def save_mask(cfg):
         # cv2.imwrite(f'vis/mask2/{mask_file_name}.png', pred_mask)
         # out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         # cv2.imwrite(f'vis/instance/{mask_file_name}.png', out.get_image()[:, :, ::-1])
-    print(3)
-    print(f'IoU: {compute_mean_iou(total_cm=total_cm)} DSC: {compute_mean_dsc(total_cm=total_cm)}')
+    # print(3)
+    total_aggregation = lidc_evaluator.get_aggregation(np.mean)
+    mean_iou, mean_dsc = total_aggregation['IoU'], total_aggregation['DSC']
+    print(f'mean IoU: {mean_iou} mean DSC: {mean_dsc}')
 
 
 if __name__ == '__main__':
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\1'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_001'
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
