@@ -159,11 +159,9 @@ def volume_eval3(cfg, case_list):
     print(f'mean IoU: {np.mean(total_ious)} mean DSC: {np.mean(total_dscs)}')
 
 
-def lidc_volume_generator(cfg):
-    # predictor = DefaultPredictor(cfg)
-    case_list = dataset_utils.get_files(cfg.FULL_DATA_PATH, recursive=False, get_dirs=True)
-    # case_list = case_list[-11:-1]
-    case_list = case_list[:10]
+def lidc_volume_generator(data_path, case_indices):
+    case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
+    case_list = np.array(case_list)[case_indices]
     for case_dir in case_list:
         pid = os.path.split(case_dir)[1]
         scan_list = dataset_utils.get_files(os.path.join(case_dir, rf'Image\lung\vol\npy'), 'npy')
@@ -174,9 +172,9 @@ def lidc_volume_generator(cfg):
             yield vol, mask_vol, infos
 
 
-def asus_nodule_volume_generator(cfg):
-    case_list = dataset_utils.get_files(cfg.FULL_DATA_PATH, recursive=False, get_dirs=True)
-    case_list = case_list[:10]
+def asus_nodule_volume_generator(data_path, case_indices):
+    case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
+    case_list = case_list[case_indices]
     for case_dir in case_list:
         raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
         assert len(raw_and_mask) == 2
@@ -211,17 +209,18 @@ def luna16_to_lidc(path, key):
     indices = index[condition]
     return indices['Subject ID']
 
-def luna16_volume_generator(cfg):
-    subset_list = dataset_utils.get_files(cfg.FULL_DATA_PATH, 'subset', recursive=False, get_dirs=True)
+
+def luna16_volume_generator(data_path, case_indices):
+    subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
     subset_list = subset_list[:1]
     
     for subset_dir in subset_list:
         case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False)
-        case_list = case_list[:10]
+        case_list = case_list[case_indices]
         for case_dir in case_list:
             # TODO: below same with asus-nodules
             luna16_name = os.path.split(case_dir)[1][:-4]
-            lidc_name = luna16_to_lidc(os.path.join(cfg.FULL_DATA_PATH, rf'LIDC-IDRI_MetaData.csv'), key=luna16_name)
+            lidc_name = luna16_to_lidc(os.path.join(data_path, rf'LIDC-IDRI_MetaData.csv'), key=luna16_name)
             raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
             assert len(raw_and_mask) == 2
             for _dir in raw_and_mask:
@@ -269,7 +268,7 @@ def volume_eval2(cfg, vol_generator):
     # start_time = time.time()
     predictor = DefaultPredictor(cfg)
     # seg_total_time = 0
-    for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg)):
+    for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg.FULL_DATA_PATH, case_indices=cfg.CASE_INDICES)):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         pred_vol = np.zeros_like(mask_vol)
         for img_idx in range(vol.shape[2]):
@@ -374,6 +373,121 @@ def volume_eval2(cfg, vol_generator):
 #     print(f'mean IoU: {np.mean(total_ious):.04f} mean DSC: {np.mean(total_dscs):.04f}')
 
 
+def volume_eval4(cfg, vol_generator):
+    # start_time = time.time()
+    predictor = DefaultPredictor(cfg)
+    th = 0.5
+    # seg_total_time = 0
+    total_hit, total_acc = np.array([], np.int16), np.array([], np.float32)
+    num_nodule, num_hit = 0, 0
+    # total_num_hit = {}
+    total_num_hit = 0
+    for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg.FULL_DATA_PATH, case_indices=cfg.CASE_INDICES)):
+        pid, scan_idx = infos['pid'], infos['scan_idx']
+        pred_vol = np.zeros_like(mask_vol)
+        for img_idx in range(vol.shape[2]):
+            if img_idx%10 == 0:
+                print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
+            # seg_start_time = time.time()
+            img = vol[...,img_idx]
+            img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
+            outputs = predictor(img) 
+            pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+            # pred_classes = outputs["instances"]._fields['pred_classes'].cpu().detach().numpy() 
+            # pred_classes = np.reshape(pred_classes, (pred_classes.shape[0], 1, 1))
+            # pred_classes += 1
+            pred = np.sum(pred, axis=0)
+            pred = np.where(pred>=1, 1, 0)
+            # if np.max(pred) > 1:
+            #     print(2)
+            # pred = np.int32(pred)
+            pred_vol[...,img_idx] = pred
+            
+        ious, dscs = nodules_eval(pid, pred_vol)
+        print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')    
+
+        case_hit, case_acc = np.array([], np.int16), np.array([], np.float32)
+        num_nodule += dscs.shape[0]
+        for th_idx, th in enumerate(np.linspace(0.5, 0.95, 10)):
+        # for th_idx, th in enumerate(np.linspace(0.5, 0.95, 1)):
+            hit = np.sum(np.where(dscs>th, 1, 0))
+            acc = hit / dscs.shape[0]
+            case_hit = np.append(case_hit, hit)[np.newaxis]
+            case_acc = np.append(case_acc, acc)[np.newaxis]
+            # TODO: write num_hit in correct way.
+            # num_hit += np.sum(case_hit)
+            
+            print(f'---Threshold: {th} Hit {hit} Acc {acc}')
+        # if th not in total_num_hit:
+        #     total_num_hit[th] = 0.0
+        # else:
+        #     total_num_hit[th] += np.sum(case_hit)
+        total_num_hit += case_hit
+
+        if vol_idx == 0:
+            total_hit = case_hit
+            total_acc = case_acc
+        else:
+            total_hit = np.append(total_hit, case_hit, axis=0)
+            total_acc = np.append(total_acc, case_acc, axis=0)
+
+        # if vol_idx > 0:
+        #     break
+    print(np.mean(total_hit, axis=0))
+    print(np.mean(total_acc, axis=0))
+
+    th = 0.5
+    total_accss = 0
+    for th_hit in total_num_hit[0]:
+        acc = th_hit/num_nodule
+        print(f'Threshold {th:.2f} Total hit {th_hit} Total nodules {num_nodule} Total acc {acc}')
+        total_accss += acc
+    print(total_accss / len(total_num_hit[0]))
+
+
+def nodules_eval(pid, pred_vol):
+    scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid)
+    num_scan_in_one_patient = scans.count()
+    print(f'{pid} has {num_scan_in_one_patient} scan')
+    scan_list = scans.all()
+    mask_threshold = 8
+
+    # TODO:
+    scan_list = scan_list[:1]
+    for scan_idx, scan in enumerate(scan_list):
+        if scan is None:
+            print(scan)
+        nodules_annotation = scan.cluster_annotations()
+        
+        print("Patient ID: {} Dicom Shape: {} Number of Annotated Nodules: {}".format(pid, pred_vol.shape, len(nodules_annotation)))
+
+        # Patients with nodules
+        masks_vol = np.zeros_like(pred_vol)
+        total_dsc, total_iou = np.array([], np.float32), np.array([], np.float32)
+        for nodule_idx, nodule in enumerate(nodules_annotation):
+        # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
+        # This current for loop iterates over total number of nodules in a single patient
+            nodule_mask_vol, cbbox, masks = consensus(nodule, clevel=0.5, pad=512)
+            # malignancy, cancer_label = calculate_malignancy(nodule)
+            # one_mask_vol = np.zeros_like(vol)
+            nodule_pred_vol = pred_vol[cbbox]
+            total_cm = 0
+            for slice_idx in range(nodule_mask_vol.shape[2]):
+                if np.sum(nodule_mask_vol[:,:,slice_idx]) <= mask_threshold:
+                    continue
+                # print(np.sum(nodule_mask_vol[...,slice_idx]), np.sum(nodule_pred_vol[...,slice_idx]))
+                # print(np.max(nodule_mask_vol[...,slice_idx]), np.max(nodule_pred_vol[...,slice_idx]))
+                total_cm += confusion_matrix(np.reshape(nodule_mask_vol[...,slice_idx], [-1]), np.reshape(nodule_pred_vol[...,slice_idx], [-1]))
+            mean_dsc, dscs = metrics2.mean_dsc(total_cm)
+            mean_iou, ious = metrics2.mean_iou(total_cm)
+            total_dsc = np.append(total_dsc, mean_dsc)
+            total_iou = np.append(total_iou, mean_iou)
+        # print('IoU', total_iou)
+        # print('DSC', total_dsc)
+    return total_iou, total_dsc
+                
+
+    
 
 def save_mask(img, mask, pred, num_class, save_path, save_name='img'):
     if np.sum(mask) > 0:
@@ -459,10 +573,11 @@ if __name__ == '__main__':
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1217\maskrcnn-{run}-{weight}-samples'
     # TODO: dataset path in configuration
-    # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
+    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
-    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16'
+    # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16'
     cfg.SAVE_COMPARE = False
+    cfg.CASE_INDICES = list(range(10, 20))
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
     # eval(cfg)
@@ -475,5 +590,8 @@ if __name__ == '__main__':
 
 
     # volume_eval2(cfg, vol_generator=asus_nodule_volume_generator)
-    volume_eval2(cfg, vol_generator=luna16_volume_generator)
+    # volume_eval2(cfg, vol_generator=luna16_volume_generator)
     # volume_eval2(cfg, vol_generator=lidc_volume_generator)
+
+
+    volume_eval4(cfg, vol_generator=lidc_volume_generator)

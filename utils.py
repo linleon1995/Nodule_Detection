@@ -90,8 +90,8 @@ def segment_lung(img):
 
 def lidc_preprocess(path, save_path, clevel=0.5, padding=512):
     case_list = dataset_utils.get_files(path, keys=[], return_fullpath=False, sort=True, recursive=False, get_dirs=True)
-    case_list = case_list[:10]
-    # case_list = case_list[810:820]
+    case_list = case_list[54:820]
+    # case_list = case_list[820:830]
     for pid in tqdm(case_list):
         scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid)
         num_scan_in_one_patient = scans.count()
@@ -137,19 +137,23 @@ def lidc_preprocess(path, save_path, clevel=0.5, padding=512):
                     os.makedirs(_dir)
 
             # Patients with nodules
-            masks_vol = np.zeros_like(vol)
+            
+            masks_vol = np.zeros_like(vol) # for all masks
             for nodule_idx, nodule in enumerate(nodules_annotation):
+                one_mask_vol = np.zeros_like(vol)
                 # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
                 # This current for loop iterates over total number of nodules in a single patient
-                mask, cbbox, masks = consensus(nodule, clevel=clevel, pad=padding)
-                assert np.shape(vol) == np.shape(mask), 'The input image shape and mask shape should be the same.'
+                mask, cbbox, _ = consensus(nodule, clevel=clevel, pad=padding)
+                # assert np.shape(vol) == np.shape(mask), f'The input image shape {np.shape(vol)} and mask shape {np.shape(mask)} must be the same.'
                 # Regard Ambiuious as malignant
                 malignancy, cancer_label = calculate_malignancy(nodule)
-                if malignancy >= 3:
-                    cancer_categories = 2
-                else:
-                    cancer_categories = 1
-                masks_vol += cancer_categories*mask
+                # if malignancy >= 3:
+                #     cancer_categories = 2
+                # else:
+                #     cancer_categories = 1
+                one_mask_vol[cbbox] = mask
+                masks_vol += malignancy*one_mask_vol
+            assert np.max(masks_vol) <= 5, f'The nodule malignancy {np.max(masks_vol)} more than 5'
 
             vol_lung = np.zeros_like(vol)
             for img_idx in range(vol.shape[2]):
@@ -173,18 +177,19 @@ def lidc_preprocess(path, save_path, clevel=0.5, padding=512):
                 img_name = f'{num_pid}-Scan{scan_idx}-Image{img_idx:03d}'
                 cv2.imwrite(os.path.join(full_img_png, f'{img_name}.png'), img)
                 cv2.imwrite(os.path.join(lung_img_png, f'{img_name}.png'), lung_img)
-                np.save(os.path.join(full_img_npy, f'{img_name}.npy'), lung_img)
-                np.save(os.path.join(lung_img_npy, f'{img_name}.npy'), img)
+                # np.save(os.path.join(full_img_npy, f'{img_name}.npy'), lung_img)
+                # np.save(os.path.join(lung_img_npy, f'{img_name}.npy'), img)
 
                 mask_name = f'{num_pid}-Scan{scan_idx}-Mask{img_idx:03d}'
                 cv2.imwrite(os.path.join(full_mask_png, f'{mask_name}.png'), masks_vol[...,img_idx])
-                cv2.imwrite(os.path.join(full_mask_vis, f'{mask_name}.png'), masks_vol[...,img_idx]*127)
-                np.save(os.path.join(full_mask_npy, f'{mask_name}.npy'), masks_vol[...,img_idx])
+                if np.sum(masks_vol[...,img_idx]) > 0:
+                    cv2.imwrite(os.path.join(full_mask_vis, f'{mask_name}.png'), masks_vol[...,img_idx]*127)
+                # np.save(os.path.join(full_mask_npy, f'{mask_name}.npy'), masks_vol[...,img_idx])
 
             vol_name = f'{num_pid}-Scan{scan_idx}'
-            np.save(os.path.join(full_vol_npy, f'{vol_name}.npy'), vol)
-            np.save(os.path.join(lung_vol_npy, f'{vol_name}.npy'), vol_lung)
-            np.save(os.path.join(full_vol_mask_npy, f'{vol_name}.npy'), masks_vol)
+            np.save(os.path.join(full_vol_npy, f'{vol_name}.npy'), np.int16(vol))
+            np.save(os.path.join(lung_vol_npy, f'{vol_name}.npy'), np.int16(vol_lung))
+            np.save(os.path.join(full_vol_mask_npy, f'{vol_name}.npy'), np.int16(masks_vol))
 
 
 
@@ -228,6 +233,6 @@ if __name__ == '__main__':
     # convert_npy_to_png(src, dst, src_format, dst_format)
 
     src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices2'
     lidc_preprocess(path=src, save_path=dst)
     pass
