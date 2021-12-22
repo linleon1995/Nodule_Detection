@@ -13,7 +13,7 @@ from scipy.ndimage import median_filter
 from skimage import measure, morphology
 from sklearn.cluster import KMeans
 from tqdm import tqdm
-
+import matplotlib.pyplot as plt
 from modules.data import dataset_utils
 
 
@@ -88,9 +88,10 @@ def segment_lung(img):
 
 
 
-def lidc_preprocess(path, save_path, clevel=0.5, padding=512):
+def lidc_preprocess(path, save_path, clevel=0.2, padding=512):
     case_list = dataset_utils.get_files(path, keys=[], return_fullpath=False, sort=True, recursive=False, get_dirs=True)
-    case_list = case_list[54:820]
+    # case_list = case_list[209:820]
+    case_list = case_list[730:]
     # case_list = case_list[820:830]
     for pid in tqdm(case_list):
         scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid)
@@ -147,30 +148,43 @@ def lidc_preprocess(path, save_path, clevel=0.5, padding=512):
                 # assert np.shape(vol) == np.shape(mask), f'The input image shape {np.shape(vol)} and mask shape {np.shape(mask)} must be the same.'
                 # Regard Ambiuious as malignant
                 malignancy, cancer_label = calculate_malignancy(nodule)
-                # if malignancy >= 3:
-                #     cancer_categories = 2
-                # else:
-                #     cancer_categories = 1
                 one_mask_vol[cbbox] = mask
                 masks_vol += malignancy*one_mask_vol
-            assert np.max(masks_vol) <= 5, f'The nodule malignancy {np.max(masks_vol)} more than 5'
+
+                # if nodule_idx == 2:
+                #     img1 = one_mask_vol[...,218]
+                # if nodule_idx == 3:
+                #     img2 = one_mask_vol[...,218]
+                
+            #     # plt.imshow(one_mask_vol[...,218])
+            #     # plt.show()
+            # a = np.where(masks_vol==6)
+            # # plt.imshow(masks_vol[...,218])
+            # print(np.sum(img1*img2))
+            # # plt.show()
+
+            for i in range(masks_vol.shape[2]):
+                print(np.sum(masks_vol[...,i]))
+            assert np.max(masks_vol) <= 5, f'The nodule malignancy {np.max(masks_vol)} higher than 5'
 
             vol_lung = np.zeros_like(vol)
             for img_idx in range(vol.shape[2]):
                 # print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
                 img = vol[...,img_idx]
+                img = np.int16(img)
                 lung_img = img.copy()
-                lung_img = segment_lung(lung_img)
-                def process(img):
-                    img[img==-0] = 0
-                    if np.min(img) == np.max(img):
-                        img = np.zeros_like(img)
-                    else:
-                        img = 255*((img-np.min(img))/(np.max(img)-np.min(img)))
-                    return np.uint8(img)
+                # lung_img = segment_lung(lung_img)
+                # def process(img):
+                #     img[img==-0] = 0
+                #     if np.min(img) == np.max(img):
+                #         img = np.zeros_like(img)
+                #     else:
+                #         img = 255*((img-np.min(img))/(np.max(img)-np.min(img)))
+                #     return np.uint8(img)
 
-                img = process(img)
-                lung_img = process(lung_img)
+                # img = process(img)
+                # lung_img = process(lung_img)
+                lung_img = raw_preprocess(lung_img, lung_segment=True, change_channel=False)
                 vol[...,img_idx] = img
                 vol_lung[...,img_idx] = lung_img
 
@@ -190,6 +204,36 @@ def lidc_preprocess(path, save_path, clevel=0.5, padding=512):
             np.save(os.path.join(full_vol_npy, f'{vol_name}.npy'), np.int16(vol))
             np.save(os.path.join(lung_vol_npy, f'{vol_name}.npy'), np.int16(vol_lung))
             np.save(os.path.join(full_vol_mask_npy, f'{vol_name}.npy'), np.int16(masks_vol))
+
+
+def raw_preprocess(img, lung_segment=True, norm=True, change_channel=True, output_dtype=np.uint8):
+    assert img.ndim == 2
+    if lung_segment:
+        img = segment_lung(img)
+        img[img==-0] = 0
+
+    if norm:
+        dtype = img.dtype
+        img = np.float32(img) # avoid overflow
+        if np.max(img)==np.min(img):
+            img = np.zeros_like(img)
+        else:
+            img = 255*((img-np.min(img))/(np.max(img)-np.min(img)))
+        img = np.array(img, dtype)
+    
+    if change_channel:
+        img = np.tile(img[...,np.newaxis], (1,1,3))
+
+    img = output_dtype(img)
+    return img
+
+
+def mask_preproccess(mask, ignore_malignancy=True):
+    assert mask.ndim == 2
+    if ignore_malignancy:
+        mask = np.where(mask>=1, 1, 0)
+    return mask
+
 
 
 
@@ -233,6 +277,6 @@ if __name__ == '__main__':
     # convert_npy_to_png(src, dst, src_format, dst_format)
 
     src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices2'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
     lidc_preprocess(path=src, save_path=dst)
     pass
