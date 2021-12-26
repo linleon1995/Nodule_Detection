@@ -24,26 +24,6 @@ import site_path
 from modules.utils import train_utils
 
 def main():
-    # Prepare the dataset
-    register_coco_instances("my_dataset_train", {}, "annotations_train.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
-    # register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
-
-    metadata = MetadataCatalog.get("my_dataset_train")
-
-    dataset_dicts = DatasetCatalog.get("my_dataset_train")
-    for d in random.sample(dataset_dicts, 3):
-        img = cv2.imread(d["file_name"])
-        # imm = cv2.imread(rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices\LIDC-IDRI-0001\Image\lung\img\png\0001-Scan0-Image086.png')
-        # print(img==imm)
-        # img = np.tile(img[...,np.newaxis], [1,1,3])
-        # img = np.uint8(255*((img-np.min(img))/(np.max(img)-np.min(img))))
-        visualizer = Visualizer(img, metadata=metadata, scale=0.5)
-        out = visualizer.draw_dataset_dict(d)
-        cv2_imshow(out.get_image())
-
-        # cv2_imshow(img)
-
-
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATASETS.TRAIN = ("my_dataset_train",)
@@ -58,7 +38,24 @@ def main():
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.OUTPUT_DIR = train_utils.create_training_path('output')
+    cfg.DATA.NAME = "my_dataset_train"
+    cfg.DATA.JSON_FILE = "annotations_train.json"
+    cfg.DATA.PATH = rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image"
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
+
+
+    # Prepare the dataset
+    register_coco_instances(cfg.DATA.NAME, {}, cfg.DATA.NAME, cfg.DATA.PATH)
+    # register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
+
+    metadata = MetadataCatalog.get(cfg.DATA.NAME)
+
+    dataset_dicts = DatasetCatalog.get(cfg.DATA.NAME)
+    for d in random.sample(dataset_dicts, 3):
+        img = cv2.imread(d["file_name"])
+        visualizer = Visualizer(img, metadata=metadata, scale=0.5)
+        out = visualizer.draw_dataset_dict(d)
+        cv2_imshow(out.get_image())
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg) 

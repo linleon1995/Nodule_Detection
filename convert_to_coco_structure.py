@@ -4,6 +4,8 @@ from tqdm.notebook import tqdm
 import json, itertools
 import os
 import cv2
+from volume_generator import lidc_to_datacatlog_valid, lidc_volume_generator, luna16_volume_generator, asus_nodule_volume_generator
+from utils import raw_preprocess, mask_preproccess
 
 
 # From https://www.kaggle.com/stainsby/fast-tested-rle
@@ -38,7 +40,7 @@ def binary_mask_to_rle(binary_mask):
 def coco_structure(train_df):
     cat_ids = {name:id+1 for id, name in enumerate(train_df.cell_type.unique())}    
     cats =[{'name':name, 'id':id} for name,id in cat_ids.items()]
-    images = [{'id':id, 'width':row.width, 'height':row.height, 'file_name': f'train/{id}.png'} for id,row in train_df.groupby('id').agg('first').iterrows()]
+    images = [{'id':id, 'width':row.width, 'height':row.height, 'file_name': f'train/{id}.png'} for id, row in train_df.groupby('id').agg('first').iterrows()]
     annotations=[]
     for idx, row in tqdm(train_df.iterrows()):
         mask = rle_decode(row.annotation, (row.height, row.width))
@@ -59,8 +61,44 @@ def coco_structure(train_df):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
+def volume_to_coco_structure(cat_ids, volume_generator, seg_root=None):
+    cat_ids = {'nodule': 1}    
+    cats = [{'name':name, 'id':id} for name,id in cat_ids.items()]
+    images, annotations = [], []
+    idx = 0
+    
+    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
+        pid, scan_idx = infos['pid'], infos['scan_idx']
+        pred_vol = np.zeros_like(mask_vol)
+        for img_idx in range(vol.shape[2]):
+            if img_idx%10 == 0:
+                print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
+            img = vol[...,img_idx]
+            # img = raw_preprocess(img, lung_segment=False, norm=False)
+            images.append(img)
+            
+            mask = mask_vol[...,img_idx]
+            # mask = mask_preproccess(mask)
+            ys, xs = np.where(mask)
+            x1, x2 = min(xs), max(xs)
+            y1, y2 = min(ys), max(ys)
+            enc =binary_mask_to_rle(mask)
+            seg = {
+                'segmentation':enc, 
+                'bbox': [int(x1), int(y1), int(x2-x1+1), int(y2-y1+1)],
+                'area': int(np.sum(mask)),
+                'image_id': f'{pid}-Scan{scan_idx}-Slice{img_idx:04d}', 
+                'category_id':cat_ids['nodule'], 
+                'iscrowd':0, 
+                'id':idx
+            }
+            annotations.append(seg)
+            idx += 1
+        return {'categories':cats, 'images':images,'annotations':annotations}
+    
+    
 def lidc_to_coco_structure(df, data_root, seg_root=None):
-    cat_ids = {'benign': 1,
+    cat_ids = {'nodule': 1,
                'malignant': 2}    
     cats = [{'name': 'benign', 'id': 1}, 
             {'name': 'malignant', 'id': 2}]
@@ -122,6 +160,9 @@ def lidc_to_datacatlog_valid():
         data_dict = json.load(jsonfile)
     return data_dict['images']
 
+
+def xx():
+    vol_generator = lidc_volume_generator(data_root, case_indices=case_indices, only_nodule_slices=only_nodules)
 
 def main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
