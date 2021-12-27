@@ -6,8 +6,8 @@ from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preproccess, raw_preprocess
-from convert_to_coco_structure import lidc_to_datacatlog_valid
+from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess, raw_preprocess
+# from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 import pandas as pd
 from LUNA16_test import dataset_seg
@@ -76,7 +76,7 @@ def luna16_to_lidc(path, key):
 
 def luna16_volume_generator(data_path, case_indices=None, only_nodule_slices=False):
     subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
-    subset_list = subset_list[:1]
+    # subset_list = subset_list[:1]
     
     for subset_dir in subset_list:
         case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False)
@@ -84,6 +84,7 @@ def luna16_volume_generator(data_path, case_indices=None, only_nodule_slices=Fal
             case_list = case_list[case_indices]
         for case_dir in case_list:
             # TODO: below same with asus-nodules
+            subset = os.path.split(subset_dir)[-1]
             series_uid = os.path.split(case_dir)[1][:-4]
             ct = dataset_seg.getCt(series_uid)
             vol = ct.hu_a
@@ -92,7 +93,7 @@ def luna16_volume_generator(data_path, case_indices=None, only_nodule_slices=Fal
             # preprocess
             # TODO: Finish preprocessing part (same with Liwei's code)
             # TODO: check the shape and dims
-            infos = {'pid': series_uid, 'scan_idx': 0}
+            infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset}
             yield vol, mask_vol, infos
             
             

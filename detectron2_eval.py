@@ -19,7 +19,7 @@ from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preproccess, raw_preprocess
+from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preproccess, raw_preprocess, compare_result, compare_result_enlarge
 from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
@@ -366,42 +366,6 @@ def save_mask(img, mask, pred, num_class, save_path, save_name='img'):
         fig2.savefig(os.path.join(sub_save_path, f'{save_name}-en.png'))
         plt.close(fig2)
 
-
-def compare_result(image, label, pred, **imshow_params):
-    fig, ax = plt.subplots(1,2)
-    ax[0].imshow(image)
-    ax[0].imshow(label, **imshow_params)
-    ax[1].imshow(image)
-    ax[1].imshow(pred, **imshow_params)
-    ax[0].set_title('Label')
-    ax[1].set_title('Prediction')
-    return fig, ax
-
-
-def compare_result_enlarge(image, label, pred, **imshow_params):
-    crop_range = 30
-    if np.sum(label) > 0:
-        item = label
-    else:
-        if np.sum(pred) > 0:
-            item = pred
-        else:
-            item = None
-    
-    fig, ax = None, None
-    if item is not None:
-        h, w, c = image.shape
-        ys, xs = np.where(item)
-        x1, x2 = max(0, min(xs)-crop_range), min(max(xs)+crop_range, min(h,w))
-        y1, y2 = max(0, min(ys)-crop_range), min(max(ys)+crop_range, min(h,w))
-        bbox_size = np.max([np.abs(x1-x2), np.abs(y1-y2)])
-
-        image = cv2.resize(image[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_AREA)
-        label = cv2.resize(label[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
-        pred = cv2.resize(pred[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
-
-        fig, ax = compare_result(image, label, pred, **imshow_params)
-    return fig, ax
 
 
 if __name__ == '__main__':

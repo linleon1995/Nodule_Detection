@@ -26,9 +26,12 @@ import torch.cuda
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 
-from disk import getCache
-from util import XyzTuple, xyz2irc
-from logconf import logging
+from LUNA16_test.disk import getCache
+# from disk import getCache
+from LUNA16_test.util import XyzTuple, xyz2irc
+# from util import XyzTuple, xyz2irc
+from LUNA16_test.logconf import logging
+# from logconf import logging
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)

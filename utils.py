@@ -88,125 +88,9 @@ def segment_lung(img):
 
 
 
-def lidc_preprocess(path, save_path, clevel=0.2, padding=512):
-    case_list = dataset_utils.get_files(path, keys=[], return_fullpath=False, sort=True, recursive=False, get_dirs=True)
-    # case_list = case_list[209:820]
-    case_list = case_list[730:]
-    # case_list = case_list[820:830]
-    for pid in tqdm(case_list):
-        scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid)
-        num_scan_in_one_patient = scans.count()
-        print(f'{pid} has {num_scan_in_one_patient} scan')
-        scan_list = scans.all()
-        num_pid = pid.split('-')[-1]
-        for scan_idx, scan in enumerate(scan_list):
-            # scan = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid).first()
-            # +++
-            if scan is None:
-                print(scan)
-            nodules_annotation = scan.cluster_annotations()
-            vol = scan.to_volume()
-            
-            print("Patient ID: {} Dicom Shape: {} Number of Annotated Nodules: {}".format(pid, vol.shape, len(nodules_annotation)))
-
-            # Make directory
-            save_vol_path = os.path.join(save_path, pid)
-            full_vol_npy = os.path.join(save_vol_path, 'Image', 'full', 'vol', 'npy')
-            full_img_npy = os.path.join(save_vol_path, 'Image', 'full', 'img', 'npy')
-            full_img_png = os.path.join(save_vol_path, 'Image', 'full', 'img', 'png')
-            full_vol_mask_npy = os.path.join(save_vol_path, 'Mask', 'vol', 'npy')
-            full_mask_npy = os.path.join(save_vol_path, 'Mask', 'img', 'npy')
-            full_mask_png = os.path.join(save_vol_path, 'Mask', 'img', 'png')
-            full_mask_vis = os.path.join(save_vol_path, 'Mask', 'img', 'vis')
-            lung_vol_npy = full_vol_npy.replace('full', 'lung')
-            lung_img_npy = full_img_npy.replace('full', 'lung')
-            lung_img_png = full_img_png.replace('full', 'lung')
-
-            dir_list = []
-            dir_list.append(full_vol_npy)
-            dir_list.append(full_img_npy)
-            dir_list.append(full_img_png)
-            dir_list.append(lung_vol_npy)
-            dir_list.append(lung_img_npy)
-            dir_list.append(lung_img_png)
-            dir_list.append(full_vol_mask_npy)
-            dir_list.append(full_mask_npy)
-            dir_list.append(full_mask_png)
-            dir_list.append(full_mask_vis)
-            for _dir in dir_list:
-                if not os.path.isdir(_dir):
-                    os.makedirs(_dir)
-
-            # Patients with nodules
-            
-            masks_vol = np.zeros_like(vol) # for all masks
-            for nodule_idx, nodule in enumerate(nodules_annotation):
-                one_mask_vol = np.zeros_like(vol)
-                # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
-                # This current for loop iterates over total number of nodules in a single patient
-                mask, cbbox, _ = consensus(nodule, clevel=clevel, pad=padding)
-                # assert np.shape(vol) == np.shape(mask), f'The input image shape {np.shape(vol)} and mask shape {np.shape(mask)} must be the same.'
-                # Regard Ambiuious as malignant
-                malignancy, cancer_label = calculate_malignancy(nodule)
-                one_mask_vol[cbbox] = mask
-                masks_vol += malignancy*one_mask_vol
-
-                # if nodule_idx == 2:
-                #     img1 = one_mask_vol[...,218]
-                # if nodule_idx == 3:
-                #     img2 = one_mask_vol[...,218]
-                
-            #     # plt.imshow(one_mask_vol[...,218])
-            #     # plt.show()
-            # a = np.where(masks_vol==6)
-            # # plt.imshow(masks_vol[...,218])
-            # print(np.sum(img1*img2))
-            # # plt.show()
-
-            for i in range(masks_vol.shape[2]):
-                print(np.sum(masks_vol[...,i]))
-            assert np.max(masks_vol) <= 5, f'The nodule malignancy {np.max(masks_vol)} higher than 5'
-
-            vol_lung = np.zeros_like(vol)
-            for img_idx in range(vol.shape[2]):
-                # print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-                img = vol[...,img_idx]
-                img = np.int16(img)
-                lung_img = img.copy()
-                # lung_img = segment_lung(lung_img)
-                # def process(img):
-                #     img[img==-0] = 0
-                #     if np.min(img) == np.max(img):
-                #         img = np.zeros_like(img)
-                #     else:
-                #         img = 255*((img-np.min(img))/(np.max(img)-np.min(img)))
-                #     return np.uint8(img)
-
-                # img = process(img)
-                # lung_img = process(lung_img)
-                lung_img = raw_preprocess(lung_img, lung_segment=True, change_channel=False)
-                vol[...,img_idx] = img
-                vol_lung[...,img_idx] = lung_img
-
-                img_name = f'{num_pid}-Scan{scan_idx}-Image{img_idx:03d}'
-                cv2.imwrite(os.path.join(full_img_png, f'{img_name}.png'), img)
-                cv2.imwrite(os.path.join(lung_img_png, f'{img_name}.png'), lung_img)
-                # np.save(os.path.join(full_img_npy, f'{img_name}.npy'), lung_img)
-                # np.save(os.path.join(lung_img_npy, f'{img_name}.npy'), img)
-
-                mask_name = f'{num_pid}-Scan{scan_idx}-Mask{img_idx:03d}'
-                cv2.imwrite(os.path.join(full_mask_png, f'{mask_name}.png'), masks_vol[...,img_idx])
-                if np.sum(masks_vol[...,img_idx]) > 0:
-                    cv2.imwrite(os.path.join(full_mask_vis, f'{mask_name}.png'), masks_vol[...,img_idx]*127)
-                # np.save(os.path.join(full_mask_npy, f'{mask_name}.npy'), masks_vol[...,img_idx])
-
-            vol_name = f'{num_pid}-Scan{scan_idx}'
-            np.save(os.path.join(full_vol_npy, f'{vol_name}.npy'), np.int16(vol))
-            np.save(os.path.join(lung_vol_npy, f'{vol_name}.npy'), np.int16(vol_lung))
-            np.save(os.path.join(full_vol_mask_npy, f'{vol_name}.npy'), np.int16(masks_vol))
 
 
-def raw_preprocess(img, lung_segment=True, norm=True, change_channel=True, output_dtype=np.uint8):
+def raw_preprocess(img, lung_segment=True, norm=True, change_channel=True, output_dtype=np.int32):
     assert img.ndim == 2
     if lung_segment:
         img = segment_lung(img)
@@ -228,13 +112,53 @@ def raw_preprocess(img, lung_segment=True, norm=True, change_channel=True, outpu
     return img
 
 
-def mask_preproccess(mask, ignore_malignancy=True):
+def mask_preprocess(mask, ignore_malignancy=True, output_dtype=np.int32):
     assert mask.ndim == 2
     if ignore_malignancy:
         mask = np.where(mask>=1, 1, 0)
+    mask = output_dtype(mask)
     return mask
 
 
+def compare_result(image, label, pred, **imshow_params):
+    if 'alpha' not in imshow_params: imshow_params['alpha'] = 0.2
+    fig, ax = plt.subplots(1,2)
+    ax[0].imshow(image)
+    ax[0].imshow(label, **imshow_params)
+    ax[1].imshow(image)
+    ax[1].imshow(pred, **imshow_params)
+    ax[0].set_title('Label')
+    ax[1].set_title('Prediction')
+    return fig, ax
+
+
+def compare_result_enlarge(image, label, pred, **imshow_params):
+    crop_range = 30
+    if np.sum(label) > 0:
+        item = label
+    else:
+        if np.sum(pred) > 0:
+            item = pred
+        else:
+            item = None
+    
+    fig, ax = None, None
+    if item is not None:
+        if image.ndim == 2:
+            image = raw_preprocess(image, lung_segment=False, norm=False)
+        image = np.uint8(image)
+        h, w, c = image.shape
+        ys, xs = np.where(item)
+        x1, x2 = max(0, min(xs)-crop_range), min(max(xs)+crop_range, min(h,w))
+        y1, y2 = max(0, min(ys)-crop_range), min(max(ys)+crop_range, min(h,w))
+        bbox_size = np.max([np.abs(x1-x2), np.abs(y1-y2)])
+
+        image = cv2.resize(image[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_LINEAR)
+        label = cv2.resize(label[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
+        pred = cv2.resize(pred[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
+
+        fig, ax = compare_result(image, label, pred, **imshow_params)
+    return fig, ax
 
 
 def cv2_imshow(img):
@@ -268,15 +192,3 @@ def convert_npy_to_png(src, dst, src_format, dst_format):
             os.makedirs(os.path.split(new_f)[0])
         cv2.imwrite(new_f, img)
 
-
-if __name__ == '__main__':
-    # src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Image'
-    # dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
-    # src_format = 'npy'
-    # dst_format = 'png'
-    # convert_npy_to_png(src, dst, src_format, dst_format)
-
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
-    lidc_preprocess(path=src, save_path=dst)
-    pass

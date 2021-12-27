@@ -3,7 +3,8 @@ import gzip
 from diskcache import FanoutCache, Disk, core
 from diskcache.core import BytesType, MODE_BINARY, BytesIO
 
-from logconf import logging
+from LUNA16_test.logconf import logging
+# from logconf import logging
 log = logging.getLogger(__name__)
 # log.setLevel(logging.WARN)
 log.setLevel(logging.INFO)
