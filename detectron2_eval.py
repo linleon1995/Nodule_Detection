@@ -19,20 +19,25 @@ from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preproccess, raw_preprocess, compare_result, compare_result_enlarge
+from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess, raw_preprocess, compare_result, compare_result_enlarge
 from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
 import time
 import pylidc as pl
 import pandas as pd
+from tqdm import tqdm
+from volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator
+from volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
 
 import site_path
 from modules.data import dataset_utils
-from modules.utils import metrics
+# from modules.utils import metrics
 from modules.utils import metrics2
 from modules.utils import evaluator
+
+from LUNA16_test import util
 
 
 def eval(cfg):
@@ -41,6 +46,35 @@ def eval(cfg):
     predictor = DefaultPredictor(cfg)
 
     register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
+    # DatasetCatalog.register("my_dataset_valid", lidc_to_datacatlog_valid)
+    dataset_dicts = DatasetCatalog.get("my_dataset_valid")
+    metadata = MetadataCatalog.get("my_dataset_valid")
+
+    for d in random.sample(dataset_dicts, 3):    
+        im = cv2.imread(d["file_name"])
+        outputs = predictor(im)  # format is documented at https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
+        v = Visualizer(im[:, :, ::-1],
+                    metadata=metadata, 
+                    scale=1.0, 
+                    instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels. This option is only available for segmentation models
+        )
+        out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+        cv2_imshow(out.get_image()[:, :, ::-1])
+
+
+    evaluator = COCOEvaluator("my_dataset_valid", cfg, distributed=False, output_dir="./output")
+    # evaluator = SemSegEvaluator("my_dataset_valid", distributed=False, num_classes=2, output_dir="./output")
+    val_loader = build_detection_test_loader(cfg, "my_dataset_valid")
+    print(inference_on_dataset(predictor.model, val_loader, evaluator))
+    # another equivalent way to evaluate the model is to use `trainer.test`
+
+
+def eval2(cfg):
+    # Inference should use the config with parameters that are used in training
+    # cfg now already contains everything we've set previously. We changed it a little bit for inference:
+    predictor = DefaultPredictor(cfg)
+
+    register_coco_instances("my_dataset_valid", {}, rf"Annotations\LUNA16\annotations_valid.json", cfg.DATA_PATH)
     # DatasetCatalog.register("my_dataset_valid", lidc_to_datacatlog_valid)
     dataset_dicts = DatasetCatalog.get("my_dataset_valid")
     metadata = MetadataCatalog.get("my_dataset_valid")
@@ -177,32 +211,43 @@ def eval(cfg):
 #             img[img==-0] = 0
 #             img = np.uint8(255*((img-np.min(img))/(1e-7+np.max(img)-np.min(img))))
 
+# for img_idx in range(vol.shape[0]):
+#             if img_idx%10 == 0:
+#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
+#             img = vol[img_idx]
+#             mask = mask_vol[img_idx]
+
+#             img = np.clip(img, -1000, 1000)
+#             img = raw_preprocess(img, lung_segment=False, change_channel=False)
+#             mask = mask_preprocess(mask)
 
 def volume_eval2(cfg, vol_generator):
     # start_time = time.time()
     predictor = DefaultPredictor(cfg)
     # seg_total_time = 0
-    for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg.FULL_DATA_PATH, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)):
+    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
+    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
+        mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
-        for img_idx in range(vol.shape[2]):
+        for img_idx in range(vol.shape[0]):
             if img_idx%10 == 0:
                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
             # seg_start_time = time.time()
-            img = vol[...,img_idx]
+            img = vol[img_idx]
+            img = np.clip(img, -1000, 1000)
             # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-            img = raw_preprocess(img, lung_segment=False, norm=False)
-
+            img = raw_preprocess(img, change_channel=True, output_dtype=np.float32)
             outputs = predictor(img) 
             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
             pred = np.sum(pred, axis=0)
-            pred = mask_preproccess(pred)
-            pred_vol[...,img_idx] = pred
+            pred = mask_preprocess(pred)
+            pred_vol[img_idx] = pred
 
             # Save image for result comparing
             if cfg.SAVE_COMPARE:
-                mask = mask_vol[...,img_idx]
-                pred = pred_vol[...,img_idx]
+                mask = mask_vol[img_idx]
+                pred = pred_vol[img_idx]
                 save_name = f'{pid}-{scan_idx}-{img_idx}'
                 save_path = os.path.join(cfg.SAVE_PATH, pid)
                 save_mask(img, mask, pred, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1, save_path=save_path, save_name=save_name)
@@ -224,6 +269,45 @@ def volume_eval2(cfg, vol_generator):
     print(f'mean IoU: {np.mean(total_ious):.04f} mean DSC: {np.mean(total_dscs):.04f}')
     
 
+def volume_eval5(cfg, vol_generator):
+    predictor = DefaultPredictor(cfg)
+    metric = util.metrics(n_class=2)
+    vol_metric = volumetric_data_eval()
+    # volume_generator = vol_generator(cfg.FULL_DATA_PATH, only_nodule_slices=cfg.ONLY_NODULES)
+    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+                                     only_nodule_slices=cfg.ONLY_NODULES)
+    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
+        pid, scan_idx = infos['pid'], infos['scan_idx']
+        mask_vol = np.int32(mask_vol)
+        pred_vol = np.zeros_like(mask_vol)
+        # if vol_idx < 4: continue
+        for img_idx in range(vol.shape[0]):
+            if img_idx%20 == 0:
+                print(f'Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
+            img = vol[img_idx]
+            # img = np.clip(img, -1000, 1000)
+            # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
+            # img = raw_preprocess(img, change_channel=True, output_dtype=np.uint8)
+            outputs = predictor(img) 
+            pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+            # if pred.shape[0] > 0:
+            #     print(3)
+            pred = np.sum(pred, axis=0)
+            pred = mask_preprocess(pred)
+            pred_vol[img_idx] = pred
+
+            if cfg.SAVE_COMPARE:
+                save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=cfg.SAVE_PATH, save_name=f'{pid}-{img_idx:03d}.png')
+        metric.calculate(pred_vol, mask_vol, area_th=10)
+        vol_metric.calculate(mask_vol, pred_vol)
+        # if vol_idx > 4:
+        #     break
+        
+    nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
+    print(30*'=')
+    class_acc, class_iou, class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice = metric.evaluation(True)
+
+
 def volume_eval4(cfg, vol_generator):
     # start_time = time.time()
     predictor = DefaultPredictor(cfg)
@@ -242,7 +326,7 @@ def volume_eval4(cfg, vol_generator):
             # seg_start_time = time.time()
             img = vol[...,img_idx]
             # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-            img = raw_preprocess(img, lung_segment=False, norm=False)
+            img = raw_preprocess(img, norm=False)
             outputs = predictor(img) 
             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
             # pred_classes = outputs["instances"]._fields['pred_classes'].cpu().detach().numpy() 
@@ -371,18 +455,21 @@ def save_mask(img, mask, pred, num_class, save_path, save_name='img'):
 if __name__ == '__main__':
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_003'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_final.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0039999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0069999.pth")  # path to the model we just trained
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7   # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.95   # set a custom testing threshold
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.OUTPUT_DIR = check_point_path
-    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI'
+    # cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI'
     # cfg.INPUT.MIN_SIZE_TEST = 0
     # cfg.INPUT.MAX_SIZE_TEST = 480
 
@@ -391,18 +478,23 @@ if __name__ == '__main__':
     cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1217\maskrcnn-{run}-{weight}-samples'
     # TODO: dataset path in configuration
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
+    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
-    # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16'
-    cfg.SAVE_COMPARE = True
+
+    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
+    cfg.SAVE_COMPARE = False
     # cfg.CASE_INDICES = list(range(10))
-    cfg.CASE_INDICES = list(range(10, 20))
+    # cfg.SUBSET_INDICES = [8, 9]
+    cfg.SUBSET_INDICES = list(range(8))
+    # cfg.CASE_INDICES = list(range(10, 20))
+    cfg.CASE_INDICES = None
     # cfg.CASE_INDICES = list(range(810, 820))
     cfg.ONLY_NODULES = True
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
-    # eval(cfg)
+    # eval2(cfg)
     # save_mask(cfg)
-    case_list = dataset_utils.get_files(cfg.DATA_PATH, keys=[], return_fullpath=False, sort=True, recursive=False, get_dirs=True)
+    # case_list = dataset_utils.get_files(cfg.DATA_PATH, keys=[], return_fullpath=False, sort=True, recursive=False, get_dirs=True)
     # case_list = case_list[807:]
     # case_list = case_list[810:813]
     # case_list = case_list[815:818]
@@ -411,8 +503,11 @@ if __name__ == '__main__':
 
     # volume_eval2(cfg, vol_generator=asus_nodule_volume_generator)
     # volume_eval2(cfg, vol_generator=luna16_volume_generator)
-    volume_eval2(cfg, vol_generator=lidc_volume_generator)
+    # volume_eval2(cfg, vol_generator=lidc_volume_generator)
 
 
     # volume_eval4(cfg, vol_generator=lidc_volume_generator)
     # volume_eval4(cfg, vol_generator=asus_nodule_volume_generator)
+
+    volume_eval5(cfg, vol_generator=luna16_volume_generator)
+    # volume_eval5(cfg, vol_generator=asus_nodule_volume_generator)

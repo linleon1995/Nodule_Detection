@@ -10,6 +10,7 @@ import numpy as np
 from NoduleFinding import NoduleFinding
 
 from tools import csvTools
+import argparse
 
 # Evaluation settings
 bPerformBootstrapping = True
@@ -28,6 +29,15 @@ CADProbability_label = 'probability'
 FROC_minX = 0.125 # Mininum value of x-axis of FROC curve
 FROC_maxX = 8 # Maximum value of x-axis of FROC curve
 bLogPlot = True
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--annotations_filename', type=str, default=rf'')
+parser.add_argument('--annotations_excluded_filename', type=str, default=rf'')
+parser.add_argument('--seriesuids_filename', type=str, default=rf'')
+parser.add_argument('--results_filename', type=str, default=rf'')
+parser.add_argument('--outputDir', type=str, default=rf'')
+vars = parser.parse_args()
+
 
 def generateBootstrapSet(scanToCandidatesDict, FROCImList):
     '''
@@ -94,7 +104,7 @@ def computeFROC_bootstrap(FROCGTList,FROCProbList,FPDivisorList,FROCImList,exclu
             scanToCandidatesDict[seriesuid] = np.concatenate((scanToCandidatesDict[seriesuid],candidate),axis = 1)
 
     for i in range(numberOfBootstrapSamples):
-        print 'computing FROC: bootstrap %d/%d' % (i,numberOfBootstrapSamples)
+        print('computing FROC: bootstrap %d/%d' % (i,numberOfBootstrapSamples))
         # Generate a bootstrapped set
         btpsamp = generateBootstrapSet(scanToCandidatesDict,FROCImList_np)
         fps, sens, thresholds = computeFROC(btpsamp[0,:],btpsamp[1,:],len(FROCImList_np),btpsamp[2,:])
@@ -130,7 +140,7 @@ def computeFROC(FROCGTList, FROCProbList, totalNumberOfImages, excludeList):
     totalNumberOfCandidates = len(FROCProbList_local)
     fpr, tpr, thresholds = skl_metrics.roc_curve(FROCGTList_local, FROCProbList_local)
     if sum(FROCGTList) == len(FROCGTList): # Handle border case when there are no false positives and ROC analysis give nan values.
-      print "WARNING, this system has no false positives.."
+      print("WARNING, this system has no false positives..")
       fps = np.zeros(len(fpr))
     else:
       fps = fpr * (totalNumberOfCandidates - numberOfDetectedLesions) / totalNumberOfImages
@@ -196,7 +206,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
 
                 nodules = nodules2
         
-        print 'adding candidates: ' + seriesuid
+        print('adding candidates: ' + seriesuid)
         allCandsCAD[seriesuid] = nodules
     
     # open output files
@@ -273,7 +283,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
                         found = True
                         noduleMatches.append(candidate)
                         if key not in candidates2.keys():
-                            print "This is strange: CAD mark %s detected two nodules! Check for overlapping nodule annotations, SeriesUID: %s, nodule Annot ID: %s" % (str(candidate.id), seriesuid, str(noduleAnnot.id))
+                            print("This is strange: CAD mark %s detected two nodules! Check for overlapping nodule annotations, SeriesUID: %s, nodule Annot ID: %s" % (str(candidate.id), seriesuid, str(noduleAnnot.id)))
                         else:
                             del candidates2[key]
                     elif (noduleAnnot.state == "Excluded"): # an excluded nodule
@@ -431,7 +441,7 @@ def collectNoduleAnnotations(annotations, annotations_excluded, seriesUIDs):
     noduleCountTotal = 0
     
     for seriesuid in seriesUIDs:
-        print 'adding nodule annotations: ' + seriesuid
+        print('adding nodule annotations: ' + seriesuid)
         
         nodules = []
         numberOfIncludedNodules = 0
@@ -459,8 +469,8 @@ def collectNoduleAnnotations(annotations, annotations_excluded, seriesUIDs):
         noduleCount      += numberOfIncludedNodules
         noduleCountTotal += len(nodules)
     
-    print 'Total number of included nodule annotations: ' + str(noduleCount)
-    print 'Total number of nodule annotations: ' + str(noduleCountTotal)
+    print('Total number of included nodule annotations: ' + str(noduleCount))
+    print('Total number of nodule annotations: ' + str(noduleCountTotal))
     return allNodules
     
     
@@ -488,7 +498,7 @@ def noduleCADEvaluation(annotations_filename,annotations_excluded_filename,serie
     @param outputDir: output directory
     '''
     
-    print annotations_filename
+    print(annotations_filename)
     
     (allNodules, seriesUIDs) = collect(annotations_filename, annotations_excluded_filename, seriesuids_filename)
     
@@ -499,7 +509,7 @@ def noduleCADEvaluation(annotations_filename,annotations_excluded_filename,serie
 
 
 if __name__ == '__main__':
-
+    
     annotations_filename          = sys.argv[1]
     annotations_excluded_filename = sys.argv[2]
     seriesuids_filename           = sys.argv[3]
@@ -507,4 +517,4 @@ if __name__ == '__main__':
     outputDir                     = sys.argv[5]
     # execute only if run as a script
     noduleCADEvaluation(annotations_filename,annotations_excluded_filename,seriesuids_filename,results_filename,outputDir)
-    print "Finished!"
+    print("Finished!")

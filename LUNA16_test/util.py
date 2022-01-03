@@ -88,8 +88,9 @@ class metrics:
 
                     for c_seg in contours_seg:
                         bad = True
-                        if cv2.contourArea(c_seg) > area_th:
-                            continue
+                        # TODO: Why have this judgement? (redundant function)
+                        # if cv2.contourArea(c_seg) > area_th:
+                        #     continue
                         for c_gt in contours_gt:
                             if self.Cal_area_2poly(gt, c_gt, c_seg) >= iou_th:
                                 bad = False
@@ -129,5 +130,6 @@ class metrics:
             print('counter F1 score =',counter_F1_score)
             print('mIoU =', mIOU)
             print('total dice =', Total_dice)
+        
         return self.class_acc, self.class_iou, self.class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice
 

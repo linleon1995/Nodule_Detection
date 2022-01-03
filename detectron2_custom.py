@@ -59,16 +59,14 @@ def common_config():
     cfg.DATASETS.TEST = ()
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
-    cfg.SOLVER.IMS_PER_BATCH = 8
-    cfg.SOLVER.BASE_LR = 0.005  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 100000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.IMS_PER_BATCH = 4
+    cfg.SOLVER.BASE_LR = 0.0005  # pick a good LR
+    cfg.SOLVER.MAX_ITER = 20000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.OUTPUT_DIR = train_utils.create_training_path('output')
-    cfg.INPUT.RANDOM_FLIP = 'none'
-    # cfg.INPUT.RANDOM_FLIP = 'horizontal
     # # By default, {MIN,MAX}_SIZE options are used in transforms.ResizeShortestEdge.
     # Please refer to ResizeShortestEdge for detailed definition.
     # Size of the smallest side of the image during training
@@ -84,16 +82,17 @@ def common_config():
     cfg.INPUT.MAX_SIZE_TEST = 1333
     # Mode for flipping images used in data augmentation during training
     # choose one of ["horizontal, "vertical", "none"]
-    cfg.INPUT.RANDOM_FLIP = "none"
-    # cfg.INPUT.RANDOM_FLIP = "horizontal"
+    # cfg.INPUT.RANDOM_FLIP = "none"
+    cfg.INPUT.RANDOM_FLIP = "horizontal"
 
     # `True` if cropping is used for data augmentation during training
-    cfg.INPUT.CROP.ENABLED = False
+    cfg.INPUT.CROP.ENABLED = True
     # Cropping type. See documentation of `detectron2.data.transforms.RandomCrop` for explanation.
     cfg.INPUT.CROP.TYPE = "relative_range"
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
-    cfg.INPUT.CROP.SIZE = [0.9, 0.9]
+    cfg.INPUT.CROP.SIZE = [0.7, 0.7]
+    cfg.SOLVER.CHECKPOINT_PERIOD = 4000
     return cfg
 
     

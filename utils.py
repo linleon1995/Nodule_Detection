@@ -90,9 +90,9 @@ def segment_lung(img):
 
 
 
-def raw_preprocess(img, lung_segment=True, norm=True, change_channel=True, output_dtype=np.int32):
-    assert img.ndim == 2
+def raw_preprocess(img, lung_segment=False, norm=True, change_channel=True, output_dtype=np.int32):
     if lung_segment:
+        assert img.ndim == 2
         img = segment_lung(img)
         img[img==-0] = 0
 
@@ -106,14 +106,14 @@ def raw_preprocess(img, lung_segment=True, norm=True, change_channel=True, outpu
         img = np.array(img, dtype)
     
     if change_channel:
-        img = np.tile(img[...,np.newaxis], (1,1,3))
+        img = np.tile(img[...,np.newaxis], np.append(np.ones(img.ndim, dtype=np.int32), 3))
 
     img = output_dtype(img)
     return img
 
 
 def mask_preprocess(mask, ignore_malignancy=True, output_dtype=np.int32):
-    assert mask.ndim == 2
+    # assert mask.ndim == 2
     if ignore_malignancy:
         mask = np.where(mask>=1, 1, 0)
     mask = output_dtype(mask)

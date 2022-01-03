@@ -47,6 +47,10 @@ data_subset_path = os.path.join(ROOT, 'LUNA16/data/subset*')
 seg_lung_path = os.path.join(ROOT, 'LUNA16/data/seg-lungs-LUNA16')
 annotations_path = os.path.join(ROOT, 'LUNA16/data/annotations.csv')
 candidates_path = os.path.join(ROOT, 'LUNA16/data/candidates.csv')
+#  +++
+TEST_SUBJECT = ['subset8', 'subset9']
+TEST_SUBJECT = None
+#  +++
 
 @functools.lru_cache(1)
 def getCandidateInfoList(requireOnDisk_bool=True):
@@ -54,9 +58,30 @@ def getCandidateInfoList(requireOnDisk_bool=True):
     # This will let us use the data, even if we haven't downloaded all of
     # the subsets yet.
     mhd_list = glob.glob(data_subset_path + '/*.mhd')
+    #  +++
+    if TEST_SUBJECT:
+        new_mhd_list = []
+        for path in mhd_list:
+            for test_subject in TEST_SUBJECT:
+                if test_subject in path:
+                    new_mhd_list.append(path)
+                    break
+        mhd_list = new_mhd_list
+    #  +++
+
     presentOnDisk_set = {os.path.split(p)[-1][:-4] for p in mhd_list}
 
     lung_mhd_list = glob.glob(seg_lung_path + '/*.mhd')
+    #  +++
+    if TEST_SUBJECT:
+        new_mhd_list = []
+        for path in lung_mhd_list:
+            for test_subject in TEST_SUBJECT:
+                if test_subject in path:
+                    new_mhd_list.append(path)
+                    break
+        lung_mhd_list = new_mhd_list
+    #  +++
     lung_presentOnDisk_set = {os.path.split(p)[-1][:-4] for p in lung_mhd_list}
 
     candidateInfo_list = []

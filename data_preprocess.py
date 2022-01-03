@@ -33,7 +33,6 @@ def luna16_preprocess(data_path, save_path):
 
             img = np.clip(img, -1000, 1000)
             img = raw_preprocess(img, lung_segment=False, change_channel=False)
-            
             mask = mask_preprocess(mask)
 
             # if np.sum(mask):
