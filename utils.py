@@ -5,6 +5,7 @@ import site_path
 import pylidc as pl
 from pylidc.utils import consensus
 from statistics import median_high
+import cc3d
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -120,19 +121,19 @@ def mask_preprocess(mask, ignore_malignancy=True, output_dtype=np.int32):
     return mask
 
 
-def compare_result(image, label, pred, **imshow_params):
+def compare_result(image, label, pred, show_mask_size=False, **imshow_params):
     if 'alpha' not in imshow_params: imshow_params['alpha'] = 0.2
-    fig, ax = plt.subplots(1,2)
+    fig, ax = plt.subplots(1,2, figsize=(8,4), tight_layout=True)
     ax[0].imshow(image)
     ax[0].imshow(label, **imshow_params)
     ax[1].imshow(image)
     ax[1].imshow(pred, **imshow_params)
-    ax[0].set_title('Label')
-    ax[1].set_title('Prediction')
+    ax[0].set_title(f'Label (Mask size: {np.sum(label)})' if show_mask_size else 'Label')
+    ax[1].set_title(f'Prediction (Mask size: {np.sum(pred)})' if show_mask_size else 'Prediction')
     return fig, ax
 
 
-def compare_result_enlarge(image, label, pred, **imshow_params):
+def compare_result_enlarge(image, label, pred, show_mask_size=False, **imshow_params):
     crop_range = 30
     if np.sum(label) > 0:
         item = label
@@ -157,15 +158,15 @@ def compare_result_enlarge(image, label, pred, **imshow_params):
         label = cv2.resize(label[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
         pred = cv2.resize(pred[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
 
-        fig, ax = compare_result(image, label, pred, **imshow_params)
+        fig, ax = compare_result(image, label, pred, show_mask_size, **imshow_params)
     return fig, ax
 
 
-def cv2_imshow(img):
+def cv2_imshow(img, save_path=None):
     # pass
     cv2.imshow('My Image', img)
-    cv2.imwrite('sample.png', img)
-    cv2.waitKey(0)
+    cv2.imwrite(save_path if save_path else 'sample.png', img)
+    # cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
@@ -191,4 +192,40 @@ def convert_npy_to_png(src, dst, src_format, dst_format):
         if not os.path.isdir(os.path.split(new_f)[0]):
             os.makedirs(os.path.split(new_f)[0])
         cv2.imwrite(new_f, img)
+
+
+def split_individual_mask(mask):
+    individual_mask = cc3d.connected_components(mask, connectivity=8)
+    if np.max(individual_mask) > 1:
+        mask_list = []
+        for mask_label in range(1, np.max(individual_mask)):
+            mask_list.append(np.uint8(individual_mask==mask_label))
+        return mask_list
+    else:
+        return [mask]
+
+
+def merge_near_masks(sub_masks, distance_threshold=128):
+    candidate_pool = []
+    for mask in sub_masks:
+        if not candidate_pool:
+            candidate_pool.append(mask)
+        else:
+            for candidate_idx, mask_candidate in enumerate(candidate_pool):
+                ys, xs = np.where(mask)
+                ys2, xs2 = np.where(mask_candidate)
+                mask_min_point = np.array([np.min(ys), np.min(xs)])
+                candidate_min_point = np.array([np.min(ys2), np.min(xs2)])
+                mask_distance =  np.linalg.norm(mask_min_point-candidate_min_point)
+                # print('distance', mask_distance)
+                if mask_distance < distance_threshold:
+                    candidate_pool[candidate_idx] = mask_candidate + mask
+                    append_flag = False
+                    break
+                else:
+                    append_flag = True
+            
+            if append_flag:
+                candidate_pool.append(mask)
+    return candidate_pool
 

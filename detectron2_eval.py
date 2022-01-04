@@ -221,57 +221,57 @@ def eval2(cfg):
 #             img = raw_preprocess(img, lung_segment=False, change_channel=False)
 #             mask = mask_preprocess(mask)
 
-def volume_eval2(cfg, vol_generator):
-    # start_time = time.time()
-    predictor = DefaultPredictor(cfg)
-    # seg_total_time = 0
-    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
-    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
-        pid, scan_idx = infos['pid'], infos['scan_idx']
-        mask_vol = np.int32(mask_vol)
-        pred_vol = np.zeros_like(mask_vol)
-        for img_idx in range(vol.shape[0]):
-            if img_idx%10 == 0:
-                print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-            # seg_start_time = time.time()
-            img = vol[img_idx]
-            img = np.clip(img, -1000, 1000)
-            # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-            img = raw_preprocess(img, change_channel=True, output_dtype=np.float32)
-            outputs = predictor(img) 
-            pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-            pred = np.sum(pred, axis=0)
-            pred = mask_preprocess(pred)
-            pred_vol[img_idx] = pred
+# def volume_eval2(cfg, vol_generator):
+#     # start_time = time.time()
+#     predictor = DefaultPredictor(cfg)
+#     # seg_total_time = 0
+#     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
+#     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
+#         pid, scan_idx = infos['pid'], infos['scan_idx']
+#         mask_vol = np.int32(mask_vol)
+#         pred_vol = np.zeros_like(mask_vol)
+#         for img_idx in range(vol.shape[0]):
+#             if img_idx%10 == 0:
+#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
+#             # seg_start_time = time.time()
+#             img = vol[img_idx]
+#             img = np.clip(img, -1000, 1000)
+#             # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
+#             img = raw_preprocess(img, change_channel=True, output_dtype=np.float32)
+#             outputs = predictor(img) 
+#             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+#             pred = np.sum(pred, axis=0)
+#             pred = mask_preprocess(pred)
+#             pred_vol[img_idx] = pred
 
-            # Save image for result comparing
-            if cfg.SAVE_COMPARE:
-                mask = mask_vol[img_idx]
-                pred = pred_vol[img_idx]
-                save_name = f'{pid}-{scan_idx}-{img_idx}'
-                save_path = os.path.join(cfg.SAVE_PATH, pid)
-                save_mask(img, mask, pred, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1, save_path=save_path, save_name=save_name)
+#             # Save image for result comparing
+#             if cfg.SAVE_COMPARE:
+#                 mask = mask_vol[img_idx]
+#                 pred = pred_vol[img_idx]
+#                 save_name = f'{pid}-{scan_idx}-{img_idx}'
+#                 save_path = os.path.join(cfg.SAVE_PATH, pid)
+#                 save_mask(img, mask, pred, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1, save_path=save_path, save_name=save_name)
 
-        cm = confusion_matrix(np.reshape(mask_vol, [-1]), np.reshape(pred_vol, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES))
-        mean_dsc, dscs = metrics2.mean_dsc(cm)
-        mean_iou, ious = metrics2.mean_iou(cm)
-        print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')        
-        if vol_idx == 0:
-            total_dscs = dscs[np.newaxis]
-            total_ious = ious[np.newaxis]
-        else:
-            total_dscs = np.append(total_dscs, dscs[np.newaxis], axis=0)
-            total_ious = np.append(total_ious, ious[np.newaxis], axis=0)
+#         cm = confusion_matrix(np.reshape(mask_vol, [-1]), np.reshape(pred_vol, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES))
+#         mean_dsc, dscs = metrics2.mean_dsc(cm)
+#         mean_iou, ious = metrics2.mean_iou(cm)
+#         print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')        
+#         if vol_idx == 0:
+#             total_dscs = dscs[np.newaxis]
+#             total_ious = ious[np.newaxis]
+#         else:
+#             total_dscs = np.append(total_dscs, dscs[np.newaxis], axis=0)
+#             total_ious = np.append(total_ious, ious[np.newaxis], axis=0)
 
-    total_dscs = np.mean(total_dscs, axis=0)
-    total_ious = np.mean(total_ious, axis=0)
-    print(f'IoU: {total_ious} DSC: {total_dscs}')
-    print(f'mean IoU: {np.mean(total_ious):.04f} mean DSC: {np.mean(total_dscs):.04f}')
+#     total_dscs = np.mean(total_dscs, axis=0)
+#     total_ious = np.mean(total_ious, axis=0)
+#     print(f'IoU: {total_ious} DSC: {total_dscs}')
+#     print(f'mean IoU: {np.mean(total_ious):.04f} mean DSC: {np.mean(total_dscs):.04f}')
     
 
 def volume_eval5(cfg, vol_generator):
     predictor = DefaultPredictor(cfg)
-    metric = util.metrics(n_class=2)
+    # metric = util.metrics(n_class=2)
     vol_metric = volumetric_data_eval()
     # volume_generator = vol_generator(cfg.FULL_DATA_PATH, only_nodule_slices=cfg.ONLY_NODULES)
     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
@@ -280,14 +280,14 @@ def volume_eval5(cfg, vol_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
-        # if vol_idx < 4: continue
+        # if vol_idx > 0: break
+        # print(pid)
+        # if pid != '1.3.6.1.4.1.14519.5.2.1.6279.6001.100621383016233746780170740405':
+        #     continue
         for img_idx in range(vol.shape[0]):
             if img_idx%20 == 0:
                 print(f'Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
             img = vol[img_idx]
-            # img = np.clip(img, -1000, 1000)
-            # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-            # img = raw_preprocess(img, change_channel=True, output_dtype=np.uint8)
             outputs = predictor(img) 
             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
             # if pred.shape[0] > 0:
@@ -297,88 +297,89 @@ def volume_eval5(cfg, vol_generator):
             pred_vol[img_idx] = pred
 
             if cfg.SAVE_COMPARE:
-                save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=cfg.SAVE_PATH, save_name=f'{pid}-{img_idx:03d}.png')
-        metric.calculate(pred_vol, mask_vol, area_th=10)
+                if vol_idx > 4:
+                    continue
+                save_path = os.path.join(cfg.SAVE_PATH, pid)
+                save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=save_path, save_name=f'{pid}-{img_idx:03d}.png')
+        # metric.calculate(pred_vol, mask_vol, area_th=10)
         vol_metric.calculate(mask_vol, pred_vol)
-        # if vol_idx > 4:
-        #     break
         
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
     print(30*'=')
-    class_acc, class_iou, class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice = metric.evaluation(True)
+    # class_acc, class_iou, class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice = metric.evaluation(True)
 
 
-def volume_eval4(cfg, vol_generator):
-    # start_time = time.time()
-    predictor = DefaultPredictor(cfg)
-    th = 0.5
-    # seg_total_time = 0
-    total_hit, total_acc = np.array([], np.int16), np.array([], np.float32)
-    num_nodule, num_hit = 0, 0
-    # total_num_hit = {}
-    total_num_hit = 0
-    for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg.FULL_DATA_PATH, case_indices=cfg.CASE_INDICES)):
-        pid, scan_idx = infos['pid'], infos['scan_idx']
-        pred_vol = np.zeros_like(mask_vol)
-        for img_idx in range(vol.shape[2]):
-            if img_idx%10 == 0:
-                print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-            # seg_start_time = time.time()
-            img = vol[...,img_idx]
-            # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-            img = raw_preprocess(img, norm=False)
-            outputs = predictor(img) 
-            pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-            # pred_classes = outputs["instances"]._fields['pred_classes'].cpu().detach().numpy() 
-            # pred_classes = np.reshape(pred_classes, (pred_classes.shape[0], 1, 1))
-            # pred_classes += 1
-            pred = np.sum(pred, axis=0)
-            pred = np.where(pred>=1, 1, 0)
-            # if np.max(pred) > 1:
-            #     print(2)
-            # pred = np.int32(pred)
-            pred_vol[...,img_idx] = pred
+# def volume_eval4(cfg, vol_generator):
+#     # start_time = time.time()
+#     predictor = DefaultPredictor(cfg)
+#     th = 0.5
+#     # seg_total_time = 0
+#     total_hit, total_acc = np.array([], np.int16), np.array([], np.float32)
+#     num_nodule, num_hit = 0, 0
+#     # total_num_hit = {}
+#     total_num_hit = 0
+#     for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg.FULL_DATA_PATH, case_indices=cfg.CASE_INDICES)):
+#         pid, scan_idx = infos['pid'], infos['scan_idx']
+#         pred_vol = np.zeros_like(mask_vol)
+#         for img_idx in range(vol.shape[2]):
+#             if img_idx%10 == 0:
+#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
+#             # seg_start_time = time.time()
+#             img = vol[...,img_idx]
+#             # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
+#             img = raw_preprocess(img, norm=False)
+#             outputs = predictor(img) 
+#             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+#             # pred_classes = outputs["instances"]._fields['pred_classes'].cpu().detach().numpy() 
+#             # pred_classes = np.reshape(pred_classes, (pred_classes.shape[0], 1, 1))
+#             # pred_classes += 1
+#             pred = np.sum(pred, axis=0)
+#             pred = np.where(pred>=1, 1, 0)
+#             # if np.max(pred) > 1:
+#             #     print(2)
+#             # pred = np.int32(pred)
+#             pred_vol[...,img_idx] = pred
             
-        ious, dscs = nodules_eval(pid, pred_vol)
-        print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')    
+#         ious, dscs = nodules_eval(pid, pred_vol)
+#         print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')    
 
-        case_hit, case_acc = np.array([], np.int16), np.array([], np.float32)
-        num_nodule += dscs.shape[0]
-        for th_idx, th in enumerate(np.linspace(0.5, 0.95, 10)):
-        # for th_idx, th in enumerate(np.linspace(0.5, 0.95, 1)):
-            hit = np.sum(np.where(dscs>th, 1, 0))
-            acc = hit / dscs.shape[0]
-            case_hit = np.append(case_hit, hit)[np.newaxis]
-            case_acc = np.append(case_acc, acc)[np.newaxis]
-            # TODO: write num_hit in correct way.
-            # num_hit += np.sum(case_hit)
+#         case_hit, case_acc = np.array([], np.int16), np.array([], np.float32)
+#         num_nodule += dscs.shape[0]
+#         for th_idx, th in enumerate(np.linspace(0.5, 0.95, 10)):
+#         # for th_idx, th in enumerate(np.linspace(0.5, 0.95, 1)):
+#             hit = np.sum(np.where(dscs>th, 1, 0))
+#             acc = hit / dscs.shape[0]
+#             case_hit = np.append(case_hit, hit)[np.newaxis]
+#             case_acc = np.append(case_acc, acc)[np.newaxis]
+#             # TODO: write num_hit in correct way.
+#             # num_hit += np.sum(case_hit)
             
-            print(f'---Threshold: {th} Hit {hit} Acc {acc}')
-        # if th not in total_num_hit:
-        #     total_num_hit[th] = 0.0
-        # else:
-        #     total_num_hit[th] += np.sum(case_hit)
-        total_num_hit += case_hit
+#             print(f'---Threshold: {th} Hit {hit} Acc {acc}')
+#         # if th not in total_num_hit:
+#         #     total_num_hit[th] = 0.0
+#         # else:
+#         #     total_num_hit[th] += np.sum(case_hit)
+#         total_num_hit += case_hit
 
-        if vol_idx == 0:
-            total_hit = case_hit
-            total_acc = case_acc
-        else:
-            total_hit = np.append(total_hit, case_hit, axis=0)
-            total_acc = np.append(total_acc, case_acc, axis=0)
+#         if vol_idx == 0:
+#             total_hit = case_hit
+#             total_acc = case_acc
+#         else:
+#             total_hit = np.append(total_hit, case_hit, axis=0)
+#             total_acc = np.append(total_acc, case_acc, axis=0)
 
-        # if vol_idx > 0:
-        #     break
-    print(np.mean(total_hit, axis=0))
-    print(np.mean(total_acc, axis=0))
+#         # if vol_idx > 0:
+#         #     break
+#     print(np.mean(total_hit, axis=0))
+#     print(np.mean(total_acc, axis=0))
 
-    th = 0.5
-    total_accss = 0
-    for th_hit in total_num_hit[0]:
-        acc = th_hit/num_nodule
-        print(f'Threshold {th:.2f} Total hit {th_hit} Total nodules {num_nodule} Total acc {acc}')
-        total_accss += acc
-    print(total_accss / len(total_num_hit[0]))
+#     th = 0.5
+#     total_accss = 0
+#     for th_hit in total_num_hit[0]:
+#         acc = th_hit/num_nodule
+#         print(f'Threshold {th:.2f} Total hit {th_hit} Total nodules {num_nodule} Total acc {acc}')
+#         total_accss += acc
+#     print(total_accss / len(total_num_hit[0]))
 
 
 def nodules_eval(pid, pred_vol):
@@ -426,28 +427,31 @@ def nodules_eval(pid, pred_vol):
     
 
 def save_mask(img, mask, pred, num_class, save_path, save_name='img'):
-    if np.sum(mask) > 0:
-        if np.sum(pred) > 0:
-            sub_dir = 'tp'
-        else:
-            sub_dir = 'fn'
-    else:
-        if np.sum(pred) > 0:
-            sub_dir = 'fp'
-        else:
-            sub_dir = 'tn'
+    # if np.sum(mask) > 0:
+    #     if np.sum(pred) > 0:
+    #         sub_dir = 'tp'
+    #     else:
+    #         sub_dir = 'fn'
+    # else:
+    #     if np.sum(pred) > 0:
+    #         sub_dir = 'fp'
+    #     else:
+    #         sub_dir = 'tn'
         
-    sub_save_path = os.path.join(save_path, sub_dir)
+    # sub_save_path = os.path.join(save_path, sub_dir)
+    sub_save_path = save_path
     if not os.path.isdir(sub_save_path):
         os.makedirs(sub_save_path)
 
-    fig1, _ = compare_result(img, mask, pred, alpha=0.2, vmin=0, vmax=num_class-1)
+    fig1, _ = compare_result(img, mask, pred, show_mask_size=True, alpha=0.2, vmin=0, vmax=num_class-1)
     fig1.savefig(os.path.join(sub_save_path, f'{save_name}.png'))
+    # fig1.tight_layout()
     plt.close(fig1)
 
-    fig2, _ = compare_result_enlarge(img, mask, pred, alpha=0.2, vmin=0, vmax=num_class-1)
+    fig2, _ = compare_result_enlarge(img, mask, pred, show_mask_size=False, alpha=0.2, vmin=0, vmax=num_class-1)
     if fig2 is not None:
         fig2.savefig(os.path.join(sub_save_path, f'{save_name}-en.png'))
+        # fig2.tight_layout()
         plt.close(fig2)
 
 
@@ -457,12 +461,15 @@ if __name__ == '__main__':
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
+    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_final.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0019999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0069999.pth")  # path to the model we just trained
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.95   # set a custom testing threshold
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
@@ -475,17 +482,19 @@ if __name__ == '__main__':
 
     run = os.path.split(check_point_path)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
-    cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1217\maskrcnn-{run}-{weight}-samples'
+    cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227\maskrcnn-{run}-{weight}-{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}-samples'
     # TODO: dataset path in configuration
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    cfg.SAVE_COMPARE = False
+    cfg.SAVE_COMPARE = True
     # cfg.CASE_INDICES = list(range(10))
-    # cfg.SUBSET_INDICES = [8, 9]
-    cfg.SUBSET_INDICES = list(range(8))
+    cfg.SUBSET_INDICES = [8, 9]
+    # cfg.SUBSET_INDICES = [2]
+    # cfg.SUBSET_INDICES = [0, 1]
+    # cfg.SUBSET_INDICES = list(range(8))
     # cfg.CASE_INDICES = list(range(10, 20))
     cfg.CASE_INDICES = None
     # cfg.CASE_INDICES = list(range(810, 820))

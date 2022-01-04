@@ -6,7 +6,7 @@ import json, itertools
 import os
 import cv2
 from volume_generator import lidc_volume_generator, luna16_volume_generator, asus_nodule_volume_generator
-from utils import raw_preprocess, mask_preprocess
+from utils import cv2_imshow, raw_preprocess, mask_preprocess, split_individual_mask, merge_near_masks
 
 import site_path
 from modules.data import dataset_utils
@@ -42,6 +42,30 @@ class coco_structure_converter():
             }
             self.idx += 1
             self.annotations.append(seg)
+
+    # def sample2(self, img_path, mask, image_id):
+    #     # TODO: Temporally keep image with object because no idea to deal with the label of objectless case
+    #     if np.sum(mask):
+    #         image = {'id': image_id, 'width':512, 'height':512, 'file_name': f'{img_path}'}
+    #         self.images.append(image)
+    #         splited_mask = split_individual_mask(mask[...,0])
+    #         splited_mask = merge_near_masks(splited_mask)
+
+    #         ys, xs = np.where(mask)
+    #         x1, x2 = min(xs), max(xs)
+    #         y1, y2 = min(ys), max(ys)
+    #         enc =binary_mask_to_rle(mask)
+    #         seg = {
+    #             'segmentation': enc, 
+    #             'bbox': [int(x1), int(y1), int(x2-x1+1), int(y2-y1+1)],
+    #             'area': int(np.sum(mask)),
+    #             'image_id': image_id, 
+    #             'category_id': self.cat_ids['nodule'], 
+    #             'iscrowd': 0, 
+    #             'id':self.idx
+    #         }
+    #         self.idx += 1
+    #         self.annotations.append(seg)
 
     def create_coco_structure(self):
         return {'categories':self.cats, 'images': self.images,'annotations': self.annotations}
@@ -100,7 +124,7 @@ def coco_structure(train_df):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
-def luna16_to_coco_structure(data_path, split_rate=0.7):
+def luna16_to_coco_structure(data_path, split_rate=0.7, area_threshold=30):
     subset_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     cat_ids = cat_ids = {'nodule': 1}
     train_converter = coco_structure_converter(cat_ids)
@@ -122,10 +146,22 @@ def luna16_to_coco_structure(data_path, split_rate=0.7):
             for img_path, mask_path in zip(case_image_list, case_mask_list):
                 mask = cv2.imread(mask_path)
                 image_id = os.path.split(img_path)[1][:-4]
-                if subset_idx <= 6:
-                    train_converter.sample(img_path, mask[...,0], image_id)
-                elif subset_idx == 7:
-                    valid_converter.sample(img_path, mask[...,0], image_id)
+                # splited_mask = split_individual_mask(mask[...,0])
+                # splited_mask = merge_near_masks(splited_mask)
+
+                # if len(splited_mask) > 0:
+                #     # print(3)
+                #     for i, mm in enumerate(splited_mask, 1):
+                #         # print(np.sum(mm))
+                #         if np.sum(mm) > area_threshold:
+                #             cv2_imshow(255*np.tile(mm[...,np.newaxis], (1,1,3)), os.path.join('plot', f'{image_id}-s{i}.png'))
+
+                for mask in splited_mask:
+                    if np.sum(mask) > area_threshold:
+                        if subset_idx <= 6:
+                            train_converter.sample(img_path, mask, image_id)
+                        elif subset_idx == 7:
+                            valid_converter.sample(img_path, mask, image_id)
     return train_converter.create_coco_structure(), valid_converter.create_coco_structure()
 
 
@@ -254,26 +290,26 @@ def main2():
         json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
 
-def main():
-    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
-    GT_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
-    CSV_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Metameta_info.csv'
+# def main():
+#     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
+#     GT_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
+#     CSV_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Metameta_info.csv'
 
-    ## run it on first three images for demonstration:
-    df = pd.read_csv(CSV_PATH)
-    split = 16219
-    all_ids = df.original_image.unique()
-    train_sample = df[df.original_image.isin(all_ids[:split])]
-    valid_sample = df[df.original_image.isin(all_ids[split:])]
+#     ## run it on first three images for demonstration:
+#     df = pd.read_csv(CSV_PATH)
+#     split = 16219
+#     all_ids = df.original_image.unique()
+#     train_sample = df[df.original_image.isin(all_ids[:split])]
+#     valid_sample = df[df.original_image.isin(all_ids[split:])]
 
-    train_root = lidc_to_coco_structure(train_sample, data_root=DATA_PATH, seg_root=GT_PATH)
-    valid_root = lidc_to_coco_structure(valid_sample, data_root=DATA_PATH, seg_root=GT_PATH)
+#     train_root = lidc_to_coco_structure(train_sample, data_root=DATA_PATH, seg_root=GT_PATH)
+#     valid_root = lidc_to_coco_structure(valid_sample, data_root=DATA_PATH, seg_root=GT_PATH)
 
-    with open('annotations_train.json', 'w', encoding='utf-8') as jsonfile:
-        json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
+#     with open('annotations_train.json', 'w', encoding='utf-8') as jsonfile:
+#         json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
 
-    with open('annotations_valid.json', 'w', encoding='utf-8') as jsonfile:
-        json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
+#     with open('annotations_valid.json', 'w', encoding='utf-8') as jsonfile:
+#         json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
 if __name__ == '__main__':
     main2()

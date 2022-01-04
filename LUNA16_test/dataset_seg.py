@@ -48,7 +48,7 @@ seg_lung_path = os.path.join(ROOT, 'LUNA16/data/seg-lungs-LUNA16')
 annotations_path = os.path.join(ROOT, 'LUNA16/data/annotations.csv')
 candidates_path = os.path.join(ROOT, 'LUNA16/data/candidates.csv')
 #  +++
-TEST_SUBJECT = ['subset8', 'subset9']
+# TEST_SUBJECT = ['subset8', 'subset9']
 TEST_SUBJECT = None
 #  +++
 

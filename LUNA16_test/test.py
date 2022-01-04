@@ -139,12 +139,6 @@ if __name__ in "__main__":
             preds = preds.cpu().data.numpy()
             masks = pos_g.cpu().data.numpy()
             metric.calculate(preds, masks)
-            # +++
-            vol_metric.calculate(masks, preds)
-            # vol_idx += 1
-            # if vol_idx > 4:
-            #     break
-            # +++
     
             if opt.save:
                 for (ct_img, target, pred, uid, ndx) in zip(ct_t, masks, preds, series_uid, ct_ndx):
@@ -163,7 +157,22 @@ if __name__ in "__main__":
                     # plt.show()
 
         # +++
+            if series_ndx == 0:
+                last_series_uid = series_uid[0]
+                mask_vol = masks
+                pred_vol = preds
+
+            if series_uid[0] == last_series_uid:
+                mask_vol = np.concatenate([mask_vol, masks], axis=0)
+                pred_vol = np.concatenate([pred_vol, preds], axis=0)
+            else:
+                vol_metric.calculate(mask_vol, pred_vol)
+                mask_vol = masks
+                pred_vol = preds
+            
+            last_series_uid = series_uid[0]
+
+
         nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
-        print(30*'=')
         # +++
         class_acc, class_iou, class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice = metric.evaluation(True)
