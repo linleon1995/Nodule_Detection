@@ -25,7 +25,7 @@ class volumetric_data_eval():
         # _, counts = np.unique(volume, return_counts=True)
         # total_area_size = np.fromiter(counts.values(), dtype=int)[1:]
         # total_area_size = np.delete(total_area_size, np.where(total_area_size<area_threshold)[0])
-
+        # print(np.max(volume))
         category = list(range(1, np.max(volume)+1))
         total_area_size = np.array([], dtype=np.int32)
         for label in range(1, np.max(volume)+1):
@@ -35,6 +35,7 @@ class volumetric_data_eval():
                 category.remove(label)
             else:
                 total_area_size = np.append(total_area_size, area_size)
+        # print(np.max(volume))
         return total_area_size, volume
 
     # @classmethod
@@ -46,10 +47,13 @@ class volumetric_data_eval():
         total_area_size, volume = cls.calculate_nodule_size(volume, area_threshold)
 
         # Descending sort the category based on nodule size
-        category = list(range(1, np.max(volume)+1))
+        # category = list(range(1, np.max(volume)+1))
+        category = np.unique(volume)
+        category = np.delete(category, np.where(category==0))
         category = np.take(category, np.argsort(total_area_size)[::-1])
 
         # Convert Label and keep big enough nodules (keeping nodule number = max_nodule_num)
+        # print(np.max(volume))
         for idx, label in enumerate(category, 1):
             volume = np.where(volume==label, idx, volume)
             if max_nodule_num is not None:
@@ -57,6 +61,7 @@ class volumetric_data_eval():
                     break
         if max_nodule_num is not None:
             volume = np.where(volume>max_nodule_num, 0, volume)
+        # print(np.max(volume))
         return volume
     
     @classmethod
@@ -69,7 +74,9 @@ class volumetric_data_eval():
         return mask_vol, pred_vol
 
     def calculate(self, mask_vol, pred_vol):
+        # print(np.max(mask_vol))
         mask_vol, pred_vol = self.mask_and_pred_volume_preprocess(mask_vol, pred_vol, self.connectivity, self.area_threshold)
+        # print(np.max(mask_vol))
         self._3D_evaluation(mask_vol, pred_vol)
         self._2D_evaluation(mask_vol, pred_vol)
 
@@ -86,11 +93,16 @@ class volumetric_data_eval():
 
     def _3D_evaluation(self, mask_vol, pred_vol):
         tp, fp, fn = 0, 0, 0
+        # print(np.max(mask_vol))
         mask_category = list(range(1, np.max(mask_vol)+1))
         pred_category = list(range(1, np.max(pred_vol)+1))
         for mask_label in mask_category:
             for pred_label in pred_category:
                 IntersectionOverUinion = self.IoU(mask_vol==mask_label, pred_vol==pred_label)
+                # zs, ys, xs = np.where(mask_vol==mask_label)
+                # unique_zs = np.unique(zs)
+                # print('Slice', unique_zs)
+                # print(f'Slice from {np.min(zs)} to {np.max(zs)}')
                 if IntersectionOverUinion >= self.match_threshold:
                     tp += 1
                     mask_category.remove(mask_label)

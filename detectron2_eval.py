@@ -98,177 +98,6 @@ def eval2(cfg):
     # another equivalent way to evaluate the model is to use `trainer.test`
 
 
-# def volume_eval3(cfg, case_list):
-#     # This is to name each image and mask
-#     prefix = [str(x).zfill(3) for x in range(1000)]
-#     mask_threshold = 8
-
-#     # lidc_evaluator = evaluator.ClassificationEvaluator(num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES+1)
-#     # lidc_evaluator.register_new_metrics({"DSC": metrics2.mean_dsc, 'IoU': metrics2.mean_iou})
-#     predictor = DefaultPredictor(cfg)
-#     total_dscs, total_ious = None, None
-#     for patient in case_list:
-#         pid = patient #LIDC-IDRI-0001~
-#         # +++
-#         scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid)
-#         num_scan_in_one_patient = scans.count()
-#         print(f'{pid} has {num_scan_in_one_patient} scan')
-#         scan_list = scans.all()
-#         for scan_idx, scan in enumerate(scan_list):
-#             # scan = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid).first()
-#             # +++
-#             if scan is None:
-#                 print(scan)
-#             nodules_annotation = scan.cluster_annotations()
-#             vol = scan.to_volume()
-            
-#             print("Patient ID: {} Dicom Shape: {} Number of Annotated Nodules: {}".format(pid, vol.shape, len(nodules_annotation)))
-
-#             # Patients with nodules
-#             masks_vol = np.zeros_like(vol)
-#             for nodule_idx, nodule in enumerate(nodules_annotation):
-#             # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
-#             # This current for loop iterates over total number of nodules in a single patient
-#                 mask, cbbox, masks = consensus(nodule, clevel=0.5, pad=512)
-#                 malignancy, cancer_label = calculate_malignancy(nodule)
-#                 if malignancy >= 3:
-#                     cancer_categories = 2
-#                 else:
-#                     cancer_categories = 1
-
-#                 masks_vol += cancer_categories*mask
-
-#                 # lung_np_array = vol[cbbox]
-#                 # We calculate the malignancy information
-
-#             assert np.shape(vol) == np.shape(masks_vol)
-#             pred_vol = np.zeros_like(vol)
-#             for img_idx in range(vol.shape[2]):
-#                 img = segment_lung(vol[...,img_idx])
-#                 img[img==-0] = 0
-#                 img = np.uint8(255*((img-np.min(img))/(1e-7+np.max(img)-np.min(img))))
-
-#                 # TODO:
-#                 img = np.tile(img[...,np.newaxis], (1,1,3))
-#                 outputs = predictor(img) 
-#                 pred_mask = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-#                 pred_classes = outputs["instances"]._fields['pred_classes'].cpu().detach().numpy() 
-#                 pred_classes = np.reshape(pred_classes, (pred_classes.shape[0], 1, 1))
-#                 pred_classes += 1
-#                 # pred_mask = np.sum(pred_mask, axis=0)
-#                 pred_mask = np.sum(pred_mask*pred_classes, axis=0)
-#                 pred_mask = np.int32(pred_mask)
-                
-#                 pred_vol[...,img_idx] = pred_mask
-#                 # print('idx, gt, pred', img_idx, np.sum(masks_vol[...,img_idx]), np.sum(pred_vol[...,img_idx]))
-#                 # fig, ax = compare_result(img, masks_vol[...,img_idx], pred_vol[...,img_idx], alpha=0.2)
-#                 # fig.savefig(os.path.join(cfg.SAVE_PATH, f'{pid}-{scan_idx}-{img_idx}.png'), figsize=(10,10))
-#                 # if img_idx > 5:
-#                 #     break
-
-#             cm = confusion_matrix(np.reshape(masks_vol, [-1]), np.reshape(pred_vol, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1))
-#             mean_dsc, dscs = metrics2.mean_dsc(cm)
-#             mean_iou, ious = metrics2.mean_iou(cm)
-#             # 64 65 66
-#             # fig, ax = plt.subplots(1,2)
-#             # ax[0].imshow(masks_vol[...,242])
-#             # ax[1].imshow(pred_vol[...,242])
-#             # plt.savefig('xx.png')
-#             if total_dscs is None:
-#                 total_dscs = dscs[np.newaxis]
-#                 total_ious = ious[np.newaxis]
-#             else:
-#                 total_dscs = np.append(total_dscs, dscs[np.newaxis], axis=0)
-#                 total_ious = np.append(total_ious, ious[np.newaxis], axis=0)
-#             # if np.sum(masks_vol)!=0 or np.sum(pred_vol)!=0:
-#             #     lidc_evaluator.evaluate(np.reshape(masks_vol, [-1]), np.reshape(pred_vol, [-1]))
-#             print(patient, dscs, ious)
-#             print(np.sum(masks_vol), np.sum(pred_vol))
-            
-#     total_dscs = np.mean(total_dscs, axis=0)
-#     total_ious = np.mean(total_ious, axis=0)
-#     # total_aggregation = lidc_evaluator.get_aggregation(np.mean)
-#     # mean_iou, mean_dsc = total_aggregation['IoU'], total_aggregation['DSC']
-#     print(f'IoU: {total_ious} DSC: {total_dscs}')
-#     print(f'mean IoU: {np.mean(total_ious)} mean DSC: {np.mean(total_dscs)}')
-
-
-
-# def volume_eval2(cfg, vol_generator):
-#     start_time = time.time()
-#     predictor = DefaultPredictor(cfg)
-#     seg_total_time = 0
-#     for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg)):
-#         pid, scan_idx = infos['pid'], infos['scan_idx']
-#         pred_vol = np.zeros_like(mask_vol)
-#         for img_idx in range(vol.shape[2]):
-#             if img_idx%10 == 0:
-#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-#             seg_start_time = time.time()
-#             img = segment_lung(vol[...,img_idx])
-#             seg_end_time = time.time()
-#             seg_total_time += (seg_end_time-seg_start_time)
-#             img[img==-0] = 0
-#             img = np.uint8(255*((img-np.min(img))/(1e-7+np.max(img)-np.min(img))))
-
-# for img_idx in range(vol.shape[0]):
-#             if img_idx%10 == 0:
-#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-#             img = vol[img_idx]
-#             mask = mask_vol[img_idx]
-
-#             img = np.clip(img, -1000, 1000)
-#             img = raw_preprocess(img, lung_segment=False, change_channel=False)
-#             mask = mask_preprocess(mask)
-
-# def volume_eval2(cfg, vol_generator):
-#     # start_time = time.time()
-#     predictor = DefaultPredictor(cfg)
-#     # seg_total_time = 0
-#     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
-#     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
-#         pid, scan_idx = infos['pid'], infos['scan_idx']
-#         mask_vol = np.int32(mask_vol)
-#         pred_vol = np.zeros_like(mask_vol)
-#         for img_idx in range(vol.shape[0]):
-#             if img_idx%10 == 0:
-#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-#             # seg_start_time = time.time()
-#             img = vol[img_idx]
-#             img = np.clip(img, -1000, 1000)
-#             # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-#             img = raw_preprocess(img, change_channel=True, output_dtype=np.float32)
-#             outputs = predictor(img) 
-#             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-#             pred = np.sum(pred, axis=0)
-#             pred = mask_preprocess(pred)
-#             pred_vol[img_idx] = pred
-
-#             # Save image for result comparing
-#             if cfg.SAVE_COMPARE:
-#                 mask = mask_vol[img_idx]
-#                 pred = pred_vol[img_idx]
-#                 save_name = f'{pid}-{scan_idx}-{img_idx}'
-#                 save_path = os.path.join(cfg.SAVE_PATH, pid)
-#                 save_mask(img, mask, pred, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1, save_path=save_path, save_name=save_name)
-
-#         cm = confusion_matrix(np.reshape(mask_vol, [-1]), np.reshape(pred_vol, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES))
-#         mean_dsc, dscs = metrics2.mean_dsc(cm)
-#         mean_iou, ious = metrics2.mean_iou(cm)
-#         print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')        
-#         if vol_idx == 0:
-#             total_dscs = dscs[np.newaxis]
-#             total_ious = ious[np.newaxis]
-#         else:
-#             total_dscs = np.append(total_dscs, dscs[np.newaxis], axis=0)
-#             total_ious = np.append(total_ious, ious[np.newaxis], axis=0)
-
-#     total_dscs = np.mean(total_dscs, axis=0)
-#     total_ious = np.mean(total_ious, axis=0)
-#     print(f'IoU: {total_ious} DSC: {total_dscs}')
-#     print(f'mean IoU: {np.mean(total_ious):.04f} mean DSC: {np.mean(total_dscs):.04f}')
-    
-
 def volume_eval5(cfg, vol_generator):
     predictor = DefaultPredictor(cfg)
     # metric = util.metrics(n_class=2)
@@ -280,7 +109,7 @@ def volume_eval5(cfg, vol_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
-        # if vol_idx > 0: break
+        # if vol_idx > 4: break
         # print(pid)
         # if pid != '1.3.6.1.4.1.14519.5.2.1.6279.6001.100621383016233746780170740405':
         #     continue
@@ -307,79 +136,6 @@ def volume_eval5(cfg, vol_generator):
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
     print(30*'=')
     # class_acc, class_iou, class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice = metric.evaluation(True)
-
-
-# def volume_eval4(cfg, vol_generator):
-#     # start_time = time.time()
-#     predictor = DefaultPredictor(cfg)
-#     th = 0.5
-#     # seg_total_time = 0
-#     total_hit, total_acc = np.array([], np.int16), np.array([], np.float32)
-#     num_nodule, num_hit = 0, 0
-#     # total_num_hit = {}
-#     total_num_hit = 0
-#     for vol_idx, (vol, mask_vol, infos) in enumerate(vol_generator(cfg.FULL_DATA_PATH, case_indices=cfg.CASE_INDICES)):
-#         pid, scan_idx = infos['pid'], infos['scan_idx']
-#         pred_vol = np.zeros_like(mask_vol)
-#         for img_idx in range(vol.shape[2]):
-#             if img_idx%10 == 0:
-#                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-#             # seg_start_time = time.time()
-#             img = vol[...,img_idx]
-#             # img = np.uint8(np.tile(img[...,np.newaxis], (1,1,3)))
-#             img = raw_preprocess(img, norm=False)
-#             outputs = predictor(img) 
-#             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-#             # pred_classes = outputs["instances"]._fields['pred_classes'].cpu().detach().numpy() 
-#             # pred_classes = np.reshape(pred_classes, (pred_classes.shape[0], 1, 1))
-#             # pred_classes += 1
-#             pred = np.sum(pred, axis=0)
-#             pred = np.where(pred>=1, 1, 0)
-#             # if np.max(pred) > 1:
-#             #     print(2)
-#             # pred = np.int32(pred)
-#             pred_vol[...,img_idx] = pred
-            
-#         ious, dscs = nodules_eval(pid, pred_vol)
-#         print(f'---Patient {pid}  Scan {scan_idx} IoU: {ious} DSC: {dscs}')    
-
-#         case_hit, case_acc = np.array([], np.int16), np.array([], np.float32)
-#         num_nodule += dscs.shape[0]
-#         for th_idx, th in enumerate(np.linspace(0.5, 0.95, 10)):
-#         # for th_idx, th in enumerate(np.linspace(0.5, 0.95, 1)):
-#             hit = np.sum(np.where(dscs>th, 1, 0))
-#             acc = hit / dscs.shape[0]
-#             case_hit = np.append(case_hit, hit)[np.newaxis]
-#             case_acc = np.append(case_acc, acc)[np.newaxis]
-#             # TODO: write num_hit in correct way.
-#             # num_hit += np.sum(case_hit)
-            
-#             print(f'---Threshold: {th} Hit {hit} Acc {acc}')
-#         # if th not in total_num_hit:
-#         #     total_num_hit[th] = 0.0
-#         # else:
-#         #     total_num_hit[th] += np.sum(case_hit)
-#         total_num_hit += case_hit
-
-#         if vol_idx == 0:
-#             total_hit = case_hit
-#             total_acc = case_acc
-#         else:
-#             total_hit = np.append(total_hit, case_hit, axis=0)
-#             total_acc = np.append(total_acc, case_acc, axis=0)
-
-#         # if vol_idx > 0:
-#         #     break
-#     print(np.mean(total_hit, axis=0))
-#     print(np.mean(total_acc, axis=0))
-
-#     th = 0.5
-#     total_accss = 0
-#     for th_hit in total_num_hit[0]:
-#         acc = th_hit/num_nodule
-#         print(f'Threshold {th:.2f} Total hit {th_hit} Total nodules {num_nodule} Total acc {acc}')
-#         total_accss += acc
-#     print(total_accss / len(total_num_hit[0]))
 
 
 def nodules_eval(pid, pred_vol):
@@ -461,7 +217,7 @@ if __name__ == '__main__':
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
@@ -469,7 +225,7 @@ if __name__ == '__main__':
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0019999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0019999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0069999.pth")  # path to the model we just trained
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.95   # set a custom testing threshold
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
@@ -489,7 +245,7 @@ if __name__ == '__main__':
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    cfg.SAVE_COMPARE = True
+    cfg.SAVE_COMPARE = False
     # cfg.CASE_INDICES = list(range(10))
     cfg.SUBSET_INDICES = [8, 9]
     # cfg.SUBSET_INDICES = [2]

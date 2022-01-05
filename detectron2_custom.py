@@ -59,7 +59,7 @@ def common_config():
     cfg.DATASETS.TEST = ()
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
-    cfg.SOLVER.IMS_PER_BATCH = 6
+    cfg.SOLVER.IMS_PER_BATCH = 4
     cfg.SOLVER.BASE_LR = 0.0005  # pick a good LR
     cfg.SOLVER.MAX_ITER = 20000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
@@ -70,10 +70,10 @@ def common_config():
     # # By default, {MIN,MAX}_SIZE options are used in transforms.ResizeShortestEdge.
     # Please refer to ResizeShortestEdge for detailed definition.
     # Size of the smallest side of the image during training
-    # cfg.INPUT.MIN_SIZE_TRAIN = (800,)
+    cfg.INPUT.MIN_SIZE_TRAIN = (512, 800)
     # Sample size of smallest side by choice or random selection from range give by
     # INPUT.MIN_SIZE_TRAIN
-    cfg.INPUT.MIN_SIZE_TRAIN_SAMPLING = "choice"
+    cfg.INPUT.MIN_SIZE_TRAIN_SAMPLING = "range"
     # Maximum size of the side of the image during training
     cfg.INPUT.MAX_SIZE_TRAIN = 1333
     # Size of the smallest side of the image during testing. Set to zero to disable resize in testing.
@@ -91,7 +91,7 @@ def common_config():
     cfg.INPUT.CROP.TYPE = "relative_range"
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
-    cfg.INPUT.CROP.SIZE = [0.9, 0.9]
+    cfg.INPUT.CROP.SIZE = [0.7, 0.7]
     cfg.SOLVER.CHECKPOINT_PERIOD = 4000
     cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
     return cfg
@@ -126,16 +126,12 @@ def main():
 
     dataset_dicts = DatasetCatalog.get("my_dataset_train")
     # for image_idx, d in enumerate(random.sample(dataset_dicts, 5)):
-    for image_idx, d in enumerate(dataset_dicts[:87]):
+    # for image_idx, d in enumerate(dataset_dicts[:87]):
+    for image_idx, d in enumerate(dataset_dicts):
         img = cv2.imread(d["file_name"])
         visualizer = Visualizer(img, metadata=metadata, scale=1.0)
         out = visualizer.draw_dataset_dict(d)
         cv2_imshow(out.get_image(), os.path.join(cfg.OUTPUT_DIR, f'input_samples_{image_idx:03d}.png'))
-
-    # os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-    # trainer = DefaultTrainer(cfg) 
-    # trainer.resume_or_load(resume=False)
-    # trainer.train()
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg) 
