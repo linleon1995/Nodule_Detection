@@ -91,7 +91,7 @@ def common_config():
     cfg.INPUT.CROP.TYPE = "relative_range"
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
-    cfg.INPUT.CROP.SIZE = [0.7, 0.7]
+    cfg.INPUT.CROP.SIZE = [0.8, 0.8]
     cfg.SOLVER.CHECKPOINT_PERIOD = 4000
     cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
     return cfg
@@ -125,9 +125,9 @@ def main():
     metadata = MetadataCatalog.get("my_dataset_train")
 
     dataset_dicts = DatasetCatalog.get("my_dataset_train")
-    # for image_idx, d in enumerate(random.sample(dataset_dicts, 5)):
+    for image_idx, d in enumerate(random.sample(dataset_dicts, 3)):
     # for image_idx, d in enumerate(dataset_dicts[:87]):
-    for image_idx, d in enumerate(dataset_dicts):
+    # for image_idx, d in enumerate(dataset_dicts):
         img = cv2.imread(d["file_name"])
         visualizer = Visualizer(img, metadata=metadata, scale=1.0)
         out = visualizer.draw_dataset_dict(d)

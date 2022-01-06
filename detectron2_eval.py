@@ -11,7 +11,11 @@ import os
 import cv2
 import random
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.use('TkAgg')
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from skimage import measure
 from numpy.lib.npyio import save
 from pylidc.utils import consensus
 from pathlib import Path
@@ -19,7 +23,8 @@ from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess, raw_preprocess, compare_result, compare_result_enlarge
+from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess
+from utils import raw_preprocess, compare_result, compare_result_enlarge, time_record
 from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
@@ -45,35 +50,7 @@ def eval(cfg):
     # cfg now already contains everything we've set previously. We changed it a little bit for inference:
     predictor = DefaultPredictor(cfg)
 
-    register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
-    # DatasetCatalog.register("my_dataset_valid", lidc_to_datacatlog_valid)
-    dataset_dicts = DatasetCatalog.get("my_dataset_valid")
-    metadata = MetadataCatalog.get("my_dataset_valid")
-
-    for d in random.sample(dataset_dicts, 3):    
-        im = cv2.imread(d["file_name"])
-        outputs = predictor(im)  # format is documented at https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
-        v = Visualizer(im[:, :, ::-1],
-                    metadata=metadata, 
-                    scale=1.0, 
-                    instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels. This option is only available for segmentation models
-        )
-        out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-        cv2_imshow(out.get_image()[:, :, ::-1])
-
-
-    evaluator = COCOEvaluator("my_dataset_valid", cfg, distributed=False, output_dir="./output")
-    # evaluator = SemSegEvaluator("my_dataset_valid", distributed=False, num_classes=2, output_dir="./output")
-    val_loader = build_detection_test_loader(cfg, "my_dataset_valid")
-    print(inference_on_dataset(predictor.model, val_loader, evaluator))
-    # another equivalent way to evaluate the model is to use `trainer.test`
-
-
-def eval2(cfg):
-    # Inference should use the config with parameters that are used in training
-    # cfg now already contains everything we've set previously. We changed it a little bit for inference:
-    predictor = DefaultPredictor(cfg)
-
+    # register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
     register_coco_instances("my_dataset_valid", {}, rf"Annotations\LUNA16\annotations_valid.json", cfg.DATA_PATH)
     # DatasetCatalog.register("my_dataset_valid", lidc_to_datacatlog_valid)
     dataset_dicts = DatasetCatalog.get("my_dataset_valid")
@@ -98,89 +75,145 @@ def eval2(cfg):
     # another equivalent way to evaluate the model is to use `trainer.test`
 
 
-def volume_eval5(cfg, vol_generator):
+def volume_eval(cfg, vol_generator):
     predictor = DefaultPredictor(cfg)
-    # metric = util.metrics(n_class=2)
     vol_metric = volumetric_data_eval()
-    # volume_generator = vol_generator(cfg.FULL_DATA_PATH, only_nodule_slices=cfg.ONLY_NODULES)
+    # time_recording = time_record()
     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
-        # if vol_idx > 4: break
-        # print(pid)
-        # if pid != '1.3.6.1.4.1.14519.5.2.1.6279.6001.100621383016233746780170740405':
+        save_path = os.path.join(cfg.SAVE_PATH, pid)
+        # if vol_idx in [0, 2, 3, 7, 10 ,11, 13, 14]:
+        #     vol_metric = volumetric_data_eval()
+        # else:
         #     continue
         for img_idx in range(vol.shape[0]):
-            if img_idx%20 == 0:
+            if img_idx%50 == 0:
                 print(f'Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
             img = vol[img_idx]
             outputs = predictor(img) 
             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-            # if pred.shape[0] > 0:
-            #     print(3)
             pred = np.sum(pred, axis=0)
             pred = mask_preprocess(pred)
             pred_vol[img_idx] = pred
-
             if cfg.SAVE_COMPARE:
-                if vol_idx > 4:
-                    continue
-                save_path = os.path.join(cfg.SAVE_PATH, pid)
                 save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=save_path, save_name=f'{pid}-{img_idx:03d}.png')
+
         # metric.calculate(pred_vol, mask_vol, area_th=10)
         vol_metric.calculate(mask_vol, pred_vol)
+        # save_mask_in_3d(mask_vol, 
+        #                 save_path1=os.path.join(save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
+        #                 save_path2=os.path.join(save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'))
+        # save_mask_in_3d(pred_vol, 
+        #                 save_path1=os.path.join(save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
+        #                 save_path2=os.path.join(save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
         
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
-    print(30*'=')
-    # class_acc, class_iou, class_f1, mIOU, pixel_Precision, pixel_Recall, Total_dice = metric.evaluation(True)
-
-
-def nodules_eval(pid, pred_vol):
-    scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == pid)
-    num_scan_in_one_patient = scans.count()
-    print(f'{pid} has {num_scan_in_one_patient} scan')
-    scan_list = scans.all()
-    mask_threshold = 8
-
-    # TODO:
-    scan_list = scan_list[:1]
-    for scan_idx, scan in enumerate(scan_list):
-        if scan is None:
-            print(scan)
-        nodules_annotation = scan.cluster_annotations()
-        
-        print("Patient ID: {} Dicom Shape: {} Number of Annotated Nodules: {}".format(pid, pred_vol.shape, len(nodules_annotation)))
-
-        # Patients with nodules
-        masks_vol = np.zeros_like(pred_vol)
-        total_dsc, total_iou = np.array([], np.float32), np.array([], np.float32)
-        for nodule_idx, nodule in enumerate(nodules_annotation):
-        # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
-        # This current for loop iterates over total number of nodules in a single patient
-            nodule_mask_vol, cbbox, masks = consensus(nodule, clevel=0.5, pad=512)
-            # malignancy, cancer_label = calculate_malignancy(nodule)
-            # one_mask_vol = np.zeros_like(vol)
-            nodule_pred_vol = pred_vol[cbbox]
-            total_cm = 0
-            for slice_idx in range(nodule_mask_vol.shape[2]):
-                if np.sum(nodule_mask_vol[:,:,slice_idx]) <= mask_threshold:
-                    continue
-                # print(np.sum(nodule_mask_vol[...,slice_idx]), np.sum(nodule_pred_vol[...,slice_idx]))
-                # print(np.max(nodule_mask_vol[...,slice_idx]), np.max(nodule_pred_vol[...,slice_idx]))
-                total_cm += confusion_matrix(np.reshape(nodule_mask_vol[...,slice_idx], [-1]), np.reshape(nodule_pred_vol[...,slice_idx], [-1]))
-            mean_dsc, dscs = metrics2.mean_dsc(total_cm)
-            mean_iou, ious = metrics2.mean_iou(total_cm)
-            total_dsc = np.append(total_dsc, mean_dsc)
-            total_iou = np.append(total_iou, mean_iou)
-        # print('IoU', total_iou)
-        # print('DSC', total_dsc)
-    return total_iou, total_dsc
-                
-
     
+
+def save_mask_in_3d_interface(vol_generator, save_path1, save_path2):
+    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+                                     only_nodule_slices=cfg.ONLY_NODULES)
+    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
+        pid, scan_idx = infos['pid'], infos['scan_idx']
+        mask_vol = np.int32(mask_vol)
+        if vol_idx > 9:
+            if np.sum(mask_vol==0) == mask_vol.size:
+                print('No mask')
+                continue
+
+            save_mask_in_3d(mask_vol, save_path1, save_path2)
+
+
+def save_mask_in_3d(volume, save_path1, save_path2):
+    if np.sum(volume==0) == volume.size:
+        print('No mask')
+    else:
+        plot_volume_in_mesh(volume, 0, save_path1)
+        volume = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=30)
+        print(np.unique(volume))
+        volume_list = [np.int32(volume==label) for label in np.unique(volume)[1:]]
+        plot_volume_in_mesh(volume_list, 0, save_path2)
+
+
+def show_mask_in_2d(cfg, vol_generator):
+    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+                                     only_nodule_slices=cfg.ONLY_NODULES)
+    fig, ax = plt.subplots(1, 1, figsize=(4,4))
+    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
+        pid, scan_idx = infos['pid'], infos['scan_idx']
+        mask_vol = np.int32(mask_vol)
+        if vol_idx in [0, 2, 3, 7, 10 ,11]:
+            if np.sum(mask_vol==0) == mask_vol.size:
+                print('No mask')
+                continue
+            mask_vol2 = volumetric_data_eval.volume_preprocess(mask_vol, connectivity=26, area_threshold=30)
+            def plot_func(volume, name):
+                zs, ys, xs = np.where(volume)
+                # min_nonzero_slice, max_nonzero_slice = np.min(zs), np.max(zs)
+                zs = np.unique(zs)
+                for slice_idx in zs:
+                    ax.imshow(volume[slice_idx], vmin=0, vmax=5)
+                    fig.savefig(os.path.join(cfg.SAVE_PATH, '2d_mask', f'{name}-{vol_idx:03d}-{slice_idx:03d}.png'))
+
+            plot_func(mask_vol, 'raw')
+            plot_func(mask_vol2, 'preprocess')
+
+
+def plot_volume_in_mesh(volume_geroup, threshold=-300, save_path=None): 
+    if not isinstance(volume_geroup, list):
+        volume_geroup = [volume_geroup]
+
+    # TODO: fix limited colors
+    # from itertools import combinations
+ 
+    # # Get all combinations of [1, 2, 3]
+    # # and length 2
+    # comb = combinations([1, 2, 3], 2)
+    
+    # # Print the obtained combinations
+    # for i in list(comb):
+    #     print (i)
+    colors = [[0.5, 0.5, 1], [0.5, 1, 0.5], [1, 0.5, 0.5], [0.5, 1, 1], [1, 1, 0.5], [1, 0.5, 1],
+              [0.1, 0.7, 1], [0.7, 1, 0.1], [1, 0.7, 0.1], [0.1, 0.7, 0.7], [0.7, 0.7, 0.1], [0.7, 0.1, 0.7]]
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    for vol_idx, vol in enumerate(volume_geroup):
+        p = vol.transpose(2,1,0)
+        verts, faces, normals, values = measure.marching_cubes_lewiner(p, threshold)
+        mesh = Poly3DCollection(verts[faces], alpha=0.3)
+        face_color = colors[vol_idx]
+        # face_color = np.random.rand(3)
+        mesh.set_facecolor(face_color)
+        ax.add_collection3d(mesh)
+
+    ax.set_xlim(0, p.shape[0])
+    ax.set_ylim(0, p.shape[1])
+    ax.set_zlim(0, p.shape[2])
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+
+def plot_3d(image, threshold=-300): 
+    p = image.transpose(2,1,0)
+    verts, faces, normals, values = measure.marching_cubes_lewiner(p, threshold)
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111, projection='3d')
+    mesh = Poly3DCollection(verts[faces], alpha=0.3)
+    face_color = [0.5, 0.5, 1]
+    mesh.set_facecolor(face_color)
+    ax.add_collection3d(mesh)
+    ax.set_xlim(0, p.shape[0])
+    ax.set_ylim(0, p.shape[1])
+    ax.set_zlim(0, p.shape[2])
+    plt.show()
+
 
 def save_mask(img, mask, pred, num_class, save_path, save_name='img'):
     # if np.sum(mask) > 0:
@@ -218,6 +251,7 @@ if __name__ == '__main__':
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
@@ -245,9 +279,10 @@ if __name__ == '__main__':
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    cfg.SAVE_COMPARE = False
+    cfg.SAVE_COMPARE = True
     # cfg.CASE_INDICES = list(range(10))
     cfg.SUBSET_INDICES = [8, 9]
+    # cfg.INPUT.MIN_SIZE_TEST = 512
     # cfg.SUBSET_INDICES = [2]
     # cfg.SUBSET_INDICES = [0, 1]
     # cfg.SUBSET_INDICES = list(range(8))
@@ -257,22 +292,8 @@ if __name__ == '__main__':
     cfg.ONLY_NODULES = True
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
-    # eval2(cfg)
-    # save_mask(cfg)
-    # case_list = dataset_utils.get_files(cfg.DATA_PATH, keys=[], return_fullpath=False, sort=True, recursive=False, get_dirs=True)
-    # case_list = case_list[807:]
-    # case_list = case_list[810:813]
-    # case_list = case_list[815:818]
-    # volume_eval3(cfg, case_list)
-
-
-    # volume_eval2(cfg, vol_generator=asus_nodule_volume_generator)
-    # volume_eval2(cfg, vol_generator=luna16_volume_generator)
-    # volume_eval2(cfg, vol_generator=lidc_volume_generator)
-
-
-    # volume_eval4(cfg, vol_generator=lidc_volume_generator)
-    # volume_eval4(cfg, vol_generator=asus_nodule_volume_generator)
-
-    volume_eval5(cfg, vol_generator=luna16_volume_generator)
-    # volume_eval5(cfg, vol_generator=asus_nodule_volume_generator)
+    # eval(cfg)
+    volume_eval(cfg, vol_generator=luna16_volume_generator)
+    # volume_eval(cfg, vol_generator=asus_nodule_volume_generator)
+    # show_mask_in_3d(vol_generator=luna16_volume_generator)
+    # show_mask_in_2d(cfg, vol_generator=luna16_volume_generator)

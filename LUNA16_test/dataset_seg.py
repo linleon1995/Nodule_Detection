@@ -47,10 +47,7 @@ data_subset_path = os.path.join(ROOT, 'LUNA16/data/subset*')
 seg_lung_path = os.path.join(ROOT, 'LUNA16/data/seg-lungs-LUNA16')
 annotations_path = os.path.join(ROOT, 'LUNA16/data/annotations.csv')
 candidates_path = os.path.join(ROOT, 'LUNA16/data/candidates.csv')
-#  +++
-# TEST_SUBJECT = ['subset8', 'subset9']
-TEST_SUBJECT = None
-#  +++
+
 
 @functools.lru_cache(1)
 def getCandidateInfoList(requireOnDisk_bool=True):
@@ -58,30 +55,9 @@ def getCandidateInfoList(requireOnDisk_bool=True):
     # This will let us use the data, even if we haven't downloaded all of
     # the subsets yet.
     mhd_list = glob.glob(data_subset_path + '/*.mhd')
-    #  +++
-    if TEST_SUBJECT:
-        new_mhd_list = []
-        for path in mhd_list:
-            for test_subject in TEST_SUBJECT:
-                if test_subject in path:
-                    new_mhd_list.append(path)
-                    break
-        mhd_list = new_mhd_list
-    #  +++
-
     presentOnDisk_set = {os.path.split(p)[-1][:-4] for p in mhd_list}
 
     lung_mhd_list = glob.glob(seg_lung_path + '/*.mhd')
-    #  +++
-    if TEST_SUBJECT:
-        new_mhd_list = []
-        for path in lung_mhd_list:
-            for test_subject in TEST_SUBJECT:
-                if test_subject in path:
-                    new_mhd_list.append(path)
-                    break
-        lung_mhd_list = new_mhd_list
-    #  +++
     lung_presentOnDisk_set = {os.path.split(p)[-1][:-4] for p in lung_mhd_list}
 
     candidateInfo_list = []
@@ -418,7 +394,7 @@ class TrainingLuna2dSegmentationDataset(Luna2dSegmentationDataset):
 
 class TestingLuna2dSegmentationDataset(Dataset):
     def __init__(self,
-                 series_uid=None,
+                 subset_list=None,
                  contextSlices_count = 3,
                  contextSlices_shift = 7,
                  fullCt_bool=False,
@@ -429,13 +405,21 @@ class TestingLuna2dSegmentationDataset(Dataset):
         self.layers = self.contextSlices_count * 2 + 1
         self.fullCt_bool = fullCt_bool
         self.img_size = img_size
-
-        if series_uid:
-            self.series_list = [series_uid]
-        else:
-            self.series_list = sorted(getCandidateInfoDict().keys())
+        self.series_list = sorted(getCandidateInfoDict().keys())
 
         self.sample_list = []
+        # +++
+        if subset_list:
+            from modules.data import dataset_utils
+            path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+
+            dir_list = dataset_utils.get_files(path, subset_list, get_dirs=True, recursive=False)
+            series_list = []
+            for data_dir in dir_list:
+                series_list.extend(dataset_utils.get_files(data_dir, 'mhd', return_fullpath=False))
+            self.series_list = [path[:-4] for path in series_list]
+        # +++
+
         for series_uid in tqdm.tqdm( self.series_list ):
             if glob.glob('{}/{}.mhd'.format(data_subset_path, series_uid)) == []:
                 continue

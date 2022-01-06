@@ -15,9 +15,31 @@ from skimage import measure, morphology
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from pprint import pprint
+import time
 from modules.data import dataset_utils
 
 
+class time_record():
+    def __init__(self):
+        self.time_period = {}
+        self.start_time = {}
+        self.end_time = {}
+        self.call_times = 1
+
+    def set_start_time(self, name):
+        self.start_time[name] = time.time()
+
+    def set_end_time(self, name):
+        self.end_time[name] = time.time()
+        if name in self.time_period:
+            self.time_period[name] += (self.end_time[name] - self.start_time[name])
+        else:
+            self.time_period[name] = self.end_time[name] - self.start_time[name]
+
+    def show_recording_time(self):
+        pprint(self.time_period)
+        
 
 def calculate_malignancy(nodule):
     # Calculate the malignancy of a nodule with the annotations made by 4 doctors. Return median high of the annotated cancer, True or False label for cancer

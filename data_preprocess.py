@@ -168,7 +168,8 @@ if __name__ == '__main__':
     # convert_npy_to_png(src, dst, src_format, dst_format)
 
     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess'
+    # dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-hu'
     # lidc_preprocess(path=src, save_path=dst)
     luna16_preprocess(data_path=src, save_path=dst)
     pass
