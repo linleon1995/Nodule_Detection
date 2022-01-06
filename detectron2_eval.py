@@ -76,20 +76,26 @@ def eval(cfg):
 
 
 def volume_eval(cfg, vol_generator):
+    time_recording = time_record()
+    time_recording.set_start_time('Total')
     predictor = DefaultPredictor(cfg)
     vol_metric = volumetric_data_eval()
-    # time_recording = time_record()
+    
     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
+
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
-        save_path = os.path.join(cfg.SAVE_PATH, pid)
+        case_save_path = os.path.join(cfg.SAVE_PATH, pid)
+        if vol_idx > 10:
+            break
         # if vol_idx in [0, 2, 3, 7, 10 ,11, 13, 14]:
         #     vol_metric = volumetric_data_eval()
         # else:
         #     continue
+        time_recording.set_start_time('2D Model Inference'if not cfg.SAVE_COMPARE else '2D Model Inference and Save result in image.')
         for img_idx in range(vol.shape[0]):
             if img_idx%50 == 0:
                 print(f'Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
@@ -100,18 +106,40 @@ def volume_eval(cfg, vol_generator):
             pred = mask_preprocess(pred)
             pred_vol[img_idx] = pred
             if cfg.SAVE_COMPARE:
-                save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=save_path, save_name=f'{pid}-{img_idx:03d}.png')
+                save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=case_save_path, save_name=f'{pid}-{img_idx:03d}.png')
+        time_recording.set_end_time('2D Model Inference'if not cfg.SAVE_COMPARE else '2D Model Inference and Save result in image.')
 
-        # metric.calculate(pred_vol, mask_vol, area_th=10)
-        vol_metric.calculate(mask_vol, pred_vol)
+        time_recording.set_start_time('Nodule Evaluation')
+        vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol)
+        if vol_idx == 0:
+            nodule_idx = 0
+            vol_info_attritube = list(vol_nodule_infos[0].keys())
+            vol_info_attritube.insert(0, 'Series uid')
+            vol_info_attritube.extend(['IoU>0.1', 'IoU>0.3', 'IoU>0.5', 'IoU>0.7', 'IoU>0.9'])
+            df = pd.DataFrame(columns=vol_info_attritube)
+        for nodule_info in vol_nodule_infos:
+            vol_info_value = list(nodule_info.values())
+            vol_info_value.insert(0, pid)
+            vol_info_value.extend([np.int32(nodule_info['Nodule IoU']>0.1), 
+                                   np.int32(nodule_info['Nodule IoU']>0.3), 
+                                   np.int32(nodule_info['Nodule IoU']>0.5), 
+                                   np.int32(nodule_info['Nodule IoU']>0.7), 
+                                   np.int32(nodule_info['Nodule IoU']>0.9)])
+            df.loc[nodule_idx] = vol_info_value
+            nodule_idx += 1
+            print(nodule_info)
+        time_recording.set_end_time('Nodule Evaluation')
         # save_mask_in_3d(mask_vol, 
-        #                 save_path1=os.path.join(save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
-        #                 save_path2=os.path.join(save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'))
+        #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
+        #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'))
         # save_mask_in_3d(pred_vol, 
-        #                 save_path1=os.path.join(save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
-        #                 save_path2=os.path.join(save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
+        #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
+        #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
         
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
+    df.to_csv(os.path.join(cfg.SAVE_PATH, 'nodule_informations.csv'))
+    time_recording.set_end_time('Total')
+    time_recording.show_recording_time()
     
 
 def save_mask_in_3d_interface(vol_generator, save_path1, save_path2):
@@ -279,7 +307,7 @@ if __name__ == '__main__':
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    cfg.SAVE_COMPARE = True
+    cfg.SAVE_COMPARE = False
     # cfg.CASE_INDICES = list(range(10))
     cfg.SUBSET_INDICES = [8, 9]
     # cfg.INPUT.MIN_SIZE_TEST = 512

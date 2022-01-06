@@ -15,12 +15,13 @@ from skimage import measure, morphology
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from pprint import pprint
 import time
 from modules.data import dataset_utils
 
 
 class time_record():
+    # TODO: to check the start and end be setted together
+
     def __init__(self):
         self.time_period = {}
         self.start_time = {}
@@ -38,7 +39,9 @@ class time_record():
             self.time_period[name] = self.end_time[name] - self.start_time[name]
 
     def show_recording_time(self):
-        pprint(self.time_period)
+        total_time = self.time_period['Total']
+        for name, time in self.time_period.items():
+            print(f'{name} {time:.2f} second {time/total_time*100:.2f} %')
         
 
 def calculate_malignancy(nodule):
