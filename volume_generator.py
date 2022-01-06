@@ -77,6 +77,23 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
 #     return indices['Subject ID']
 
 
+class luna16_volume_generator():
+    def __init__():
+        pass
+
+    @classmethod
+    def Build_DLP_luna16_volume_generator(cls):
+        
+        return cls
+
+    @staticmethod
+    def DLP_luna16_preprocessing():
+        # Deep Learning with Pytorch: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/viewer.html?pdfurl=https%3A%2F%2Fpytorch.org%2Fassets%2Fdeep-learning%2FDeep-Learning-with-PyTorch.pdf&clen=46912982&chunk=true
+        pass
+
+    @staticmethod
+    def Round_luna16_preprocessing():
+        pass
 
 def luna16_volume_generator(data_path, subset_indices=None, case_indices=None, only_nodule_slices=False):
     subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)

@@ -169,7 +169,7 @@ if __name__ == '__main__':
 
     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
     # dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-hu'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round'
     # lidc_preprocess(path=src, save_path=dst)
     luna16_preprocess(data_path=src, save_path=dst)
     pass

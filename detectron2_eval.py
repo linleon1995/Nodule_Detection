@@ -89,12 +89,16 @@ def volume_eval(cfg, vol_generator):
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
         case_save_path = os.path.join(cfg.SAVE_PATH, pid)
-        if vol_idx > 10:
-            break
-        # if vol_idx in [0, 2, 3, 7, 10 ,11, 13, 14]:
-        #     vol_metric = volumetric_data_eval()
-        # else:
+        # if vol_idx > 10:
+        #     break
+        # pid_list =[
+        #             '1.3.6.1.4.1.14519.5.2.1.6279.6001.229860476925100292554329427970',
+        #             '1.3.6.1.4.1.14519.5.2.1.6279.6001.204287915902811325371247860532',
+        #             '1.3.6.1.4.1.14519.5.2.1.6279.6001.100225287222365663678666836860',
+        #            '1.3.6.1.4.1.14519.5.2.1.6279.6001.387954549120924524005910602207']
+        # if pid not in pid_list:
         #     continue
+        
         time_recording.set_start_time('2D Model Inference'if not cfg.SAVE_COMPARE else '2D Model Inference and Save result in image.')
         for img_idx in range(vol.shape[0]):
             if img_idx%50 == 0:
@@ -129,6 +133,8 @@ def volume_eval(cfg, vol_generator):
             nodule_idx += 1
             print(nodule_info)
         time_recording.set_end_time('Nodule Evaluation')
+        # if pid == pid_list[-1]:
+        #     break
         # save_mask_in_3d(mask_vol, 
         #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
         #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'))
@@ -243,33 +249,27 @@ def plot_3d(image, threshold=-300):
     plt.show()
 
 
-def save_mask(img, mask, pred, num_class, save_path, save_name='img'):
-    # if np.sum(mask) > 0:
-    #     if np.sum(pred) > 0:
-    #         sub_dir = 'tp'
-    #     else:
-    #         sub_dir = 'fn'
-    # else:
-    #     if np.sum(pred) > 0:
-    #         sub_dir = 'fp'
-    #     else:
-    #         sub_dir = 'tn'
+def save_mask(img, mask, pred, num_class, save_path, save_name='img', mask_or_pred_exist=True):
+    if mask_or_pred_exist:
+        condition = (np.sum(mask)>0 or np.sum(pred)>0)
+    else:
+        condition = True
         
-    # sub_save_path = os.path.join(save_path, sub_dir)
-    sub_save_path = save_path
-    if not os.path.isdir(sub_save_path):
-        os.makedirs(sub_save_path)
+    if condition:
+        sub_save_path = save_path
+        if not os.path.isdir(sub_save_path):
+            os.makedirs(sub_save_path)
 
-    fig1, _ = compare_result(img, mask, pred, show_mask_size=True, alpha=0.2, vmin=0, vmax=num_class-1)
-    fig1.savefig(os.path.join(sub_save_path, f'{save_name}.png'))
-    # fig1.tight_layout()
-    plt.close(fig1)
+        fig1, _ = compare_result(img, mask, pred, show_mask_size=True, alpha=0.2, vmin=0, vmax=num_class-1)
+        fig1.savefig(os.path.join(sub_save_path, f'{save_name}.png'))
+        # fig1.tight_layout()
+        plt.close(fig1)
 
-    fig2, _ = compare_result_enlarge(img, mask, pred, show_mask_size=False, alpha=0.2, vmin=0, vmax=num_class-1)
-    if fig2 is not None:
-        fig2.savefig(os.path.join(sub_save_path, f'{save_name}-en.png'))
-        # fig2.tight_layout()
-        plt.close(fig2)
+        fig2, _ = compare_result_enlarge(img, mask, pred, show_mask_size=False, alpha=0.2, vmin=0, vmax=num_class-1)
+        if fig2 is not None:
+            fig2.savefig(os.path.join(sub_save_path, f'{save_name}-en.png'))
+            # fig2.tight_layout()
+            plt.close(fig2)
 
 
 
@@ -307,7 +307,7 @@ if __name__ == '__main__':
     # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    cfg.SAVE_COMPARE = False
+    cfg.SAVE_COMPARE = True
     # cfg.CASE_INDICES = list(range(10))
     cfg.SUBSET_INDICES = [8, 9]
     # cfg.INPUT.MIN_SIZE_TEST = 512

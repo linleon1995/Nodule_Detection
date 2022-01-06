@@ -32,7 +32,7 @@ class volumetric_data_eval():
         total_nodule_infos = []
 
         for nodule_idx, mask_label in enumerate(range(1, np.max(mask_vol)+1)):
-            gt_nodule = mask_vol==mask_label
+            gt_nodule = np.int32(mask_vol==mask_label)
             gt_nodule_size = np.sum(gt_nodule)
             BestNoduleIoU, BestNoduleDSC = 0, 0
             BestSliceIoU, BestSliceIndex = 0, 'Null'
@@ -45,7 +45,7 @@ class volumetric_data_eval():
                             'Size': np.int32(gt_nodule_size), 'Relative Size': gt_nodule_size/mask_vol.size,
                             'Best Slice IoU': BestSliceIoU, 'Best Slice Index': BestSliceIndex}
             for pred_label in range(1, np.max(pred_vol)+1):
-                pred_nodule = pred_vol==pred_label
+                pred_nodule = np.int32(pred_vol==pred_label)
                 NoduleIoU = self.IoU(gt_nodule, pred_nodule)
                 NoduleDSC = self.DSC(gt_nodule, pred_nodule)
 
@@ -53,7 +53,7 @@ class volumetric_data_eval():
                     if NoduleIoU > BestNoduleIoU:
                         BestNoduleIoU = NoduleIoU
                         BestNoduleDSC = NoduleDSC
-                        BestSliceIoU = 0
+                        BestSliceIoU, BestSliceIndex = 0, 'Null'
                         for slice_idx in range(mask_nonzero_slice[0], mask_nonzero_slice[1]+1):
                             SliceIOU = self.IoU(mask_vol[slice_idx]==mask_label, pred_vol[slice_idx]==pred_label)
                             if SliceIOU > BestSliceIoU:
@@ -98,7 +98,7 @@ class volumetric_data_eval():
         # category = list(range(1, np.max(volume)+1))
         category = np.unique(volume)
         category = np.delete(category, np.where(category==0))
-        category = np.take(category, np.argsort(total_area_size)[::-1])
+        # category = np.take(category, np.argsort(total_area_size)[::-1])
 
         # Convert Label and keep big enough nodules (keeping nodule number = max_nodule_num)
         new_volume = np.zeros_like(volume)
