@@ -16,7 +16,7 @@ class volumetric_data_eval():
         pred_vol = self.volume_preprocess(pred_vol, self.connectivity, self.area_threshold)
         assert np.shape(mask_vol) == np.shape(pred_vol)
         nodule_infos = self._3D_evaluation(mask_vol, pred_vol)
-        # self._2D_evaluation(mask_vol, pred_vol)
+        self._2D_evaluation(mask_vol, pred_vol)
         return nodule_infos
     
     @classmethod

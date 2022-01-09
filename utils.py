@@ -40,9 +40,14 @@ class time_record():
 
     def show_recording_time(self):
         total_time = self.time_period['Total']
+        function_time = 0
         for name, time in self.time_period.items():
-            print(f'{name} {time:.2f} second {time/total_time*100:.2f} %')
-        
+            if name != 'Total':
+                print(f'{name} {time:.2f} second {time/total_time*100:.2f} %')
+                function_time += time
+
+        print(f'Others {total_time-function_time} second {(total_time-function_time)/total_time*100:.2f} %')
+        print(f'Total {total_time:.2f} second {total_time/total_time*100:.2f} %')
 
 def calculate_malignancy(nodule):
     # Calculate the malignancy of a nodule with the annotations made by 4 doctors. Return median high of the annotated cancer, True or False label for cancer

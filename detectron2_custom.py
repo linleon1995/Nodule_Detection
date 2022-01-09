@@ -61,10 +61,10 @@ def common_config():
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
     cfg.SOLVER.IMS_PER_BATCH = 4
     cfg.SOLVER.BASE_LR = 0.0005  # pick a good LR
-    cfg.SOLVER.MAX_ITER = 20000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 16000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
+    # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.OUTPUT_DIR = train_utils.create_training_path('output')
     # # By default, {MIN,MAX}_SIZE options are used in transforms.ResizeShortestEdge.
@@ -91,9 +91,13 @@ def common_config():
     cfg.INPUT.CROP.TYPE = "relative_range"
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
-    cfg.INPUT.CROP.SIZE = [0.8, 0.8]
+    cfg.INPUT.CROP.SIZE = [0.7, 0.7]
     cfg.SOLVER.CHECKPOINT_PERIOD = 4000
     cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
+    # cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "diou"
+    # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "diou"
+    # cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
+    cfg.MODEL.RPN.IOU_THRESHOLDS = [0.3, 0.7]
     return cfg
 
     
