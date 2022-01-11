@@ -314,7 +314,7 @@ if __name__ == '__main__':
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_final.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0000999.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0011999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
@@ -349,6 +349,7 @@ if __name__ == '__main__':
     # cfg.SUBSET_INDICES = list(range(8))
     # cfg.CASE_INDICES = list(range(10, 20))
     cfg.CASE_INDICES = list(range(45, 57))
+    # cfg.CASE_INDICES = list(range(57))
     # cfg.CASE_INDICES = list(range(810, 820))
     cfg.ONLY_NODULES = True
     # TODO: Not a clear naming variable (NUM_TEST_CASES = None)
