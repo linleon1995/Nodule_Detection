@@ -25,7 +25,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess
 from utils import raw_preprocess, compare_result, compare_result_enlarge, time_record
-from convert_to_coco_structure import lidc_to_datacatlog_valid
+# from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
 import time
@@ -34,6 +34,7 @@ import pandas as pd
 from tqdm import tqdm
 from volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator
 from volume_eval import volumetric_data_eval
+import utils
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -107,9 +108,13 @@ class Nodule_data_recording():
 
 def volume_eval(cfg, vol_generator):
     # TODO: Add in subset information to divide different trial (csv will replace)
-    # TODO: 
     if not os.path.isdir(cfg.SAVE_PATH):
         os.makedirs(cfg.SAVE_PATH)
+    if cfg.SAVE_ALL_COMPARES:
+        save_image_condition = lambda x: True
+    else:
+        save_image_condition = lambda x: True if x > 10 else False
+                    
     time_recording = time_record()
     time_recording.set_start_time('Total')
     predictor = DefaultPredictor(cfg)
@@ -124,55 +129,31 @@ def volume_eval(cfg, vol_generator):
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
         case_save_path = os.path.join(cfg.SAVE_PATH, pid)
-        # if pid != '1.3.6.1.4.1.14519.5.2.1.6279.6001.137773550852881583165286615668':
-        #     continue
+
+        # TODO: use decorator to write a breaking condition
         if cfg.NUM_TEST_CASES is not None:
             if vol_idx >= cfg.NUM_TEST_CASES-1:
                 break
 
-        time_recording.set_start_time('2D Model Inference'if not cfg.SAVE_COMPARE else '2D Model Inference and Save result in image.')
+        time_recording.set_start_time('2D Model Inference and Save result in image.')
         for img_idx in range(vol.shape[0]):
             if img_idx%50 == 0:
                 print(f'Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
             img = vol[img_idx]
+            time_recording.set_start_time('Inference')
             outputs = predictor(img) 
+            time_recording.set_end_time('Inference')
             pred = outputs["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-            # if pid == '1.3.6.1.4.1.14519.5.2.1.6279.6001.137773550852881583165286615668' and img_idx > 195:
-            #     print(np.sum(pred))
-            #     cv2_imshow(255*mask_preprocess(pred[0], output_dtype=np.uint8))
-                # print(np.sum(pred[1]))
-                # cv2_imshow(255*mask_preprocess(pred[1], output_dtype=np.uint8))
             pred = np.sum(pred, axis=0)
             pred = mask_preprocess(pred)
             pred_vol[img_idx] = pred
-            if cfg.SAVE_COMPARE:
+            if save_image_condition:
                 save_mask(img, mask_vol[img_idx], pred, num_class=2, save_path=case_save_path, save_name=f'{pid}-{img_idx:03d}.png')
-        time_recording.set_end_time('2D Model Inference'if not cfg.SAVE_COMPARE else '2D Model Inference and Save result in image.')
+        time_recording.set_end_time('2D Model Inference and Save result in image.')
 
         time_recording.set_start_time('Nodule Evaluation')
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol)
-
-        # if vol_idx == 0:
-        #     nodule_idx = 0
-        #     vol_info_attritube = ['Nodule ID', 'Nodule IoU', 'Nodule DSC', 'Slice Number', 
-        #                           'Size', 'Relative Size','Best Slice IoU', 'Best Slice Index']
-        #     # vol_info_attritube = list(vol_nodule_infos[0].keys())
-        #     vol_info_attritube.insert(0, 'Series uid')
-        #     vol_info_attritube.extend(['IoU>0.1', 'IoU>0.3', 'IoU>0.5', 'IoU>0.7', 'IoU>0.9'])
-        #     df = pd.DataFrame(columns=vol_info_attritube)
-        # for nodule_info in vol_nodule_infos:
-        #     vol_info_value = list(nodule_info.values())
-        #     vol_info_value.insert(0, pid)
-        #     vol_info_value.extend([np.int32(nodule_info['Nodule IoU']>0.1), 
-        #                            np.int32(nodule_info['Nodule IoU']>0.3), 
-        #                            np.int32(nodule_info['Nodule IoU']>0.5), 
-        #                            np.int32(nodule_info['Nodule IoU']>0.7), 
-        #                            np.int32(nodule_info['Nodule IoU']>0.9)])
-        #     df.loc[nodule_idx] = vol_info_value
-        #     nodule_idx += 1
         data_recorder.write_row(vol_nodule_infos, pid)
-        
-
         time_recording.set_end_time('Nodule Evaluation')
         # if pid == pid_list[-1]:
         #     break
@@ -325,13 +306,17 @@ if __name__ == '__main__':
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
     check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_final.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0011999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0000999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0011999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0019999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0039999.pth")  # path to the model we just trained
@@ -351,27 +336,30 @@ if __name__ == '__main__':
     # TODO: dataset path in configuration
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-    # cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
+    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    cfg.SAVE_COMPARE = False
     # cfg.CASE_INDICES = list(range(10))
-    cfg.SUBSET_INDICES = [8, 9]
+    # cfg.SUBSET_INDICES = [8, 9]
+    cfg.SUBSET_INDICES = None
     # cfg.SUBSET_INDICES = list(range(7))
     # cfg.INPUT.MIN_SIZE_TEST = 512
     # cfg.SUBSET_INDICES = [2]
     # cfg.SUBSET_INDICES = [0, 1]
     # cfg.SUBSET_INDICES = list(range(8))
     # cfg.CASE_INDICES = list(range(10, 20))
-    cfg.CASE_INDICES = None
+    cfg.CASE_INDICES = list(range(45, 57))
     # cfg.CASE_INDICES = list(range(810, 820))
     cfg.ONLY_NODULES = True
     # TODO: Not a clear naming variable (NUM_TEST_CASES = None)
     cfg.NUM_TEST_CASES = None
+    cfg.SAVE_ALL_COMPARES = False
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
     # eval(cfg)
-    volume_eval(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
-    # volume_eval(cfg, vol_generator=asus_nodule_volume_generator)
+    # volume_eval(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
+    volume_eval(cfg, vol_generator=asus_nodule_volume_generator)
     # show_mask_in_3d(vol_generator=luna16_volume_generator)
     # show_mask_in_2d(cfg, vol_generator=luna16_volume_generator)
+
+    # utils.check_image()

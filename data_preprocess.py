@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from pylidc.utils import consensus
 import warnings
 from utils import calculate_malignancy, raw_preprocess, mask_preprocess, compare_result, compare_result_enlarge
-from volume_generator import luna16_volume_generator
+from volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from tqdm import tqdm
@@ -17,31 +17,32 @@ from modules.data import dataset_utils
 
 
 
-def luna16_preprocess(data_path, save_path):
-    volume_generator = luna16_volume_generator(data_path)
+def volumetric_data_preprocess(data_path, save_path, vol_generator_func):
+    volume_generator = vol_generator_func(data_path)
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx, subset = infos['pid'], infos['scan_idx'], infos['subset']
         # Create saving directry
-        save_sub_dir = os.path.join(save_path, 'raw', subset)
+        save_sub_dir = os.path.join(save_path, 'raw', subset) if subset else os.path.join(save_path, 'raw') 
         if not os.path.isdir(os.path.join(save_sub_dir, 'Image', pid)):
             os.makedirs(os.path.join(save_sub_dir, 'Image', pid))
         if not os.path.isdir(os.path.join(save_sub_dir, 'Mask', pid)):
             os.makedirs(os.path.join(save_sub_dir, 'Mask', pid))
+        if not os.path.isdir(os.path.join(save_sub_dir, 'Mask_show', pid)):
+            os.makedirs(os.path.join(save_sub_dir, 'Mask_show', pid))
         
         for img_idx in range(vol.shape[0]):
-            if img_idx%10 == 0:
+            if img_idx%50 == 0:
                 print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
             img = vol[img_idx]
             mask = mask_vol[img_idx]
+            if np.sum(mask):
+                mask_show = np.where(mask>0, 255, 0)
+                cv2.imwrite(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'), mask_show)
 
-            # img = np.clip(img, -1000, 1000)
-            # img = raw_preprocess(img, lung_segment=False, change_channel=False)
-            # mask = mask_preprocess(mask)
-
-            # if np.sum(mask):
-            #     compare_result_enlarge(img, mask ,mask)
             cv2.imwrite(os.path.join(save_sub_dir, 'Image', pid, f'{pid}_{img_idx:04d}.png'), img)
             cv2.imwrite(os.path.join(save_sub_dir, 'Mask', pid, f'{pid}_{img_idx:04d}.png'), mask)
+    print('Preprocess complete!')
+            
 
 
 def lidc_preprocess(data_path, save_path, clevel=0.2, padding=512):
@@ -162,17 +163,29 @@ def lidc_preprocess(data_path, save_path, clevel=0.2, padding=512):
             np.save(os.path.join(full_vol_mask_npy, f'{vol_name}.npy'), np.int16(masks_vol))
 
 
+def luna16_volume_preprocess():
+    src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess'
+    volumetric_data_preprocess(data_path=src, 
+                               save_path=dst, 
+                               vol_generator_func=luna16_volume_generator.Build_DLP_luna16_volume_generator)
+
+
+def luna16_volume_preprocess_round():
+    src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round'
+    volumetric_data_preprocess(data_path=src, 
+                               save_path=dst, 
+                               vol_generator_func=luna16_volume_generator.Build_Round_luna16_volume_generator)
+
+
+def asus_nodule_volume_preprocess():
+    src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant'
+    volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=asus_nodule_volume_generator)
+
 
 if __name__ == '__main__':
-    # src = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Image'
-    # dst = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
-    # src_format = 'npy'
-    # dst_format = 'png'
-    # convert_npy_to_png(src, dst, src_format, dst_format)
-
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-    # dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round'
-    # lidc_preprocess(path=src, save_path=dst)
-    luna16_preprocess(data_path=src, save_path=dst)
+    # luna16_volume_preprocess()
+    asus_nodule_volume_preprocess()
     pass

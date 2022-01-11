@@ -43,29 +43,6 @@ class coco_structure_converter():
             self.idx += 1
             self.annotations.append(seg)
 
-    # def sample2(self, img_path, mask, image_id):
-    #     # TODO: Temporally keep image with object because no idea to deal with the label of objectless case
-    #     if np.sum(mask):
-    #         image = {'id': image_id, 'width':512, 'height':512, 'file_name': f'{img_path}'}
-    #         self.images.append(image)
-    #         splited_mask = split_individual_mask(mask[...,0])
-    #         splited_mask = merge_near_masks(splited_mask)
-
-    #         ys, xs = np.where(mask)
-    #         x1, x2 = min(xs), max(xs)
-    #         y1, y2 = min(ys), max(ys)
-    #         enc =binary_mask_to_rle(mask)
-    #         seg = {
-    #             'segmentation': enc, 
-    #             'bbox': [int(x1), int(y1), int(x2-x1+1), int(y2-y1+1)],
-    #             'area': int(np.sum(mask)),
-    #             'image_id': image_id, 
-    #             'category_id': self.cat_ids['nodule'], 
-    #             'iscrowd': 0, 
-    #             'id':self.idx
-    #         }
-    #         self.idx += 1
-    #         self.annotations.append(seg)
 
     def create_coco_structure(self):
         return {'categories':self.cats, 'images': self.images,'annotations': self.annotations}
@@ -124,6 +101,47 @@ def coco_structure(train_df):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
+def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_threshold=30):
+    subset_image_path = os.path.join(data_path, 'Image')
+    subset_mask_path = os.path.join(data_path, 'Mask')
+    subset_image_list = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
+    subset_mask_list = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+    cat_ids = cat_ids = {'nodule': 1}
+    train_converter = coco_structure_converter(cat_ids)
+    valid_converter = coco_structure_converter(cat_ids)
+    test_converter = coco_structure_converter(cat_ids)
+    def decide_subset(num_sample, split_rate):
+        # TODO: why sum(split_rate) = 0.999...
+        # assert sum(split_rate) == 1.0, 'Split rate error'
+        case_split_indices = (int(num_sample*split_rate[0]), int(num_sample*(split_rate[0]+split_rate[1])))
+        return case_split_indices
+    case_split_indices = decide_subset(num_sample=len(subset_image_list), split_rate=split_rate)
+    
+    for case_idx, (case_img_dir, case_mask_dir) in enumerate(tzip(subset_image_list, subset_mask_list)):
+        case_image_list = dataset_utils.get_files(case_img_dir, 'png', recursive=False)
+        case_mask_list = dataset_utils.get_files(case_mask_dir, 'png', recursive=False)
+        assert len(case_image_list) == len(case_mask_list), f'Inconsitent slice number Raw {len(case_image_list)} Mask {len(case_mask_list)}'
+        for img_path, mask_path in zip(case_image_list, case_mask_list):
+            mask = cv2.imread(mask_path)
+            image_id = os.path.split(img_path)[1][:-4]
+            splited_mask = split_individual_mask(mask[...,0])
+            splited_mask = merge_near_masks(splited_mask)
+
+            if len(splited_mask):
+                for i, mask in enumerate(splited_mask, 1):
+                    if np.sum(mask) > area_threshold:
+                        cv2_imshow(255*np.tile(mask[...,np.newaxis], (1,1,3)), os.path.join('plot', 'ASUS_nodule', f'{image_id}-s{i}.png'))
+
+                        if case_idx < case_split_indices[0]:
+                            train_converter.sample(img_path, mask, image_id)
+                        elif case_idx >= case_split_indices[0] and case_idx < case_split_indices[1]:
+                            valid_converter.sample(img_path, mask, image_id)
+                        else:
+                            test_converter.sample(img_path, mask, image_id)
+                        
+    return train_converter.create_coco_structure(), valid_converter.create_coco_structure(), test_converter.create_coco_structure()
+
+
 def luna16_to_coco_structure(data_path, split_rate=0.7, area_threshold=30):
     subset_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     cat_ids = cat_ids = {'nodule': 1}
@@ -146,15 +164,15 @@ def luna16_to_coco_structure(data_path, split_rate=0.7, area_threshold=30):
             for img_path, mask_path in zip(case_image_list, case_mask_list):
                 mask = cv2.imread(mask_path)
                 image_id = os.path.split(img_path)[1][:-4]
-                # splited_mask = split_individual_mask(mask[...,0])
-                # splited_mask = merge_near_masks(splited_mask)
+                splited_mask = split_individual_mask(mask[...,0])
+                splited_mask = merge_near_masks(splited_mask)
 
-                # if len(splited_mask) > 0:
-                #     # print(3)
-                #     for i, mm in enumerate(splited_mask, 1):
-                #         # print(np.sum(mm))
-                #         if np.sum(mm) > area_threshold:
-                #             cv2_imshow(255*np.tile(mm[...,np.newaxis], (1,1,3)), os.path.join('plot', f'{image_id}-s{i}.png'))
+                if len(splited_mask) > 0:
+                    # print(3)
+                    for i, mm in enumerate(splited_mask, 1):
+                        # print(np.sum(mm))
+                        if np.sum(mm) > area_threshold:
+                            cv2_imshow(255*np.tile(mm[...,np.newaxis], (1,1,3)), os.path.join('plot', f'{image_id}-s{i}.png'))
 
                 for mask in splited_mask:
                     if np.sum(mask) > area_threshold:
@@ -256,26 +274,7 @@ def lidc_to_coco_structure(df, data_root, seg_root=None):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
-def lidc_to_datacatlog_valid():
-    # mode = 'valid'
-    # CSV_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Metameta_info.csv'
-    # df = pd.read_csv(CSV_PATH)
-    # split = 16219
-    # all_ids = df.original_image.unique()
-    # if mode == 'train':
-    #     samples = df[df.original_image.isin(all_ids[:split])]
-    # elif mode == 'valid':
-    #     samples = df[df.original_image.isin(all_ids[split:])]
-    # data_root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
-    # seg_root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
-    # with open('annotations_valid.json', 'w', encoding='utf-8') as jsonfile:
-    #     json.load(valid_root, jsonfile, ensure_ascii=True, indent=4)
-
-    with open('annotations_valid.json', newline='') as jsonfile:
-        data_dict = json.load(jsonfile)
-    return data_dict['images']
-
-def main2():
+def luun16_to_coco_main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
     annotation_root = os.path.join('Annotations', 'LUNA16')
     if not os.path.isdir(annotation_root):
@@ -290,26 +289,23 @@ def main2():
         json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
 
-# def main():
-#     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image'
-#     GT_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Mask'
-#     CSV_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing\Metameta_info.csv'
+def asus_nodule_to_coco_main():
+    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
+    annotation_root = os.path.join('Annotations', 'ASUS_Nodule')
+    if not os.path.isdir(annotation_root):
+        os.makedirs(annotation_root)
 
-#     ## run it on first three images for demonstration:
-#     df = pd.read_csv(CSV_PATH)
-#     split = 16219
-#     all_ids = df.original_image.unique()
-#     train_sample = df[df.original_image.isin(all_ids[:split])]
-#     valid_sample = df[df.original_image.isin(all_ids[split:])]
+    train_root, valid_root, test_root = asus_nodule_to_coco_structure(DATA_PATH, area_threshold=8)
 
-#     train_root = lidc_to_coco_structure(train_sample, data_root=DATA_PATH, seg_root=GT_PATH)
-#     valid_root = lidc_to_coco_structure(valid_sample, data_root=DATA_PATH, seg_root=GT_PATH)
+    with open(os.path.join(annotation_root, 'annotations_train.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
 
-#     with open('annotations_train.json', 'w', encoding='utf-8') as jsonfile:
-#         json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
+    with open(os.path.join(annotation_root, 'annotations_valid.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
-#     with open('annotations_valid.json', 'w', encoding='utf-8') as jsonfile:
-#         json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
+    with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
 
 if __name__ == '__main__':
-    main2()
+    # luun16_to_coco_main()
+    asus_nodule_to_coco_main()

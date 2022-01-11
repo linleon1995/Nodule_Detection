@@ -16,7 +16,76 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import time
+import pandas as pd
 from modules.data import dataset_utils
+
+
+def check_image():
+    data_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
+    save_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign\checked'
+    dir_list = dataset_utils.get_files(data_path, '1B', get_dirs=True, recursive=False)
+    data_index = 0
+    df = pd.DataFrame(columns=['Pid', 'Slice', 'Contour num', 'Slice mask size', 'Issue'])
+    for _dir in dir_list:
+        raw_mask_dir = dataset_utils.get_files(_dir, get_dirs=True, recursive=False)
+        for sub_dir in raw_mask_dir:
+            if 'raw' in sub_dir:
+                raw_path = dataset_utils.get_files(sub_dir, 'mhd')[0]
+                raw_vol, _, _ = dataset_utils.load_itk(raw_path)
+                raw_vol = raw_vol
+            if 'mask' in sub_dir:
+                mask_path = dataset_utils.get_files(sub_dir, 'mhd')[0]
+                mask_vol, _, _ = dataset_utils.load_itk(mask_path)
+                mask_vol = mask_vol
+            
+        if np.shape(raw_vol) != np.shape(mask_vol):
+            print('Unmatch problem!', raw_path)
+            break
+
+        pid = os.path.split(_dir)[1]
+        save_sub_dir = os.path.join(save_path, pid)
+        if not os.path.isdir(save_sub_dir):
+            os.makedirs(save_sub_dir)
+
+        print(pid)
+        for slice_idx, (raw_slice, mask_slice) in enumerate(zip(raw_vol, mask_vol)):
+            raw_slice = raw_preprocess(raw_slice)
+            mask_slice = np.uint8(mask_slice)
+            if np.sum(mask_slice) > 0:
+                
+                mask_contours, _ = cv2.findContours(mask_slice, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                # cv2.drawContours(mask_slice, contours=mask_contours, contourIdx=-1, color=(0, 0, 255))
+                contour_slice = raw_slice.copy()
+                cv2.drawContours(contour_slice, contours=mask_contours, contourIdx=-1, color=(255, 0, 0))
+
+                # plt.imshow(mask_slice)
+                # plt.show()
+
+                data_list = [pid, slice_idx, len(mask_contours), np.sum(mask_slice), 'Pass']
+                if len(mask_contours) > 1:
+                    print('Potential Annotation problem', pid, slice_idx)
+                    fig0, ax0 = plt.subplots(1,1, dpi=400)
+                    ax0.imshow(mask_slice, 'gray')
+                    fig0.savefig(os.path.join(save_sub_dir, f'{slice_idx}_mask.png'))
+                    ax0.clear()
+                    ax0.imshow(enlarge_binary_image(mask_slice), 'gray')
+                    fig0.savefig(os.path.join(save_sub_dir, f'{slice_idx}_mask_en.png'))
+                    fig1, _ = compare_result(raw_slice, mask_slice, mask_slice)
+                    fig2, _ = compare_result_enlarge(raw_slice, mask_slice, mask_slice)
+                    fig1.savefig(os.path.join(save_sub_dir, f'{slice_idx}_comp.png'))
+                    fig2.savefig(os.path.join(save_sub_dir, f'{slice_idx}_comp_en.png'))
+                    data_list[-1] = 'Annotation problem'
+                    
+                fig3, ax3 = plt.subplots(1,1)
+                ax3.imshow(contour_slice, 'gray')
+                ax3.set_title(f'Contour number: {len(mask_contours)}')
+                # plt.show()
+                fig3.savefig(os.path.join(save_sub_dir, f'{slice_idx}.png'))
+                df.loc[data_index] = data_list
+                data_index += 1
+    df.to_csv(os.path.join(save_path, 'check.csv'))
+                
+            
 
 
 class time_record():
@@ -149,6 +218,21 @@ def mask_preprocess(mask, ignore_malignancy=True, output_dtype=np.int32):
         mask = np.where(mask>=1, 1, 0)
     mask = output_dtype(mask)
     return mask
+
+
+def enlarge_binary_image(binary_image, crop_range=30):
+    if binary_image.ndim == 3:
+        h, w, c = binary_image.shape
+    elif binary_image.ndim == 2:
+        h, w = binary_image.shape
+    else:
+        raise ValueError('Unknown input image shape')
+
+    ys, xs = np.where(binary_image)
+    x1, x2 = max(0, min(xs)-crop_range), min(max(xs)+crop_range, min(h,w))
+    y1, y2 = max(0, min(ys)-crop_range), min(max(ys)+crop_range, min(h,w))
+    bbox_size = np.max([np.abs(x1-x2), np.abs(y1-y2)])
+    return cv2.resize(binary_image[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
 
 
 def compare_result(image, label, pred, show_mask_size=False, **imshow_params):

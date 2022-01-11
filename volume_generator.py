@@ -50,23 +50,13 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
                 vol, _, _ = dataset_utils.load_itk(vol_path)
                 vol = np.clip(vol, -1000, 1000)
                 vol = raw_preprocess(vol, output_dtype=np.uint8)
-                # vol = np.swapaxes(np.swapaxes(vol, 0, 1), 1, 2)
-                # for img_idx in range(vol.shape[2]):
-                    # img = vol[...,img_idx]
-                    # img = raw_preprocess(img, change_channel=False)
-                    # img = segment_lung(img)
-                    # if np.max(img)==np.min(img):
-                    #     img = np.zeros_like(img)
-                    # else:
-                    #     img = np.uint8(255*((img-np.min(img))/(np.max(img)-np.min(img))))
-                    # vol[...,img_idx] = img
             if 'mask' in _dir:
                 vol_mask_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
                 mask_vol, _, _ = dataset_utils.load_itk(vol_mask_path)
                 mask_vol = mask_preprocess(mask_vol)            
                 # mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 1), 1, 2)
         pid = os.path.split(case_dir)[1]
-        infos = {'pid': pid, 'scan_idx': 0}
+        infos = {'pid': pid, 'scan_idx': 0, 'subset': None}
         yield vol, mask_vol, infos
 
 
@@ -222,31 +212,4 @@ class luna16_volume_generator():
                 yield vol, mask_vol, infos
 
 
-# def luna16_volume_generator(data_path, subset_indices=None, case_indices=None, only_nodule_slices=False):
-#     subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
-#     subset_list.sort()
-#     if subset_indices:
-#         subset_list = np.take(subset_list, subset_indices)
-#     # subset_list = subset_list[:1]
-    
-#     for subset_dir in subset_list:
-#         case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False)
-#         if case_indices:
-#             case_list = np.take(case_list, case_indices)
-#         for case_dir in case_list:
-#             subset = os.path.split(subset_dir)[-1]
-#             series_uid = os.path.split(case_dir)[1][:-4]
-#             ct = dataset_seg.getCt(series_uid)
-#             vol = ct.hu_a
-#             mask_vol = ct.positive_mask
-            
-#             # preprocess
-#             vol = np.clip(vol, -1000, 1000)
-#             vol = raw_preprocess(vol, output_dtype=np.uint8)
-#             mask_vol = mask_preprocess(mask_vol)
-#             # TODO: Finish preprocessing part (same with Liwei's code)
-#             # TODO: check the shape and dims
-#             infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset}
-#             yield vol, mask_vol, infos
-            
             
