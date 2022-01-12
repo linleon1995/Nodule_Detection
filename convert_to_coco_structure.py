@@ -22,7 +22,6 @@ class coco_structure_converter():
         self.idx = 0
 
     def sample(self, img_path, mask, image_id):
-        # TODO: Temporally keep image with object because no idea to deal with the label of objectless case
         if np.sum(mask):
             image = {'id': image_id, 'width':512, 'height':512, 'file_name': f'{img_path}'}
             self.images.append(image)
@@ -201,7 +200,6 @@ def volume_to_coco_structure(cat_ids, volume_generator, seg_root=None):
             
             mask = mask_vol[img_idx]
 
-            # TODO: Temporally keep image with object because no idea to deal with the label of objectless case
             if not np.sum(mask):
                 # print(np.sum(mask))
                 continue

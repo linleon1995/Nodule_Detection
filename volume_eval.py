@@ -24,58 +24,140 @@ class volumetric_data_eval():
     def volume_preprocess(cls, volume, connectivity, area_threshold):
         volume = cc3d.connected_components(volume, connectivity=connectivity)
         total_nodule_metadata = cls.build_nodule_metadata(volume)
-        volume, total_nodule_metadata = cls.remove_small_area(volume, total_nodule_metadata, area_threshold)
-        volume, total_nodule_metadata = cls.convert_label_value(volume, total_nodule_metadata)
+        if total_nodule_metadata is not None:
+            volume, total_nodule_metadata = cls.remove_small_area(volume, total_nodule_metadata, area_threshold)
+            volume, total_nodule_metadata = cls.convert_label_value(volume, total_nodule_metadata)
         return volume, total_nodule_metadata
 
     def _3D_evaluation(self, mask_vol, pred_vol, mask_metadata, pred_metadata):
+        # TODO: Distinduish nodule_metadata and nodule_infos
         tp, fp, fn = 0, 0, 0
-        mask_category = list(range(1, np.max(mask_vol)+1))
-        pred_category = list(range(1, np.max(pred_vol)+1))
+        mask_category = list(range(1, np.max(mask_vol)+1)) if np.max(mask_vol) > 0 else None
+        pred_category = list(range(1, np.max(pred_vol)+1)) if np.max(pred_vol) > 0 else None
         total_nodule_infos = []
 
-        for mask_nodule_metadata in mask_metadata:
-            gt_nodule = np.int32(mask_vol==mask_nodule_metadata['Nodule_id'])
-            BestNoduleIoU, BestNoduleDSC = 0, 0
-            BestSliceIoU, BestSliceIndex = 0, 'Null'
-            slice_num = mask_nodule_metadata['Nodule_slice'][1] - mask_nodule_metadata['Nodule_slice'][0] + 1
-            nodule_infos = {'Nodule ID': np.int32(mask_nodule_metadata['Nodule_id']), 'Nodule IoU': 0, 'Nodule DSC': 0, 
-                            'Slice Number': np.int32(slice_num), 
-                            'Size': np.int32(mask_nodule_metadata['Nodule_size']), 
-                            'Relative Size': mask_nodule_metadata['Nodule_size']/mask_vol.size,
-                            'Best Slice IoU': BestSliceIoU, 'Best Slice Index': BestSliceIndex}
-            for pred_nodule_metadata in pred_metadata:
-                pred_nodule = np.int32(pred_vol==pred_nodule_metadata['Nodule_id'])
-                NoduleIoU = self.IoU(gt_nodule, pred_nodule)
-                NoduleDSC = self.DSC(gt_nodule, pred_nodule)
-                if NoduleIoU > 0:
-                    if NoduleIoU > BestNoduleIoU:
-                        BestNoduleIoU = NoduleIoU
-                        BestNoduleDSC = NoduleDSC
-                        BestSliceIoU, BestSliceIndex = 0, 'Null'
-                        for slice_idx in range(mask_nodule_metadata['Nodule_slice'][0], mask_nodule_metadata['Nodule_slice'][1]+1):
-                            SliceIOU = self.IoU(mask_vol[slice_idx]==mask_nodule_metadata['Nodule_id'], pred_vol[slice_idx]==pred_nodule_metadata['Nodule_id'])
-                            if SliceIOU > BestSliceIoU:
-                                BestSliceIoU = SliceIOU
-                                BestSliceIndex = slice_idx
-                    if NoduleIoU >= self.match_threshold:
-                        tp += 1
-                        mask_category.remove(mask_nodule_metadata['Nodule_id'])
-                        pred_category.remove(pred_nodule_metadata['Nodule_id'])
-                        break
+        if mask_category is not None and pred_category is not None:
+
+            for mask_nodule_metadata in mask_metadata:
+                gt_nodule = np.int32(mask_vol==mask_nodule_metadata['Nodule_id'])
+                BestNoduleIoU, BestNoduleDSC = 0, 0
+                BestSliceIoU, BestSliceIndex = 0, 'Null'
+                slice_num = mask_nodule_metadata['Nodule_slice'][1] - mask_nodule_metadata['Nodule_slice'][0] + 1
+                nodule_infos = {'Nodule ID': np.int32(mask_nodule_metadata['Nodule_id']), 'Nodule IoU': 0, 'Nodule DSC': 0, 
+                                'Slice Number': np.int32(slice_num), 
+                                'Size': np.int32(mask_nodule_metadata['Nodule_size']), 
+                                'Relative Size': mask_nodule_metadata['Nodule_size']/mask_vol.size,
+                                'Best Slice IoU': BestSliceIoU, 'Best Slice Index': BestSliceIndex}
+                # for pred_nodule_metadata in pred_metadata:
+                #     pred_nodule = np.int32(pred_vol==pred_nodule_metadata['Nodule_id'])
+                
+                # print(np.unique(mask_vol))
+                # tp1 = np.sum(np.logical_and(pred_vol==1, mask_vol==1))
+                # fp1 = np.sum(pred_vol==1) - tp1
+                # fn1 = np.sum(mask_vol==1) - tp1
+                # print(f'TP1 {tp1} FP1 {fp1} FN1 {fn1} IoU1 {tp1/(tp1+fp1+fn1)}')
+                # tp3 = np.sum(np.logical_and(pred_vol==3, mask_vol==1))
+                # fp3 = np.sum(pred_vol==3) - tp3
+                # fn3 = np.sum(mask_vol==3) - tp3
+                # print(f'TP3 {tp3} FP3 {fp3} FN3 {fn3} IoU3 {tp3/(tp3+fp3+fn3)}')
+                # print(f'IoU {(tp3+tp1)/(fp1+fp3+np.sum(mask_vol>0))}')
+                # print(np.sum(pred_vol==1), np.sum(pred_vol==3), np.sum(mask_vol==1))
+
+                gt_nodule_mask = np.logical_and(gt_nodule>0, pred_vol>0)
+                pred_nodule_category = np.unique(gt_nodule_mask*pred_vol)[1:]
+                if pred_nodule_category.size > 0: # The all predictions are wrong if size of pred_nodule_category is zero
+                    pred_nodule = sum([pred_vol==label for label in pred_nodule_category])
+                    pred_nodule_id = np.min(pred_nodule_category)
+                    pred_vol[np.where(pred_nodule)] = pred_nodule_id
+                    pred_category = np.delete(pred_category, np.where(pred_category==np.delete(
+                            pred_nodule_category, np.where(pred_nodule_category==pred_nodule_id))))
+                    pred_nodule_category = np.array([pred_nodule_id])
+
+                    NoduleIoU = self.IoU(gt_nodule, pred_nodule)
+                    NoduleDSC = self.DSC(gt_nodule, pred_nodule)
+                    if NoduleIoU > 0:
+                        if NoduleIoU > BestNoduleIoU:
+                            BestNoduleIoU = NoduleIoU
+                            BestNoduleDSC = NoduleDSC
+                            BestSliceIoU, BestSliceIndex = 0, 'Null'
+                            for slice_idx in range(mask_nodule_metadata['Nodule_slice'][0], mask_nodule_metadata['Nodule_slice'][1]+1):
+                                SliceIOU = self.IoU(mask_vol[slice_idx]==mask_nodule_metadata['Nodule_id'], pred_vol[slice_idx]==pred_nodule_id)
+                                if SliceIOU > BestSliceIoU:
+                                    BestSliceIoU = SliceIOU
+                                    BestSliceIndex = slice_idx
+                        if NoduleIoU >= self.match_threshold:
+                            tp += 1
+                            mask_category.remove(mask_nodule_metadata['Nodule_id'])
+                            ## pred_category.remove(pred_nodule_id)
+                            pred_category = np.delete(pred_category, np.where(pred_category==pred_nodule_id))
+                            break
 
             nodule_infos['Nodule IoU'] = BestNoduleIoU
             nodule_infos['Nodule DSC'] = BestNoduleDSC
             nodule_infos['Best Slice IoU'] = BestSliceIoU
             nodule_infos['Best Slice Index'] = BestSliceIndex
             total_nodule_infos.append(nodule_infos)
+        else:
+            tp = 0
 
-        fp = len(pred_category)
-        fn = len(mask_category)
+        fp = len(pred_category) if pred_category is not None else 0
+        fn = len(mask_category) if mask_category is not None else 0
         self.VoxelTP.append(tp)
         self.VoxelFP.append(fp)
         self.VoxelFN.append(fn)
         return total_nodule_infos
+
+    # def _3D_evaluation(self, mask_vol, pred_vol, mask_metadata, pred_metadata):
+    #     tp, fp, fn = 0, 0, 0
+    #     mask_category = list(range(1, np.max(mask_vol)+1)) if np.max(mask_vol) > 0 else None
+    #     pred_category = list(range(1, np.max(pred_vol)+1)) if np.max(pred_vol) > 0 else None
+    #     total_nodule_infos = []
+
+    #     if mask_category is not None and pred_category is not None:
+    #         for mask_nodule_metadata in mask_metadata:
+    #             gt_nodule = np.int32(mask_vol==mask_nodule_metadata['Nodule_id'])
+    #             BestNoduleIoU, BestNoduleDSC = 0, 0
+    #             BestSliceIoU, BestSliceIndex = 0, 'Null'
+    #             slice_num = mask_nodule_metadata['Nodule_slice'][1] - mask_nodule_metadata['Nodule_slice'][0] + 1
+    #             nodule_infos = {'Nodule ID': np.int32(mask_nodule_metadata['Nodule_id']), 'Nodule IoU': 0, 'Nodule DSC': 0, 
+    #                             'Slice Number': np.int32(slice_num), 
+    #                             'Size': np.int32(mask_nodule_metadata['Nodule_size']), 
+    #                             'Relative Size': mask_nodule_metadata['Nodule_size']/mask_vol.size,
+    #                             'Best Slice IoU': BestSliceIoU, 'Best Slice Index': BestSliceIndex}
+    #             for pred_nodule_metadata in pred_metadata:
+    #                 pred_nodule = np.int32(pred_vol==pred_nodule_metadata['Nodule_id'])
+    #                 NoduleIoU = self.IoU(gt_nodule, pred_nodule)
+    #                 NoduleDSC = self.DSC(gt_nodule, pred_nodule)
+    #                 if NoduleIoU > 0:
+    #                     if NoduleIoU > BestNoduleIoU:
+    #                         BestNoduleIoU = NoduleIoU
+    #                         BestNoduleDSC = NoduleDSC
+    #                         BestSliceIoU, BestSliceIndex = 0, 'Null'
+    #                         for slice_idx in range(mask_nodule_metadata['Nodule_slice'][0], mask_nodule_metadata['Nodule_slice'][1]+1):
+    #                             SliceIOU = self.IoU(mask_vol[slice_idx]==mask_nodule_metadata['Nodule_id'], pred_vol[slice_idx]==pred_nodule_metadata['Nodule_id'])
+    #                             if SliceIOU > BestSliceIoU:
+    #                                 BestSliceIoU = SliceIOU
+    #                                 BestSliceIndex = slice_idx
+    #                     if NoduleIoU >= self.match_threshold:
+    #                         tp += 1
+    #                         mask_category.remove(mask_nodule_metadata['Nodule_id'])
+    #                         pred_category.remove(pred_nodule_metadata['Nodule_id'])
+    #                         break
+
+    #             nodule_infos['Nodule IoU'] = BestNoduleIoU
+    #             nodule_infos['Nodule DSC'] = BestNoduleDSC
+    #             nodule_infos['Best Slice IoU'] = BestSliceIoU
+    #             nodule_infos['Best Slice Index'] = BestSliceIndex
+    #             total_nodule_infos.append(nodule_infos)
+    #     else:
+    #         tp = 0
+
+    #     fp = len(pred_category) if pred_category is not None else 0
+    #     fn = len(mask_category) if mask_category is not None else 0
+    #     self.VoxelTP.append(tp)
+    #     self.VoxelFP.append(fp)
+    #     self.VoxelFN.append(fn)
+    #     return total_nodule_infos
     
     def _2D_evaluation(self, mask_vol, pred_vol):
         binary_mask_vol = np.where(mask_vol>0, 1, 0)

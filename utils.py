@@ -20,6 +20,36 @@ import pandas as pd
 from modules.data import dataset_utils
 
 
+class Nodule_data_recording():
+    def __init__(self):
+        self.df = self.create_data_frame()
+        self.nodule_idx = 0
+
+    def create_data_frame(self):
+        vol_info_attritube = ['Nodule ID', 'Nodule IoU', 'Nodule DSC', 'Slice Number', 
+                                'Size', 'Relative Size','Best Slice IoU', 'Best Slice Index']
+        vol_info_attritube.insert(0, 'Series uid')
+        vol_info_attritube.extend(['IoU>0.1', 'IoU>0.3', 'IoU>0.5', 'IoU>0.7', 'IoU>0.9'])
+        df = pd.DataFrame(columns=vol_info_attritube)
+        return df
+
+    def write_row(self, vol_nodule_infos, pid):
+        for nodule_info in vol_nodule_infos:
+            vol_info_value = list(nodule_info.values())
+            vol_info_value.insert(0, pid)
+            vol_info_value.extend([np.int32(nodule_info['Nodule IoU']>0.1), 
+                                   np.int32(nodule_info['Nodule IoU']>0.3), 
+                                   np.int32(nodule_info['Nodule IoU']>0.5), 
+                                   np.int32(nodule_info['Nodule IoU']>0.7), 
+                                   np.int32(nodule_info['Nodule IoU']>0.9)])
+            self.df.loc[self.nodule_idx] = vol_info_value
+            self.nodule_idx += 1
+            print(nodule_info)
+
+    def get_data_frame(self):
+        return self.df
+
+
 def check_image():
     data_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
     save_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign\checked'
