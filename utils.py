@@ -1,4 +1,5 @@
 import os
+import stat
 import cv2
 import numpy as np
 import site_path
@@ -17,15 +18,66 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
+
 from modules.data import dataset_utils
 
 
+def irc2xyz(coord_irc, origin_xyz, vxSize_xyz, direction_a):
+    cri_a = np.array(coord_irc)[::-1]
+    origin_a = np.array(origin_xyz)
+    vxSize_a = np.array(vxSize_xyz)
+    coords_xyz = (direction_a @ (cri_a * vxSize_a)) + origin_a
+    # coords_xyz = (direction_a @ (idx * vxSize_a)) + origin_a
+    return coords_xyz
+
+
+def xyz2irc(coord_xyz, origin_xyz, vxSize_xyz, direction_a):
+    origin_a = np.array(origin_xyz)
+    vxSize_a = np.array(vxSize_xyz)
+    coord_a = np.array(coord_xyz)
+    cri_a = ((coord_a - origin_a) @ np.linalg.inv(direction_a)) / vxSize_a
+    cri_a = np.round(cri_a)
+    return cri_a
+
+
+def get_nodule_center(nodule_volume):
+    zs, ys, xs = np.where(nodule_volume)
+    center_irc = np.array([np.mean(zs), np.mean(ys), np.mean(xs)])
+    return center_irc
+
+
+class DataFrameTool():
+    def __init__(self, column_name):
+        self.df = self.build_data_frame(column_name)
+        self.row_index = 0
+
+    def build_data_frame(self, column_name):
+        return pd.DataFrame(columns=column_name)
+    
+    def write_row(self, data):
+        self.df.loc[self.row_index] = data
+        self.row_index += 1
+
+    def get_data_frame(self):
+        return self.df
+
+    def save_data_frame(self, save_path, first_column_index=False):
+        self.df.to_csv(save_path, index=first_column_index)
+
+
+class SubmissionDataFrame(DataFrameTool):
+    def __init__(self):
+        column_name = ['seriesuid', 'coordX', 'coordY', 'coordZ', 'probability']
+        super().__init__(column_name)
+
+
+# TODO: Inherit from DataFrameTool
 class Nodule_data_recording():
     def __init__(self):
-        self.df = self.create_data_frame()
+        self.df = self.build_data_frame()
         self.nodule_idx = 0
 
-    def create_data_frame(self):
+    def build_data_frame(self):
         vol_info_attritube = ['Nodule ID', 'Nodule IoU', 'Nodule DSC', 'Slice Number', 
                                 'Size', 'Relative Size','Best Slice IoU', 'Best Slice Index']
         vol_info_attritube.insert(0, 'Series uid')
@@ -145,7 +197,8 @@ class time_record():
                 print(f'{name} {time:.2f} second {time/total_time*100:.2f} %')
                 function_time += time
 
-        print(f'Others {total_time-function_time} second {(total_time-function_time)/total_time*100:.2f} %')
+        if len(self.time_period.keys()) > 1:
+            print(f'Others {total_time-function_time} second {(total_time-function_time)/total_time*100:.2f} %')
         print(f'Total {total_time:.2f} second {total_time/total_time*100:.2f} %')
 
 def calculate_malignancy(nodule):

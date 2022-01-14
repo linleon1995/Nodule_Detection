@@ -18,6 +18,8 @@ logging.basicConfig(level=logging.INFO)
 from modules.data import dataset_utils
 
 
+
+# TODO: Wrap all the thing to single object in generarator(raw_vol, mask_vol, space, origin, ...)
 def lidc_volume_generator(data_path, case_indices, only_nodule_slices=False):
     case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     case_list = np.array(case_list)[case_indices]
@@ -47,16 +49,16 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
         for _dir in raw_and_mask:
             if 'raw' in _dir:
                 vol_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
-                vol, _, _ = dataset_utils.load_itk(vol_path)
+                vol, origin, space, direction = dataset_utils.load_itk(vol_path)
                 vol = np.clip(vol, -1000, 1000)
                 vol = raw_preprocess(vol, output_dtype=np.uint8)
             if 'mask' in _dir:
                 vol_mask_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
-                mask_vol, _, _ = dataset_utils.load_itk(vol_mask_path)
+                mask_vol, _, _, _ = dataset_utils.load_itk(vol_mask_path)
                 mask_vol = mask_preprocess(mask_vol)            
                 # mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 1), 1, 2)
         pid = os.path.split(case_dir)[1]
-        infos = {'pid': pid, 'scan_idx': 0, 'subset': None}
+        infos = {'pid': pid, 'scan_idx': 0, 'subset': None, 'origin': origin, 'space': space, 'direction': direction}
         yield vol, mask_vol, infos
 
 
@@ -80,6 +82,47 @@ def make_mask(center, diam, z, width, height, spacing, origin):
     v_ymin = np.max([0,int(v_center[1]-v_diam)-5]) 
     v_ymax = np.min([height-1,int(v_center[1]+v_diam)+5])
 
+    v_xrange = range(v_xmin, v_xmax+1)
+    v_yrange = range(v_ymin, v_ymax+1)
+
+    # Convert back to world coordinates for distance calculation
+    x_data = [x*spacing[0]+origin[0] for x in range(width)]
+    y_data = [x*spacing[1]+origin[1] for x in range(height)]
+
+    # Fill in 1 within sphere around nodule
+    for v_x in v_xrange:
+        for v_y in v_yrange:
+            p_x = spacing[0]*v_x + origin[0]
+            p_y = spacing[1]*v_y + origin[1]
+            if np.linalg.norm(center-np.array([p_x, p_y, z])) <= diam:
+                mask[int((p_y-origin[1])/spacing[1]), int((p_x-origin[0])/spacing[0])] = 1.0
+    return mask
+
+
+
+def make_mask2(center, diam, depth, width, height, spacing, origin):
+    '''
+    Center : centers of circles px -- list of coordinates x,y,z
+    diam : diameters of circles px -- diameter
+    widthXheight : pixel dim of image
+    spacing = mm/px conversion rate np array x,y,z
+    origin = x,y,z mm np.array
+    z = z position of slice in world coordinates mm
+    '''
+    mask = np.zeros([height,width]) # 0's everywhere except nodule swapping x,y to match img
+    # convert to nodule space from world coordinates
+
+    # Defining the voxel range in which the nodule falls
+    world_range = 5 # 5 mm
+    v_center = (center-origin)/spacing
+    v_diam = int(diam/spacing[0]+world_range)
+    v_xmin = np.max([0, int(v_center[0]-v_diam)-world_range])
+    v_xmax = np.min([width-1, int(v_center[0]+v_diam)+world_range])
+    v_ymin = np.max([0, int(v_center[1]-v_diam)-world_range]) 
+    v_ymax = np.min([height-1, int(v_center[1]+v_diam)+world_range])
+    v_zmin = np.max([0, int(v_center[1]-v_diam)-world_range]) 
+    v_zmax = np.min([depth-1, int(v_center[1]+v_diam)+world_range])
+    
     v_xrange = range(v_xmin, v_xmax+1)
     v_yrange = range(v_ymin, v_ymax+1)
 
@@ -173,22 +216,23 @@ class luna16_volume_generator():
         self.data_path = data_path
         self.subset_indices = subset_indices
         self.case_indices = case_indices
+        self.pid_list = self.get_pid_list(data_path, subset_indices, case_indices)
 
     @classmethod
     def Build_DLP_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
-        mask_generating_op = dataset_seg.getCt
+        mask_generating_op = lambda x: x.positive_mask
         return cls.Build_luna16_volume_generator(data_path, mask_generating_op, subset_indices, case_indices, only_nodule_slices)
 
     @classmethod
     def Build_Round_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
-        mask_generating_op = getCt
+        mask_generating_op = make_mask
         return cls.Build_luna16_volume_generator(data_path, mask_generating_op, subset_indices, case_indices, only_nodule_slices)
 
     @classmethod   
     def Build_luna16_volume_generator(cls, data_path, mask_generating_op, subset_indices=None, case_indices=None, only_nodule_slices=None):
         # TODO: Cancel dependency of [dataset_utils.get_files]
+        # TODO: use self.pid_list to calculate and choose a proper name
         subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
-        subset_list.sort()
         if subset_indices:
             subset_list = np.take(subset_list, subset_indices)
         
@@ -201,15 +245,28 @@ class luna16_volume_generator():
                 series_uid = os.path.split(case_dir)[1][:-4]
                 
                 # preprocess
-                ct = mask_generating_op(series_uid)
+                ct = dataset_seg.getCt(series_uid)
                 vol = ct.hu_a
-                mask_vol = ct.positive_mask
+                mask_vol = mask_generating_op(ct)
                 
                 vol = np.clip(vol, -1000, 1000)
                 vol = raw_preprocess(vol, output_dtype=np.uint8)
                 mask_vol = mask_preprocess(mask_vol)
-                infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset}
+                infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset, 
+                         'origin': ct.origin_xyz, 'space': ct.vxSize_xyz, 'direction': ct.direction_a}
                 yield vol, mask_vol, infos
 
-
-            
+    @staticmethod
+    def get_pid_list(data_path, subset_indices, case_indices):
+        pid_list = []
+        subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
+        if subset_indices:
+            subset_list = np.take(subset_list, subset_indices)
+        
+        for subset_dir in subset_list:
+            case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False, return_fullpath=False)
+            if case_indices:
+                case_list = np.take(case_list, case_indices)
+            case_list = [c[:-4] for c in case_list]
+            pid_list.extend(case_list)
+        return pid_list

@@ -69,6 +69,9 @@ def rle_decode(mask_rle, shape):
 def binary_mask_to_rle(binary_mask):
     rle = {'counts': [], 'size': list(binary_mask.shape)}
     counts = rle.get('counts')
+    x = binary_mask.ravel(order='F')
+    y = itertools.groupby(x)
+    z = enumerate(y)
     for i, (value, elements) in enumerate(itertools.groupby(binary_mask.ravel(order='F'))):
         if i == 0 and value == 1:
             counts.append(0)
@@ -295,14 +298,14 @@ def asus_nodule_to_coco_main():
 
     train_root, valid_root, test_root = asus_nodule_to_coco_structure(DATA_PATH, area_threshold=8)
 
-    with open(os.path.join(annotation_root, 'annotations_train.json'), 'w', encoding='utf-8') as jsonfile:
-        json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
+    # with open(os.path.join(annotation_root, 'annotations_train.json'), 'w', encoding='utf-8') as jsonfile:
+    #     json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
 
-    with open(os.path.join(annotation_root, 'annotations_valid.json'), 'w', encoding='utf-8') as jsonfile:
-        json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
+    # with open(os.path.join(annotation_root, 'annotations_valid.json'), 'w', encoding='utf-8') as jsonfile:
+    #     json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
-    with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
-        json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
+    # with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
+    #     json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
 
 if __name__ == '__main__':
     # luun16_to_coco_main()

@@ -7,9 +7,9 @@ from matplotlib.ticker import ScalarFormatter,LogFormatter,StrMethodFormatter,Fi
 import sklearn.metrics as skl_metrics
 import numpy as np
 
-from NoduleFinding import NoduleFinding
+from evaluationScript.NoduleFinding import NoduleFinding
 
-from tools import csvTools
+from evaluationScript.tools import csvTools
 import argparse
 
 # Evaluation settings
@@ -191,13 +191,13 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
             if len(nodules.keys()) > maxNumberOfCADMarks:
                 # make a list of all probabilities
                 probs = []
-                for keytemp, noduletemp in nodules.iteritems():
+                for keytemp, noduletemp in nodules.items():
                     probs.append(float(noduletemp.CADprobability))
                 probs.sort(reverse=True) # sort from large to small
                 probThreshold = probs[maxNumberOfCADMarks]
                 nodules2 = {}
                 nrNodules2 = 0
-                for keytemp, noduletemp in nodules.iteritems():
+                for keytemp, noduletemp in nodules.items():
                     if nrNodules2 >= maxNumberOfCADMarks:
                         break
                     if float(noduletemp.CADprobability) > probThreshold:
@@ -208,6 +208,8 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
         
         print('adding candidates: ' + seriesuid)
         allCandsCAD[seriesuid] = nodules
+        if seriesuid == '1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208':
+            break
     
     # open output files
     nodNoCandFile = open(os.path.join(outputDir, "nodulesWithoutCandidate_%s.txt" % CADSystemName), 'w')
@@ -273,7 +275,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
 
             found = False
             noduleMatches = []
-            for key, candidate in candidates.iteritems():
+            for key, candidate in candidates.items():
                 x2 = float(candidate.coordX)
                 y2 = float(candidate.coordY)
                 z2 = float(candidate.coordZ)
@@ -323,7 +325,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
                     nodNoCandFile.write("%s,%s,%s,%s,%s,%.9f,%s\n" % (seriesuid, noduleAnnot.id, noduleAnnot.coordX, noduleAnnot.coordY, noduleAnnot.coordZ, float(noduleAnnot.diameter_mm), str(-1)))
 
         # add all false positives to the vectors
-        for key, candidate3 in candidates2.iteritems():
+        for key, candidate3 in candidates2.items():
             candFPs += 1
             FROCGTList.append(0.0)
             FROCProbList.append(float(candidate3.CADprobability))
@@ -510,11 +512,18 @@ def noduleCADEvaluation(annotations_filename,annotations_excluded_filename,serie
 
 if __name__ == '__main__':
     
-    annotations_filename          = sys.argv[1]
-    annotations_excluded_filename = sys.argv[2]
-    seriesuids_filename           = sys.argv[3]
-    results_filename              = sys.argv[4]
-    outputDir                     = sys.argv[5]
+    # annotations_filename          = sys.argv[1]
+    # annotations_excluded_filename = sys.argv[2]
+    # seriesuids_filename           = sys.argv[3]
+    # results_filename              = sys.argv[4]
+    # outputDir                     = sys.argv[5]
+
+    annotations_filename          = 'evaluationScript/annotations/annotations.csv'
+    annotations_excluded_filename = 'evaluationScript/annotations/annotations_excluded.csv'
+    seriesuids_filename           = 'evaluationScript/annotations/seriesuids.csv'
+    results_filename              = 'evaluationScript/exampleFiles/submission/sampleSubmission.csv'
+    outputDir                     = 'evaluationScript/exampleFiles/evaluation_test'
+
     # execute only if run as a script
     noduleCADEvaluation(annotations_filename,annotations_excluded_filename,seriesuids_filename,results_filename,outputDir)
     print("Finished!")
