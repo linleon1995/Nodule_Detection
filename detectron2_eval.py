@@ -33,7 +33,7 @@ import time
 import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
-from volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator
+from volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator, build_pred_generator
 from volume_eval import volumetric_data_eval
 from utils import Nodule_data_recording, SubmissionDataFrame
 from vis import save_mask
@@ -108,7 +108,44 @@ def eval(cfg):
     # another equivalent way to evaluate the model is to use `trainer.test`
 
 
-def volume_eval(cfg, vol_generator):
+
+# def volume_eval2(cfg, volume_generator):
+#     if not os.path.isdir(cfg.SAVE_PATH):
+#         os.makedirs(cfg.SAVE_PATH)
+#     vol_metric = volumetric_data_eval()
+#     for mask_vol, pred_vol, vol_nodule_infos in build_pred_generator(cfg, volume_generator):
+#         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
+    
+#         for nodule_infos in vol_nodule_infos:
+#             if nodule_infos['Nodule_prob']:
+#                 submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
+#                 submission_recorder.write_row(submission)
+#             nodule_infos.pop('Center_xyz', None)
+#             nodule_infos.pop('Nodule_prob', None)
+#         metadata_recorder.write_row(vol_nodule_infos, pid)
+#         time_recording.set_end_time('Nodule Evaluation')
+
+#         # save_sample_submission(vol_nodule_infos)
+#         # if pid == pid_list[-1]:
+#         #     break
+#         # save_mask_in_3d(mask_vol, 
+#         #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
+#         #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'))
+#         # save_mask_in_3d(pred_vol, 
+#         #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
+#         #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
+        
+#     print(cfg.DATASET_NAME, os.path.split(cfg.checkpoint_path)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
+#           cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST)
+#     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
+#     submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
+#     df = metadata_recorder.get_data_frame()
+#     df.to_csv(os.path.join(cfg.SAVE_PATH, f'{cfg.DATASET_NAME}-nodule_informations.csv'), index=False)
+#     time_recording.set_end_time('Total')
+#     time_recording.show_recording_time()
+
+
+def volume_eval(cfg, volume_generator):
     # TODO: Add trial number to divide different trial (csv will replace)
     # TODO: predictor, volume, generator,... should be input into this function rather define in the function
     # TODO: Select a better Data interface or implement both (JSON, volume loading)
@@ -123,10 +160,10 @@ def volume_eval(cfg, vol_generator):
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval()
     metadata_recorder = Nodule_data_recording()
-    submission_recorder = SubmissionDataFrame()
+    # submission_recorder = SubmissionDataFrame()
     
-    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
-                                     only_nodule_slices=cfg.ONLY_NODULES)
+    # volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+    #                                  only_nodule_slices=cfg.ONLY_NODULES)
 
     # xx = luna16_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
     # total_pid = xx.pid_list
@@ -173,9 +210,9 @@ def volume_eval(cfg, vol_generator):
 
         
         for nodule_infos in vol_nodule_infos:
-            if nodule_infos['Nodule_prob']:
-                submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
-                submission_recorder.write_row(submission)
+            # if nodule_infos['Nodule_prob']:
+                # submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
+                # submission_recorder.write_row(submission)
             nodule_infos.pop('Center_xyz', None)
             nodule_infos.pop('Nodule_prob', None)
         metadata_recorder.write_row(vol_nodule_infos, pid)
@@ -191,171 +228,67 @@ def volume_eval(cfg, vol_generator):
         #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
         #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
         
+    print(cfg.DATASET_NAME, os.path.split(cfg.checkpoint_path)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
+          cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST)
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
-    submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
+    # submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
     df = metadata_recorder.get_data_frame()
     df.to_csv(os.path.join(cfg.SAVE_PATH, f'{cfg.DATASET_NAME}-nodule_informations.csv'), index=False)
     time_recording.set_end_time('Total')
     time_recording.show_recording_time()
 
 
-def volume_eval2(cfg, vol_generator):
-    # TODO: Add trial number to divide different trial (csv will replace)
-    # TODO: predictor, volume, generator,... should be input into this function rather define in the function
-    # TODO: Select a better Data interface or implement both (JSON, volume loading)
-    if not os.path.isdir(cfg.SAVE_PATH):
-        os.makedirs(cfg.SAVE_PATH)
-    save_image_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
-    total_pid = []
-
-    time_recording = time_record()
-    time_recording.set_start_time('Total')
-    predictor = liwei_eval.liwei_predictor
-    # predictor = BatchPredictor(cfg)
-    vol_metric = volumetric_data_eval()
-    metadata_recorder = Nodule_data_recording()
-    submission_recorder = SubmissionDataFrame()
-    input_slices = 7
-    
-    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
-                                     only_nodule_slices=cfg.ONLY_NODULES)
-
-    # xx = luna16_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
-    # total_pid = xx.pid_list
-    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
-        pid, scan_idx = infos['pid'], infos['scan_idx']
-        total_pid.append(pid)
-        print(pid)
-        mask_vol = np.int32(mask_vol)
-        pred_vol = np.zeros_like(mask_vol)
-        case_save_path = os.path.join(cfg.SAVE_PATH, pid)
-        # TODO: use decorator to write a breaking condition
-        if cfg.MAX_TEST_CASES is not None:
-            if vol_idx >= cfg.MAX_TEST_CASES:
-                break
-
-        for img_idx in range(0, vol.shape[0]):
-            if img_idx == 0:
-                print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
-            # TODO: simplify
-            start = max(0, img_idx-input_slices//2) if img_idx-input_slices//2 < 0 else min(start+input_slices, vol.shape[0]-1)
-            if img_idx-input_slices//2 < 0:
-                start = 0
-            elif img_idx+input_slices//2 > vol.shape[0]:
-                start = vol.shape[0] - input_slices + 1
-            else:
-                start = img_idx - input_slices//2
-            end = start + input_slices
-            img = vol[start:end]
-            img = np.split(img, img.shape[0], axis=0)
-            outputs = predictor(img) 
-
-            for j, output in enumerate(outputs):
-                pred_vol[img_idx+j] = output
-
-        vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
-        # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
-        # vol_nodule_infos = {'Nodule_pid': pid}.update(vol_nodule_infos)
-
-        
-        for nodule_infos in vol_nodule_infos:
-            if nodule_infos['Nodule_prob']:
-                submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
-                submission_recorder.write_row(submission)
-            nodule_infos.pop('Center_xyz', None)
-            nodule_infos.pop('Nodule_prob', None)
-        metadata_recorder.write_row(vol_nodule_infos, pid)
-        time_recording.set_end_time('Nodule Evaluation')
-
-        
-    nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
-    df = metadata_recorder.get_data_frame()
-    df.to_csv(os.path.join(cfg.SAVE_PATH, f'{cfg.DATASET_NAME}-nodule_informations.csv'), index=False)
-    time_recording.set_end_time('Total')
-    time_recording.show_recording_time()
-
-
-def froc(cfg, vol_generator):
+def froc(cfg, volume_generator):
     time_recording = time_record()
     time_recording.set_start_time('Total')
     if not os.path.isdir(cfg.SAVE_PATH):
         os.makedirs(cfg.SAVE_PATH)
-    total_pid = []
+    pid_list = []
 
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval()
     submission_recorder = SubmissionDataFrame()
-    
-    volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
-                                     only_nodule_slices=cfg.ONLY_NODULES)
-
-    # xx = luna16_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
-    # total_pid = xx.pid_list
-    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
-        pid, scan_idx = infos['pid'], infos['scan_idx']
-        total_pid.append(pid)
-        mask_vol = np.int32(mask_vol)
-        pred_vol = np.zeros_like(mask_vol)
-        case_save_path = os.path.join(cfg.SAVE_PATH, pid)
-        if cfg.MAX_TEST_CASES is not None:
-            if vol_idx >= cfg.MAX_TEST_CASES:
-                break
-
-        for img_idx in range(0, vol.shape[0], cfg.TEST_BATCH_SIZE):
-            if img_idx == 0:
-                print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
-            start, end = img_idx, min(vol.shape[0], img_idx+cfg.TEST_BATCH_SIZE)
-            img = vol[start:end]
-            img = np.split(img, img.shape[0], axis=0)
-            outputs = predictor(img) 
-
-            for j, output in enumerate(outputs):
-                pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-                pred = np.sum(pred, axis=0)
-                # TODO: better way to calculate pred score of slice
-                # pred_score = np.mean(output["instances"]._fields['scores'].cpu().detach().numpy() , axis=0)
-                pred = mask_preprocess(pred)
-                pred_vol[img_idx+j] = pred
-
+    for infos, mask_vol, pred_vol in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
+        pid_list.append(infos['pid'])
         vol_nodule_infos = vol_metric.get_submission(mask_vol, pred_vol, infos)
 
         for nodule_infos in vol_nodule_infos:
             if not nodule_infos['Nodule_prob']: 
                 nodule_infos['Nodule_prob'] = 0.5
-            submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
+            submission = [infos['pid']] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
             submission_recorder.write_row(submission)
 
-
     submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
-
-    if not os.path.isdir(os.path.join(cfg.SAVE_PATH, 'FROC')):
-        os.makedirs(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations'))
-    
-    seriesuid_df = pd.DataFrame(data=total_pid)
-    seriesuid_df.to_csv(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
     time_recording.set_end_time('Total')
-    
-    CalculateFROC(cfg)
+
+    seriesuid = pd.DataFrame(data=pid_list)
+    seriesuid.to_csv(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
+    CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH, pid_list)
     time_recording.show_recording_time()
 
 
-def CalculateFROC(cfg):
+def CalculateFROC(dataset_name, save_path):
+    annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
+    if not os.path.isdir(annotation_dir):
+        os.makedirs(annotation_dir)
+
+    # select calculate cases from seriesuid.csv
     annotations = pd.read_csv('evaluationScript/annotations/annotations.csv')
     annotations_excluded = pd.read_csv('evaluationScript/annotations/annotations_excluded.csv')
-    calculate_pid = pd.read_csv(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'seriesuids.csv'))
+    calculate_pid = pd.read_csv(os.path.join(annotation_dir, 'seriesuids.csv'))
     calculate_annotations = annotations.loc[annotations['seriesuid'].isin(calculate_pid.iloc[:, 0])]
     calculate_annotations_excluded = annotations_excluded.loc[annotations_excluded['seriesuid'].isin(calculate_pid.iloc[:, 0])]
 
     # save annotation and annotation_excluded
-    calculate_annotations.to_csv(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'annotations.csv'), index=False)
-    calculate_annotations_excluded.to_csv(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'annotations_excluded.csv'), index=False)
+    calculate_annotations.to_csv(os.path.join(annotation_dir, 'annotations.csv'), index=False)
+    calculate_annotations_excluded.to_csv(os.path.join(annotation_dir, 'annotations_excluded.csv'), index=False)
 
-    noduleCADEvaluationLUNA16.noduleCADEvaluation(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'annotations.csv'),
-                                                  os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'annotations_excluded.csv'),
+    noduleCADEvaluationLUNA16.noduleCADEvaluation(os.path.join(annotation_dir, 'annotations.csv'),
+                                                  os.path.join(annotation_dir, 'annotations_excluded.csv'),
                                                 #   'evaluationScript/annotations/seriesuids2.csv',
-                                                  os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'seriesuids.csv'),
-                                                  os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'),
-                                                  os.path.join(cfg.SAVE_PATH, 'FROC'))
+                                                  os.path.join(annotation_dir, 'seriesuids.csv'),
+                                                  os.path.join(save_path, 'FROC', f'{dataset_name}-submission.csv'),
+                                                  os.path.join(save_path, 'FROC'))
 
 
 # def save_sample_submission(vol_nodule_infos):
@@ -365,52 +298,55 @@ def CalculateFROC(cfg):
     
 
 def select_model(cfg):
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_003'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_044'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_045'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_046'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_048'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_049'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_051'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_053'
-    # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_055'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_056'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
-    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
-    cfg.check_point_path = check_point_path
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_003'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_044'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_045'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_046'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_048'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_049'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_051'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_053'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_055'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_056'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_059'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
+    cfg.checkpoint_path = checkpoint_path
     
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_final.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0000399.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0000799.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0000999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001199.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001599.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0005999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0009999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0011999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0019999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0023999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0027999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0039999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0059999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0069999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000399.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000799.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001199.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001599.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0003999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0007999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0009999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0011999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0019999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0023999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0027999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0039999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0059999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0069999.pth")  # path to the model we just trained
     return cfg
 
 
@@ -433,7 +369,7 @@ def common_config():
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
-    cfg.OUTPUT_DIR = cfg.check_point_path
+    cfg.OUTPUT_DIR = cfg.checkpoint_path
     cfg.INPUT.MIN_SIZE_TEST = 800
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
@@ -441,68 +377,87 @@ def common_config():
     # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 32
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
-    run = os.path.split(cfg.check_point_path)[1]
+    run = os.path.split(cfg.checkpoint_path)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227\maskrcnn-{run}-{weight}-{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}-samples'
     cfg.MAX_SAVE_IMAGE_CASES = 10
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
-    cfg.TEST_BATCH_SIZE = 1
+    cfg.TEST_BATCH_SIZE = 4
     return cfg
 
-
-# def lidc_eval():
-#     cfg = common_config()
-#     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-all-slices'
-#     # cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI'
-#     cfg = add_dataset_name(cfg)
-
-#     cfg.SUBSET_INDICES = None
-#     # cfg.CASE_INDICES = list(range(40))
-#     cfg.CASE_INDICES = list(range(45, 57))
-#     cfg.CASE_INDICES = list(range(49, 50))
-#     # cfg.CASE_INDICES = None
-
-#     # volume_eval(cfg, vol_generator=asus_nodule_volume_generator)
-#     return cfg
 
 def luna16_eval():
     cfg = common_config()
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
     cfg = add_dataset_name(cfg)
+    cfg.DATA_SPLIT = 'test'
 
-    # cfg.SUBSET_INDICES = None
-    cfg.SUBSET_INDICES = [8, 9]
-    # cfg.SUBSET_INDICES = list(range(7))
+    if cfg.DATA_SPLIT == 'train':
+        cfg.SUBSET_INDICES = list(range(7))
+    elif cfg.DATA_SPLIT == 'test':
+        cfg.SUBSET_INDICES = [8, 9]
+    else:
+        cfg.SUBSET_INDICES = None
     cfg.CASE_INDICES = None
 
-    volume_eval(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
+    # volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator = asus_nodule_volume_generator(
+    #     cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
+    # volume_eval(cfg, volume_generator=volume_generator)
     # froc(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
+    CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH)
     # calculateFROC(cfg)
     # eval(cfg)
     return cfg
 
 
-def asus_eval():
+def asus_malignant_eval():
     cfg = common_config()
     cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
     cfg = add_dataset_name(cfg)
+    cfg.DATA_SPLIT = 'train'
 
     cfg.SUBSET_INDICES = None
-    # cfg.CASE_INDICES = list(range(40))
-    cfg.CASE_INDICES = list(range(45, 57))
-    # cfg.CASE_INDICES = list(range(48, 50))
-    # cfg.CASE_INDICES = None
+    if cfg.DATA_SPLIT == 'train':
+        cfg.CASE_INDICES = list(range(40))
+    elif cfg.DATA_SPLIT == 'test':
+        cfg.CASE_INDICES = list(range(45, 57))
+    else:
+        cfg.CASE_INDICES = None
 
-    volume_eval(cfg, vol_generator=asus_nodule_volume_generator)
+    volume_generator = asus_nodule_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+                                     only_nodule_slices=cfg.ONLY_NODULES)
+    volume_eval(cfg, volume_generator=volume_generator)
+    return cfg
+
+
+def asus_benign_eval():
+    cfg = common_config()
+    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
+    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw'
+    cfg = add_dataset_name(cfg)
+    cfg.DATA_SPLIT = 'train'
+
+    cfg.SUBSET_INDICES = None
+    if cfg.DATA_SPLIT == 'train':
+        cfg.CASE_INDICES = list(range(25))
+    elif cfg.DATA_SPLIT == 'test':
+        cfg.CASE_INDICES = list(range(27, 35))
+    else:
+        cfg.CASE_INDICES = None
+
+    volume_generator = asus_nodule_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+                                     only_nodule_slices=cfg.ONLY_NODULES)
+    volume_eval(cfg, volume_generator=volume_generator)
     return cfg
 
 
 if __name__ == '__main__':
-    asus_eval()
+    # asus_benign_eval()
+    asus_malignant_eval()
     # luna16_eval()
     
     

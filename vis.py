@@ -124,8 +124,8 @@ def plot_3d(image, threshold=-300):
     plt.show()
 
 
-def save_mask(img, mask, pred, num_class, save_path, save_name='img', mask_or_pred_exist=True):
-    if mask_or_pred_exist:
+def save_mask(img, mask, pred, num_class, save_path, save_name='img', saving_condition=True):
+    if saving_condition:
         condition = (np.sum(mask)>0 or np.sum(pred)>0)
     else:
         condition = True
@@ -146,3 +146,36 @@ def save_mask(img, mask, pred, num_class, save_path, save_name='img', mask_or_pr
             # fig2.tight_layout()
             plt.close(fig2)
 
+
+class visualizer():
+    def __init__(self, save_path):
+        self.save_path = save_path
+
+    @staticmethod
+    def visualize_segmentation_in_2d(image, mask, pred, num_class, save_path, save_name='img', mask_or_pred_exist=True):
+        if mask_or_pred_exist:
+            condition = (np.sum(mask)>0 or np.sum(pred)>0)
+        else:
+            condition = True
+            
+        if condition:
+            sub_save_path = save_path
+            if not os.path.isdir(sub_save_path):
+                os.makedirs(sub_save_path)
+
+            fig1, _ = compare_result(image, mask, pred, show_mask_size=True, alpha=0.2, vmin=0, vmax=num_class-1)
+            fig1.savefig(os.path.join(sub_save_path, f'{save_name}.png'))
+            plt.close(fig1)
+
+            fig2, _ = compare_result_enlarge(image, mask, pred, show_mask_size=False, alpha=0.2, vmin=0, vmax=num_class-1)
+            if fig2 is not None:
+                fig2.savefig(os.path.join(sub_save_path, f'{save_name}-en.png'))
+                plt.close(fig2)
+
+    @staticmethod
+    def visualize_segmentation_in_3d(cls):
+        pass
+
+    def visulize_sample(self, ):
+        self.visualize_segmentation_in_2d()
+        self.visualize_segmentation_in_3d()

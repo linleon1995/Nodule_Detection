@@ -149,7 +149,9 @@ class luna16_volume_generator():
         self.data_path = data_path
         self.subset_indices = subset_indices
         self.case_indices = case_indices
-        self.pid_list = self.get_pid_list(data_path, subset_indices, case_indices)
+        self.total_case_list = self.get_case_list(data_path, subset_indices, case_indices)
+        self.pid_list = [os.path.split(path)[1].split('.')[0] for path in self.total_case_list]
+        # self.pid_list = self.get_pid_list(data_path, subset_indices, case_indices)
 
     @classmethod
     def Build_DLP_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
@@ -164,7 +166,7 @@ class luna16_volume_generator():
     @classmethod   
     def Build_luna16_volume_generator(cls, data_path, mask_generating_op, subset_indices=None, case_indices=None, only_nodule_slices=None):
         # TODO: Cancel dependency of [dataset_utils.get_files]
-        # TODO: use self.pid_list to calculate and choose a proper name
+        # TODO: use self.total_case_list to calculate
         subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
         if subset_indices:
             subset_list = np.take(subset_list, subset_indices)
@@ -190,16 +192,39 @@ class luna16_volume_generator():
                 yield vol, mask_vol, infos
 
     @staticmethod
-    def get_pid_list(data_path, subset_indices, case_indices):
-        pid_list = []
+    def get_case_list(data_path, subset_indices, case_indices):
+        total_case_list = []
         subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
         if subset_indices:
             subset_list = np.take(subset_list, subset_indices)
         
         for subset_dir in subset_list:
-            case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False, return_fullpath=False)
+            case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False, return_fullpath=True)
             if case_indices:
                 case_list = np.take(case_list, case_indices)
-            case_list = [c[:-4] for c in case_list]
-            pid_list.extend(case_list)
-        return pid_list
+            total_case_list.extend(case_list)
+        return total_case_list
+
+
+
+def build_pred_generator(data_generator, predictor, batch_size=1):
+    for vol_idx, (vol, mask_vol, infos) in enumerate(data_generator):
+        infos['vol_idx'] = vol_idx
+        pid, scan_idx = infos['pid'], infos['scan_idx']
+        mask_vol = np.int32(mask_vol)
+        pred_vol = np.zeros_like(mask_vol)
+
+        for img_idx in range(0, vol.shape[0], batch_size):
+            if img_idx == 0:
+                print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
+            start, end = img_idx, min(vol.shape[0], img_idx+batch_size)
+            img = vol[start:end]
+            img = np.split(img, img.shape[0], axis=0)
+            outputs = predictor(img) 
+            for j, output in enumerate(outputs):
+                pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+                pred = np.sum(pred, axis=0)
+                pred = mask_preprocess(pred)
+                pred_vol[img_idx+j] = pred
+            
+        yield infos, mask_vol, pred_vol

@@ -10,24 +10,23 @@ import torchvision
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch-size', type=int, default=4, help='Batch size to use for training')
+parser.add_argument('--num-workers', type=int, default=0, help='Number of worker processes for background data loading')
 
-def liwei_predictor(images):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch-size', type=int, default=4, help='Batch size to use for training')
-    parser.add_argument('--num-workers', type=int, default=0, help='Number of worker processes for background data loading')
+parser.add_argument('--n_classes', type=int, default=2)
+parser.add_argument('--val_stride', type=int, default=10)
+parser.add_argument('--contextSlices_count', type=int, default=3)
+parser.add_argument('--contextSlices_shift', type=int, default=1)
+parser.add_argument('--fullCt_bool', type=bool, default=True)
     
-    parser.add_argument('--n_classes', type=int, default=2)
-    parser.add_argument('--val_stride', type=int, default=10)
-    parser.add_argument('--contextSlices_count', type=int, default=3)
-    parser.add_argument('--contextSlices_shift', type=int, default=1)
-    parser.add_argument('--fullCt_bool', type=bool, default=True)
-        
-    parser.add_argument('--loss', type=str, default='SoftIoU', help='use BinaryDice or Focal or SoftIoU or CrossEntropy')
-    parser.add_argument('--pretrain_path', default=rf'C:\Users\test\Desktop\Leon\Projects\Nodule_project_LiweiHsiao\FCN_IOUFocal/best.pt')
-    parser.add_argument('--save_path', default='./Show_output')
-    parser.add_argument('--save', default=False)
-    opt = parser.parse_args()
-    
+parser.add_argument('--loss', type=str, default='SoftIoU', help='use BinaryDice or Focal or SoftIoU or CrossEntropy')
+parser.add_argument('--pretrain_path', default=rf'C:\Users\test\Desktop\Leon\Projects\Nodule_project_LiweiHsiao\FCN_IOUFocal/best.pt')
+parser.add_argument('--save_path', default='./Show_output')
+parser.add_argument('--save', default=False)
+opt = parser.parse_args()
+
+def liwei_predictor(opt, images):
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     if opt.save:
@@ -59,3 +58,11 @@ def liwei_predictor(images):
         preds = torch.argmax(logits, dim=1)
         preds = preds.cpu().data.numpy()
     return preds
+
+
+def main(opt):
+    preds = liwei_predictor(opt, images)
+
+
+if __name__ == '__main__':
+    main(opt)

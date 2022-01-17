@@ -132,7 +132,7 @@ def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_th
             if len(splited_mask):
                 for i, mask in enumerate(splited_mask, 1):
                     if np.sum(mask) > area_threshold:
-                        cv2_imshow(255*np.tile(mask[...,np.newaxis], (1,1,3)), os.path.join('plot', 'ASUS_nodule', f'{image_id}-s{i}.png'))
+                        # cv2_imshow(255*np.tile(mask[...,np.newaxis], (1,1,3)), os.path.join('plot', 'ASUS_nodule', f'{image_id}-s{i}.png'))
 
                         if case_idx < case_split_indices[0]:
                             train_converter.sample(img_path, mask, image_id)
@@ -313,9 +313,27 @@ def luun16_to_coco_main():
         json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
 
-def asus_nodule_to_coco_main():
+def asus_benign_to_coco_main():
+    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw'
+    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'benign')
+    if not os.path.isdir(annotation_root):
+        os.makedirs(annotation_root)
+
+    train_root, valid_root, test_root = asus_nodule_to_coco_structure(DATA_PATH, area_threshold=8)
+
+    with open(os.path.join(annotation_root, 'annotations_train.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
+
+    with open(os.path.join(annotation_root, 'annotations_valid.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
+
+    with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
+
+
+def asus_malignant_to_coco_main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
-    annotation_root = os.path.join('Annotations', 'ASUS_Nodule')
+    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'malignant')
     if not os.path.isdir(annotation_root):
         os.makedirs(annotation_root)
 
@@ -330,7 +348,9 @@ def asus_nodule_to_coco_main():
     # with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
     #     json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
 
+
 if __name__ == '__main__':
-    luun16_round_to_coco_main()
+    # luun16_round_to_coco_main()
     # luun16_to_coco_main()
-    # asus_nodule_to_coco_main()
+    asus_benign_to_coco_main()
+    # asus_malignant_to_coco_main()
