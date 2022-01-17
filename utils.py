@@ -62,6 +62,9 @@ class DataFrameTool():
         return self.df
 
     def save_data_frame(self, save_path, first_column_index=False):
+        save_dir = os.path.split(save_path)[0]
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir)
         self.df.to_csv(save_path, index=first_column_index)
 
 

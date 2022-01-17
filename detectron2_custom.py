@@ -61,10 +61,12 @@ def common_config():
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032\model_0019999.pth'  # Let training initialize from model zoo
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037\model_0011999.pth'  # Let training initialize from model zoo
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040\model_0007999.pth'  # Let training initialize from model zoo
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
-    cfg.SOLVER.IMS_PER_BATCH = 4
+    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052\model_0015999.pth'  # Let training initialize from model zoo
+    cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057\model_0009999.pth'  # Let training initialize from model zoo
+    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
+    cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.0001  
-    cfg.SOLVER.MAX_ITER = 40000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 10000   # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -97,8 +99,7 @@ def common_config():
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
     cfg.INPUT.CROP.SIZE = [0.7, 0.7]
-    cfg.SOLVER.CHECKPOINT_PERIOD = 2000
-    cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 14
+    cfg.SOLVER.CHECKPOINT_PERIOD = 400
     # cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
@@ -110,6 +111,8 @@ def common_config():
     # cfg.MODEL.RPN.BBOX_REG_LOSS_WEIGHT = 5e-3
     # cfg.MODEL.RPN.LOSS_WEIGHT = 5e-3
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_WEIGHT = 5e-3
+    # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 32
+    # cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 32
     return cfg
 
 
@@ -129,6 +132,14 @@ def luna16_config():
     return cfg
 
 
+def luna16_round_config():
+    cfg = common_config()
+    cfg.TRAIN_JSON_FILE = os.path.join("Annotations", "LUNA16-round", "annotations_train.json")
+    cfg.VALID_JSON_FILE = os.path.join("Annotations", "LUNA16-round", "annotations_valid.json")
+    cfg.DATA_PATH = rf"C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round\raw"
+    return cfg
+
+
 def lidc_config():
     cfg = common_config()
     cfg.TRAIN_JSON_FILE = os.path.join("Annotations", "LIDC", "annotations_train.json")
@@ -139,8 +150,9 @@ def lidc_config():
 
 
 def main():
-    cfg = luna16_config()
-    # cfg = asus_nodule_config()
+    # cfg = luna16_config()
+    # cfg = luna16_round_config()
+    cfg = asus_nodule_config()
 
     # Prepare the dataset
     register_coco_instances("my_dataset_train", {}, cfg.TRAIN_JSON_FILE, cfg.DATA_PATH)

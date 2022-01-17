@@ -7,7 +7,7 @@ from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess, raw_preprocess
+from utils import cv2_imshow, calculate_malignancy, irc2xyz, segment_lung, mask_preprocess, raw_preprocess
 # import data_preprocess
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
@@ -72,44 +72,9 @@ def make_mask(center, diam, z, width, height, spacing, origin):
     z = z position of slice in world coordinates mm
     '''
     mask = np.zeros([height,width]) # 0's everywhere except nodule swapping x,y to match img
-    # convert to nodule space from world coordinates
-
-    # Defining the voxel range in which the nodule falls
-    v_center = (center-origin)/spacing
-    v_diam = int(diam/spacing[0]+5)
-    v_xmin = np.max([0,int(v_center[0]-v_diam)-5])
-    v_xmax = np.min([width-1,int(v_center[0]+v_diam)+5])
-    v_ymin = np.max([0,int(v_center[1]-v_diam)-5]) 
-    v_ymax = np.min([height-1,int(v_center[1]+v_diam)+5])
-
-    v_xrange = range(v_xmin, v_xmax+1)
-    v_yrange = range(v_ymin, v_ymax+1)
-
-    # Convert back to world coordinates for distance calculation
-    x_data = [x*spacing[0]+origin[0] for x in range(width)]
-    y_data = [x*spacing[1]+origin[1] for x in range(height)]
-
-    # Fill in 1 within sphere around nodule
-    for v_x in v_xrange:
-        for v_y in v_yrange:
-            p_x = spacing[0]*v_x + origin[0]
-            p_y = spacing[1]*v_y + origin[1]
-            if np.linalg.norm(center-np.array([p_x, p_y, z])) <= diam:
-                mask[int((p_y-origin[1])/spacing[1]), int((p_x-origin[0])/spacing[0])] = 1.0
-    return mask
-
-
-
-def make_mask2(center, diam, depth, width, height, spacing, origin):
-    '''
-    Center : centers of circles px -- list of coordinates x,y,z
-    diam : diameters of circles px -- diameter
-    widthXheight : pixel dim of image
-    spacing = mm/px conversion rate np array x,y,z
-    origin = x,y,z mm np.array
-    z = z position of slice in world coordinates mm
-    '''
-    mask = np.zeros([height,width]) # 0's everywhere except nodule swapping x,y to match img
+    center = np.array(list(center))
+    origin = np.array(list(origin))
+    spacing = np.array(list(spacing))
     # convert to nodule space from world coordinates
 
     # Defining the voxel range in which the nodule falls
@@ -120,8 +85,6 @@ def make_mask2(center, diam, depth, width, height, spacing, origin):
     v_xmax = np.min([width-1, int(v_center[0]+v_diam)+world_range])
     v_ymin = np.max([0, int(v_center[1]-v_diam)-world_range]) 
     v_ymax = np.min([height-1, int(v_center[1]+v_diam)+world_range])
-    v_zmin = np.max([0, int(v_center[1]-v_diam)-world_range]) 
-    v_zmax = np.min([depth-1, int(v_center[1]+v_diam)+world_range])
     
     v_xrange = range(v_xmin, v_xmax+1)
     v_yrange = range(v_ymin, v_ymax+1)
@@ -131,10 +94,8 @@ def make_mask2(center, diam, depth, width, height, spacing, origin):
     y_data = [x*spacing[1]+origin[1] for x in range(height)]
 
     # Fill in 1 within sphere around nodule
-    for v_x in v_xrange:
-        for v_y in v_yrange:
-            p_x = spacing[0]*v_x + origin[0]
-            p_y = spacing[1]*v_y + origin[1]
+    for p_x in x_data:
+        for p_y in y_data:
             if np.linalg.norm(center-np.array([p_x, p_y, z])) <= diam:
                 mask[int((p_y-origin[1])/spacing[1]), int((p_x-origin[0])/spacing[0])] = 1.0
     return mask
@@ -145,20 +106,19 @@ def getCt(series_uid):
     return Ct_luna16_round_mask(series_uid)
 
 class Ct_luna16_round_mask(dataset_seg.Ct):
-    def __init__(self, series_uid, luna_path):
-        super.__init__(self, series_uid)
+    def __init__(self, series_uid):
+        super().__init__(series_uid)
         self.height, self.width = self.hu_a.shape[1:]
 
-        df_node = pd.read_csv(luna_path+"annotations.csv")
-        df_node["file"] = df_node["seriesuid"].map(lambda file_name: get_filename(file_list, file_name))
-        self.df_node = df_node.dropna()
+        # df_node = pd.read_csv(luna_path+"annotations.csv")
+        # df_node["file"] = df_node["seriesuid"].map(lambda file_name: get_filename(file_list, file_name))
+        # self.df_node = df_node.dropna()
 
     def buildAnnotationMask(self, positiveInfo_list, threshold_hu=-700):
-        self.luna16_round_mask_preprocessing(positiveInfo_list)
+        return self.luna16_round_mask_preprocessing(positiveInfo_list)
 
     def luna16_round_mask_preprocessing(self, positiveInfo_list):
-        
-        boundingBox_a = np.zeros_like(self.hu_a, dtype=np.bool)
+        mask_vol = np.zeros_like(self.hu_a)
 
         for candidateInfo_tup in positiveInfo_list:
             center_irc = util.xyz2irc(
@@ -167,48 +127,21 @@ class Ct_luna16_round_mask(dataset_seg.Ct):
                 self.vxSize_xyz,
                 self.direction_a,
             )
-            data_preprocess.make_mask(
-                candidateInfo_tup.center_xyz, candidateInfo_tup.diameter_mm, center_irc['z'], self.width, self.height, self.vxSize_xyz, self.origin_xyz)
+            for i, i_z in enumerate(np.arange(int(center_irc.index)-1,
+                             int(center_irc.index)+2).clip(0, self.hu_a.shape[0]-1)): # clip prevents going out of bounds in Z
 
+                mask = make_mask(
+                    candidateInfo_tup.center_xyz, candidateInfo_tup.diameter_mm, 
+                    i_z*self.vxSize_xyz[2]+self.origin_xyz[2], self.width, self.height, self.vxSize_xyz, self.origin_xyz)
+                                 
+            # for mask_idx in range(mask_vol.shape[0]):
+            #     z_in_world = irc2xyz(mask_idx, self.origin_xyz, self.vxSize_xyz, self.direction_a)
+            #     mask = make_mask(
+            #         candidateInfo_tup.center_xyz, candidateInfo_tup.diameter_mm, 
+            #         z_in_world, self.width, self.height, self.vxSize_xyz, self.origin_xyz)
 
-            ci = int(center_irc.index)
-            cr = int(center_irc.row)
-            cc = int(center_irc.col)
-
-            index_radius = 2
-            try:
-                while self.hu_a[ci + index_radius, cr, cc] > threshold_hu and \
-                        self.hu_a[ci - index_radius, cr, cc] > threshold_hu:
-                    index_radius += 1
-            except IndexError:
-                index_radius -= 1
-
-            row_radius = 2
-            try:
-                while self.hu_a[ci, cr + row_radius, cc] > threshold_hu and \
-                        self.hu_a[ci, cr - row_radius, cc] > threshold_hu:
-                    row_radius += 1
-            except IndexError:
-                row_radius -= 1
-
-            col_radius = 2
-            try:
-                while self.hu_a[ci, cr, cc + col_radius] > threshold_hu and \
-                        self.hu_a[ci, cr, cc - col_radius] > threshold_hu:
-                    col_radius += 1
-            except IndexError:
-                col_radius -= 1
-
-            boundingBox_a[
-                 ci - index_radius: ci + index_radius + 1,
-                 cr - row_radius: cr + row_radius + 1,
-                 cc - col_radius: cc + col_radius + 1] = True
-        self.lung_mask[self.lung_mask == 3] = 1
-        self.lung_mask[self.lung_mask == 4] = 1
-        self.lung_mask[self.lung_mask != 1] = 0
-        mask_a = boundingBox_a & (self.hu_a > threshold_hu) & self.lung_mask.astype('bool')
-
-        return mask_a
+                mask_vol[i_z] = mask
+        return mask_vol
 
 
 class luna16_volume_generator():
@@ -220,12 +153,12 @@ class luna16_volume_generator():
 
     @classmethod
     def Build_DLP_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
-        mask_generating_op = lambda x: x.positive_mask
+        mask_generating_op = dataset_seg.getCt
         return cls.Build_luna16_volume_generator(data_path, mask_generating_op, subset_indices, case_indices, only_nodule_slices)
 
     @classmethod
     def Build_Round_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
-        mask_generating_op = make_mask
+        mask_generating_op = getCt
         return cls.Build_luna16_volume_generator(data_path, mask_generating_op, subset_indices, case_indices, only_nodule_slices)
 
     @classmethod   
@@ -245,9 +178,9 @@ class luna16_volume_generator():
                 series_uid = os.path.split(case_dir)[1][:-4]
                 
                 # preprocess
-                ct = dataset_seg.getCt(series_uid)
+                ct = mask_generating_op(series_uid)
                 vol = ct.hu_a
-                mask_vol = mask_generating_op(ct)
+                mask_vol = ct.positive_mask
                 
                 vol = np.clip(vol, -1000, 1000)
                 vol = raw_preprocess(vol, output_dtype=np.uint8)

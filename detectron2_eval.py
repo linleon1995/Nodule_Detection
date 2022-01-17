@@ -133,7 +133,6 @@ def volume_eval(cfg, vol_generator):
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         total_pid.append(pid)
-        print(pid)
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
         case_save_path = os.path.join(cfg.SAVE_PATH, pid)
@@ -387,6 +386,10 @@ def select_model(cfg):
     # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_051'
     # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_053'
     # check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_055'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_056'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
+    check_point_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
     cfg.check_point_path = check_point_path
     
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_final.pth")  # path to the model we just trained
@@ -395,17 +398,19 @@ def select_model(cfg):
     cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0000999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001199.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001599.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0003999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0001999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0005999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0007999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0009999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0011999.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0015999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0019999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0023999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0027999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0039999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0059999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(check_point_path, "model_0069999.pth")  # path to the model we just trained
-
     return cfg
 
 
@@ -432,16 +437,18 @@ def common_config():
     cfg.INPUT.MIN_SIZE_TEST = 800
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
+    # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8,  16,  32,  64, 128]]
+    # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 32
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
     run = os.path.split(cfg.check_point_path)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227\maskrcnn-{run}-{weight}-{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}-samples'
     cfg.MAX_SAVE_IMAGE_CASES = 10
-    cfg.MAX_TEST_CASES = 2
+    cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
-    cfg.TEST_BATCH_SIZE = 10
+    cfg.TEST_BATCH_SIZE = 1
     return cfg
 
 
@@ -485,8 +492,8 @@ def asus_eval():
     cfg = add_dataset_name(cfg)
 
     cfg.SUBSET_INDICES = None
-    cfg.CASE_INDICES = list(range(40))
-    # cfg.CASE_INDICES = list(range(45, 57))
+    # cfg.CASE_INDICES = list(range(40))
+    cfg.CASE_INDICES = list(range(45, 57))
     # cfg.CASE_INDICES = list(range(48, 50))
     # cfg.CASE_INDICES = None
 
@@ -495,8 +502,8 @@ def asus_eval():
 
 
 if __name__ == '__main__':
-    # asus_eval()
-    luna16_eval()
+    asus_eval()
+    # luna16_eval()
     
     
     

@@ -68,7 +68,11 @@ def volumetric_data_preprocess(data_path, save_path, vol_generator_func):
             mask = mask_vol[img_idx]
             if np.sum(mask):
                 mask_show = np.where(mask>0, 255, 0)
-                cv2.imwrite(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'), mask_show)
+                fig, ax = plt.subplots(1, 1)
+                ax.imshow(img, 'gray')
+                ax.imshow(mask_show, alpha=0.2)
+                fig.savefig(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'))
+                # cv2.imwrite(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'), mask_show)
 
             cv2.imwrite(os.path.join(save_sub_dir, 'Image', pid, f'{pid}_{img_idx:04d}.png'), img)
             cv2.imwrite(os.path.join(save_sub_dir, 'Mask', pid, f'{pid}_{img_idx:04d}.png'), mask)
@@ -197,7 +201,7 @@ def lidc_preprocess(data_path, save_path, clevel=0.2, padding=512):
 def luna16_volume_preprocess():
     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
     dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess'
-    volumetric_data_preprocess_KC(data_path=src, 
+    volumetric_data_preprocess(data_path=src, 
                                save_path=dst, 
                                vol_generator_func=luna16_volume_generator.Build_DLP_luna16_volume_generator)
 
@@ -210,13 +214,21 @@ def luna16_volume_preprocess_round():
                                vol_generator_func=luna16_volume_generator.Build_Round_luna16_volume_generator)
 
 
-def asus_nodule_volume_preprocess():
+def asus_benign_volume_preprocess():
+    src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
+    dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign'
+    volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=asus_nodule_volume_generator)
+
+
+def asus_malignant_volume_preprocess():
     src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
     dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant'
     volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=asus_nodule_volume_generator)
 
-
+    
 if __name__ == '__main__':
-    luna16_volume_preprocess()
-    # asus_nodule_volume_preprocess()
+    # luna16_volume_preprocess()
+    # luna16_volume_preprocess_round()
+    asus_benign_volume_preprocess()
+    # asus_malignant_volume_preprocess()
     pass

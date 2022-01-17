@@ -123,6 +123,7 @@ class Ct:
 
         ct_mhd = sitk.ReadImage(mhd_path)
         self.hu_a = np.array(sitk.GetArrayFromImage(ct_mhd), dtype=np.float32)
+        self.depth, self.width, self.height = self.hu_a.shape
 
         lung_mhd_path = glob.glob('{}/{}.mhd'.format(seg_lung_path, series_uid))[0]
 
