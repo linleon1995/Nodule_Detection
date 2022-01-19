@@ -83,7 +83,7 @@ class volumetric_data_eval():
 
                 if NoduleDSC > 0:
                     pred_center_irc = utils.get_nodule_center(pred_nodule)
-                    pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['space'], vol_infos['direction'])
+                    pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
                 else:
                     pred_center_xyz = None
                 nodule_infos['Center_xyz'] = pred_center_xyz
@@ -121,7 +121,7 @@ class volumetric_data_eval():
             target_nodule = np.logical_or(target_vol>0, pred_nodule)*target_vol
             nodule_dsc = cls.DSC(target_nodule, pred_nodule)
             pred_center_irc = utils.get_nodule_center(pred_nodule)
-            pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['space'], vol_infos['direction'])
+            pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
             nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_dsc}
             total_nodule_infos.append(nodule_infos)
         return total_nodule_infos

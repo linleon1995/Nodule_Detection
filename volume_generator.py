@@ -16,10 +16,10 @@ from LUNA16_test import dataset_seg, util
 logging.basicConfig(level=logging.INFO)
 
 from modules.data import dataset_utils
+LUNA16_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
 
 
-
-# TODO: Wrap all the thing to single object in generarator(raw_vol, mask_vol, space, origin, ...)
+# TODO: Wrap all the thing to single object in generarator(raw_vol, mask_vol, spacing, origin, ...)
 def lidc_volume_generator(data_path, case_indices, only_nodule_slices=False):
     case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     case_list = np.array(case_list)[case_indices]
@@ -49,7 +49,7 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
         for _dir in raw_and_mask:
             if 'raw' in _dir:
                 vol_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
-                vol, origin, space, direction = dataset_utils.load_itk(vol_path)
+                vol, origin, spacing, direction = dataset_utils.load_itk(vol_path)
                 vol = np.clip(vol, -1000, 1000)
                 vol = raw_preprocess(vol, output_dtype=np.uint8)
             if 'mask' in _dir:
@@ -58,7 +58,7 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
                 mask_vol = mask_preprocess(mask_vol)            
                 # mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 1), 1, 2)
         pid = os.path.split(case_dir)[1]
-        infos = {'pid': pid, 'scan_idx': 0, 'subset': None, 'origin': origin, 'space': space, 'direction': direction}
+        infos = {'pid': pid, 'scan_idx': 0, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
         yield vol, mask_vol, infos
 
 
@@ -75,7 +75,7 @@ def make_mask(center, diam, z, width, height, spacing, origin):
     center = np.array(list(center))
     origin = np.array(list(origin))
     spacing = np.array(list(spacing))
-    # convert to nodule space from world coordinates
+    # convert to nodule spacing from world coordinates
 
     # Defining the voxel range in which the nodule falls
     world_range = 5 # 5 mm
@@ -145,8 +145,8 @@ class Ct_luna16_round_mask(dataset_seg.Ct):
 
 
 class luna16_volume_generator():
-    def __init__(self, data_path, subset_indices=None, case_indices=None):
-        self.data_path = data_path
+    def __init__(self, data_path=None, subset_indices=None, case_indices=None):
+        self.data_path = data_path if data_path else LUNA16_RAW_DATA_PATH
         self.subset_indices = subset_indices
         self.case_indices = case_indices
         self.total_case_list = self.get_case_list(data_path, subset_indices, case_indices)
@@ -154,19 +154,21 @@ class luna16_volume_generator():
         # self.pid_list = self.get_pid_list(data_path, subset_indices, case_indices)
 
     @classmethod
-    def Build_DLP_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
+    def Build_DLP_luna16_volume_generator(cls, data_path=None, subset_indices=None, case_indices=None, only_nodule_slices=None):
         mask_generating_op = dataset_seg.getCt
-        return cls.Build_luna16_volume_generator(data_path, mask_generating_op, subset_indices, case_indices, only_nodule_slices)
+        return cls.Build_luna16_volume_generator(mask_generating_op, data_path, subset_indices, case_indices, only_nodule_slices)
 
     @classmethod
-    def Build_Round_luna16_volume_generator(cls, data_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
+    def Build_Round_luna16_volume_generator(cls, data_path=None, subset_indices=None, case_indices=None, only_nodule_slices=None):
         mask_generating_op = getCt
-        return cls.Build_luna16_volume_generator(data_path, mask_generating_op, subset_indices, case_indices, only_nodule_slices)
+        return cls.Build_luna16_volume_generator(mask_generating_op, data_path, subset_indices, case_indices, only_nodule_slices)
 
     @classmethod   
-    def Build_luna16_volume_generator(cls, data_path, mask_generating_op, subset_indices=None, case_indices=None, only_nodule_slices=None):
+    def Build_luna16_volume_generator(cls, mask_generating_op, data_path=None, subset_indices=None, case_indices=None, only_nodule_slices=None):
         # TODO: Cancel dependency of [dataset_utils.get_files]
         # TODO: use self.total_case_list to calculate
+        if not data_path:
+            data_path = LUNA16_RAW_DATA_PATH
         subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
         if subset_indices:
             subset_list = np.take(subset_list, subset_indices)
@@ -179,17 +181,19 @@ class luna16_volume_generator():
                 subset = os.path.split(subset_dir)[-1]
                 series_uid = os.path.split(case_dir)[1][:-4]
                 
-                # preprocess
-                ct = mask_generating_op(series_uid)
-                vol = ct.hu_a
-                mask_vol = ct.positive_mask
+                raw_vol, mask_vol, infos = luna16_volume_generator.get_data_from_pid(series_uid, mask_generating_op)
+                infos['subset'] = subset
+                # # preprocess
+                # ct = mask_generating_op(series_uid)
+                # vol = ct.hu_a
+                # mask_vol = ct.positive_mask
                 
-                vol = np.clip(vol, -1000, 1000)
-                vol = raw_preprocess(vol, output_dtype=np.uint8)
-                mask_vol = mask_preprocess(mask_vol)
-                infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset, 
-                         'origin': ct.origin_xyz, 'space': ct.vxSize_xyz, 'direction': ct.direction_a}
-                yield vol, mask_vol, infos
+                # vol = np.clip(vol, -1000, 1000)
+                # vol = raw_preprocess(vol, output_dtype=np.uint8)
+                # mask_vol = mask_preprocess(mask_vol)
+                # infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset, 
+                #          'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
+                yield raw_vol, mask_vol, infos
 
     @staticmethod
     def get_case_list(data_path, subset_indices, case_indices):
@@ -205,6 +209,18 @@ class luna16_volume_generator():
             total_case_list.extend(case_list)
         return total_case_list
 
+    @staticmethod
+    def get_data_from_pid(pid, mask_generating_op=dataset_seg.getCt):
+        ct = mask_generating_op(pid)
+        raw_vol = ct.hu_a
+        mask_vol = ct.positive_mask
+        
+        raw_vol = np.clip(raw_vol, -1000, 1000)
+        raw_vol = raw_preprocess(raw_vol, output_dtype=np.uint8)
+        mask_vol = mask_preprocess(mask_vol)
+        infos = {'dataset': 'LUNA16', 'pid': pid, 'scan_idx': 0, 
+                    'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
+        return raw_vol, mask_vol, infos
 
 
 def build_pred_generator(data_generator, predictor, batch_size=1):

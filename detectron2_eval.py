@@ -162,10 +162,10 @@ def volume_eval(cfg, volume_generator):
     metadata_recorder = Nodule_data_recording()
     # submission_recorder = SubmissionDataFrame()
     
-    # volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+    # volume_generator = vol_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
     #                                  only_nodule_slices=cfg.ONLY_NODULES)
 
-    # xx = luna16_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
+    # xx = luna16_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
     # total_pid = xx.pid_list
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
@@ -307,8 +307,8 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_044'
@@ -321,7 +321,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_055'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_056'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_059'
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
@@ -347,12 +347,13 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0039999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0059999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0069999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0079999.pth")  # path to the model we just trained
     return cfg
 
 
 def add_dataset_name(cfg):
     for dataset_name in ['LUNA16', 'ASUS', 'LIDC']:
-        if dataset_name in cfg.FULL_DATA_PATH:
+        if dataset_name in cfg.RAW_DATA_PATH:
             break
         dataset_name = None
     assert dataset_name is not None
@@ -384,13 +385,13 @@ def common_config():
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
-    cfg.TEST_BATCH_SIZE = 4
+    cfg.TEST_BATCH_SIZE = 1
     return cfg
 
 
 def luna16_eval():
     cfg = common_config()
-    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
     cfg = add_dataset_name(cfg)
     cfg.DATA_SPLIT = 'test'
@@ -403,11 +404,11 @@ def luna16_eval():
         cfg.SUBSET_INDICES = None
     cfg.CASE_INDICES = None
 
-    # volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator = asus_nodule_volume_generator(
-    #     cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
-    # volume_eval(cfg, volume_generator=volume_generator)
-    # froc(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
-    CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH)
+    volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
+        cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
+    volume_eval(cfg, volume_generator=volume_generator)
+    # # froc(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
+    # CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH)
     # calculateFROC(cfg)
     # eval(cfg)
     return cfg
@@ -415,10 +416,10 @@ def luna16_eval():
 
 def asus_malignant_eval():
     cfg = common_config()
-    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'train'
+    cfg.DATA_SPLIT = 'test'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
@@ -428,7 +429,7 @@ def asus_malignant_eval():
     else:
         cfg.CASE_INDICES = None
 
-    volume_generator = asus_nodule_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+    volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     volume_eval(cfg, volume_generator=volume_generator)
     return cfg
@@ -436,7 +437,7 @@ def asus_malignant_eval():
 
 def asus_benign_eval():
     cfg = common_config()
-    cfg.FULL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw'
     cfg = add_dataset_name(cfg)
     cfg.DATA_SPLIT = 'train'
@@ -449,7 +450,7 @@ def asus_benign_eval():
     else:
         cfg.CASE_INDICES = None
 
-    volume_generator = asus_nodule_volume_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+    volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     volume_eval(cfg, volume_generator=volume_generator)
     return cfg
