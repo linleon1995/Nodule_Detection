@@ -149,8 +149,10 @@ def volume_eval(cfg, volume_generator):
     # TODO: Add trial number to divide different trial (csv will replace)
     # TODO: predictor, volume, generator,... should be input into this function rather define in the function
     # TODO: Select a better Data interface or implement both (JSON, volume loading)
-    if not os.path.isdir(cfg.SAVE_PATH):
-        os.makedirs(cfg.SAVE_PATH)
+    # TODO: save_image_condition
+    save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
+    if not os.path.isdir(save_path):
+        os.makedirs(save_path)
     save_image_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
     total_pid = []
 
@@ -160,6 +162,7 @@ def volume_eval(cfg, volume_generator):
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval()
     metadata_recorder = Nodule_data_recording()
+        
     # submission_recorder = SubmissionDataFrame()
     
     # volume_generator = vol_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
@@ -172,7 +175,8 @@ def volume_eval(cfg, volume_generator):
         total_pid.append(pid)
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
-        case_save_path = os.path.join(cfg.SAVE_PATH, pid)
+        
+        image_save_path = os.path.join(save_path, 'images', pid)
         # TODO: use decorator to write a breaking condition
         if cfg.MAX_TEST_CASES is not None:
             if vol_idx >= cfg.MAX_TEST_CASES:
@@ -200,7 +204,7 @@ def volume_eval(cfg, volume_generator):
                 time_recording.set_start_time('Save result in image.')
                 # TODO: check behavior: save_image_condition
                 if save_image_condition(vol_idx):
-                    save_mask(img[j][0], mask_vol[img_idx+j], pred, num_class=2, save_path=case_save_path, save_name=f'{pid}-{img_idx+j:03d}.png')
+                    save_mask(img[j][0], mask_vol[img_idx+j], pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{img_idx+j:03d}.png')
                 time_recording.set_end_time('Save result in image.')
 
         time_recording.set_start_time('Nodule Evaluation')
@@ -233,7 +237,7 @@ def volume_eval(cfg, volume_generator):
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
     # submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
     df = metadata_recorder.get_data_frame()
-    df.to_csv(os.path.join(cfg.SAVE_PATH, f'{cfg.DATASET_NAME}-nodule_informations.csv'), index=False)
+    df.to_csv(os.path.join(save_path, f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-nodule_informations.csv'), index=False)
     time_recording.set_end_time('Total')
     time_recording.show_recording_time()
 
@@ -241,8 +245,9 @@ def volume_eval(cfg, volume_generator):
 def froc(cfg, volume_generator):
     time_recording = time_record()
     time_recording.set_start_time('Total')
-    if not os.path.isdir(cfg.SAVE_PATH):
-        os.makedirs(cfg.SAVE_PATH)
+    save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
+    if not os.path.isdir(save_path):
+        os.makedirs(save_path)
     pid_list = []
 
     predictor = BatchPredictor(cfg)
@@ -258,12 +263,12 @@ def froc(cfg, volume_generator):
             submission = [infos['pid']] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
             submission_recorder.write_row(submission)
 
-    submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
+    submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
     time_recording.set_end_time('Total')
 
     seriesuid = pd.DataFrame(data=pid_list)
-    seriesuid.to_csv(os.path.join(cfg.SAVE_PATH, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
-    CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH, pid_list)
+    seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
+    CalculateFROC(cfg.DATASET_NAME, save_path, pid_list)
     time_recording.show_recording_time()
 
 
@@ -324,17 +329,17 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_059'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.checkpoint_path = checkpoint_path
     
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000399.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000799.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001199.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001599.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001999.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0003999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0007999.pth")  # path to the model we just trained
@@ -354,9 +359,15 @@ def select_model(cfg):
 def add_dataset_name(cfg):
     for dataset_name in ['LUNA16', 'ASUS', 'LIDC']:
         if dataset_name in cfg.RAW_DATA_PATH:
+            if dataset_name == 'ASUS':
+                if 'benign' in cfg.RAW_DATA_PATH:
+                    dataset_name = f'{dataset_name}-benign'
+                elif 'malignant' in cfg.RAW_DATA_PATH:
+                    dataset_name = f'{dataset_name}-malignant'
             break
         dataset_name = None
-    assert dataset_name is not None
+
+    assert dataset_name is not None, 'Unknown dataset name.'
     cfg.DATASET_NAME = dataset_name
     return cfg
 
@@ -381,7 +392,7 @@ def common_config():
     run = os.path.split(cfg.checkpoint_path)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227\maskrcnn-{run}-{weight}-{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}-samples'
-    cfg.MAX_SAVE_IMAGE_CASES = 10
+    cfg.MAX_SAVE_IMAGE_CASES = 100
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -419,7 +430,7 @@ def asus_malignant_eval():
     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'test'
+    cfg.DATA_SPLIT = 'train'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
@@ -440,7 +451,7 @@ def asus_benign_eval():
     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'train'
+    cfg.DATA_SPLIT = 'test'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
