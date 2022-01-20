@@ -184,7 +184,7 @@ class luna16_volume_generator():
                 subset = os.path.split(subset_dir)[-1]
                 series_uid = os.path.split(case_dir)[1][:-4]
                 
-                raw_vol, mask_vol, infos = luna16_volume_generator.get_data_from_pid(series_uid, mask_generating_op)
+                raw_vol, mask_vol, infos = luna16_volume_generator.get_data_by_pid(series_uid, mask_generating_op)
                 infos['subset'] = subset
                 # # preprocess
                 # ct = mask_generating_op(series_uid)

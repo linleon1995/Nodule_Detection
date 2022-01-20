@@ -33,7 +33,7 @@ def main(config_reference):
         LOGGER.info(f'Seed the RNG for all devices with {manual_seed}')
         train_utils.set_deterministic(manual_seed, random, np, torch)
 
-    model = build_3d_resnet(model_depth=50, n_classes=config.MODEL.NUM_CLASSES-1, conv1_t_size=7, conv1_t_stride=2)
+    model = build_3d_resnet(model_depth=18, n_classes=config.MODEL.NUM_CLASSES, conv1_t_size=7, conv1_t_stride=2)
 
 
     train_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='train')
