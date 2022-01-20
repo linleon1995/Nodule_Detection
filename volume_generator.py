@@ -12,7 +12,10 @@ from utils import cv2_imshow, calculate_malignancy, irc2xyz, segment_lung, mask_
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 import pandas as pd
+from LUNA16_test.disk import getCache
 from LUNA16_test import dataset_seg, util
+raw_cache = getCache('part2segment')
+
 logging.basicConfig(level=logging.INFO)
 
 from modules.data import dataset_utils
@@ -210,7 +213,8 @@ class luna16_volume_generator():
         return total_case_list
 
     @staticmethod
-    def get_data_from_pid(pid, mask_generating_op=dataset_seg.getCt):
+    @raw_cache.memoize(typed=True)
+    def get_data_by_pid(pid, mask_generating_op=dataset_seg.getCt):
         ct = mask_generating_op(pid)
         raw_vol = ct.hu_a
         mask_vol = ct.positive_mask

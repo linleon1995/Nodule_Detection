@@ -38,7 +38,7 @@ class LUNA16_CropRange_Builder():
         for index, data_info in data_samples.iterrows():
             print(f'Saving LUNA16 nodule volume {index:04d}')
             pid = data_info['seriesuid']
-            raw_volume, target_volume, volume_info = luna16_volume_generator.get_data_from_pid(pid)
+            raw_volume, target_volume, volume_info = luna16_volume_generator.get_data_by_pid(pid)
             
             crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
             raw_chunk = LUNA16_CropRange_Builder.crop_volume(raw_volume, crop_range, crop_center)
@@ -52,9 +52,9 @@ class LUNA16_CropRange_Builder():
                 target_path = negative_target_path
                 
             np.save(os.path.join(raw_path, f'luna16-{index:04d}-{pid}.npy'), raw_chunk[...,0])
-            np.save(os.path.join(target_path, f'luna16-{index:04d}-{pid}.npy'), target_chunk[...,0])
+            np.save(os.path.join(target_path, f'luna16-{index:04d}-{pid}.npy'), target_chunk)
             total_raw_path = np.append(total_raw_path, os.path.join(raw_path, f'luna16-{index:04d}-{pid}.npy'))
-        
+
         data_samples['path'] = total_raw_path
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
