@@ -68,7 +68,7 @@ def common_config():
 
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = 0.00005  
-    cfg.SOLVER.MAX_ITER = 80000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 30000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -100,7 +100,7 @@ def common_config():
     cfg.INPUT.CROP.TYPE = "relative_range"
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
-    cfg.INPUT.CROP.SIZE = [0.7, 0.7]
+    cfg.INPUT.CROP.SIZE = [0.5, 0.5]
     cfg.SOLVER.CHECKPOINT_PERIOD = 2000
     # cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "giou"
@@ -160,10 +160,10 @@ def lidc_config():
 
 
 def main():
-    # cfg = luna16_config()
+    cfg = luna16_config()
     # cfg = luna16_round_config()
     # cfg = asus_benign_config()
-    cfg = asus_malignant_config()
+    # cfg = asus_malignant_config()
 
     # Prepare the dataset
     register_coco_instances("my_dataset_train", {}, cfg.TRAIN_JSON_FILE, cfg.DATA_PATH)

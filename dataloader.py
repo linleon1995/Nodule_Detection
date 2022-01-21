@@ -60,15 +60,15 @@ class Luna16CropDataset(Dataset):
         target = 1 if 'positive' in data_path else 0
         target = np.array(target, dtype='float')[np.newaxis]
 
-        mask_path = data_path.replace('Image', 'Mask')
-        mask_chunk = np.load(mask_path)
-        # mask_chunk = rotate(mask_chunk)
-        for i in range(0, 64, 30):
-            if np.sum(mask_chunk[i]) == 0:
-                plt.imshow(raw_chunk[0,i], 'gray')
-                plt.imshow(mask_chunk[i], alpha=0.2)
-                plt.title(f'{i}-{target}')
-                plt.show()
+        # mask_path = data_path.replace('Image', 'Mask')
+        # mask_chunk = np.load(mask_path)
+        # # mask_chunk = rotate(mask_chunk)
+        # for i in range(0, 64, 30):
+        #     if np.sum(mask_chunk[i]) == 0:
+        #         plt.imshow(raw_chunk[0,i], 'gray')
+        #         plt.imshow(mask_chunk[i], alpha=0.2)
+        #         plt.title(f'{i}-{target}')
+        #         plt.show()
 
         return {'input':raw_chunk, 'target': target}
 

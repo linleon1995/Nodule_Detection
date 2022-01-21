@@ -243,36 +243,36 @@ def volume_eval(cfg, volume_generator):
 
 
 def froc(cfg, volume_generator):
-    time_recording = time_record()
-    time_recording.set_start_time('Total')
+    # time_recording = time_record()
+    # time_recording.set_start_time('Total')
     save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
-    if not os.path.isdir(save_path):
-        os.makedirs(save_path)
-    pid_list = []
+    # if not os.path.isdir(save_path):
+    #     os.makedirs(save_path)
+    # pid_list = []
 
-    predictor = BatchPredictor(cfg)
-    vol_metric = volumetric_data_eval()
-    submission_recorder = SubmissionDataFrame()
-    for infos, mask_vol, pred_vol in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
-        pid_list.append(infos['pid'])
-        vol_nodule_infos = vol_metric.get_submission(mask_vol, pred_vol, infos)
+    # predictor = BatchPredictor(cfg)
+    # vol_metric = volumetric_data_eval()
+    # submission_recorder = SubmissionDataFrame()
+    # for infos, mask_vol, pred_vol in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
+    #     pid_list.append(infos['pid'])
+    #     vol_nodule_infos = vol_metric.get_submission(mask_vol, pred_vol, infos)
 
-        for nodule_infos in vol_nodule_infos:
-            if not nodule_infos['Nodule_prob']: 
-                nodule_infos['Nodule_prob'] = 0.5
-            submission = [infos['pid']] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
-            submission_recorder.write_row(submission)
+    #     for nodule_infos in vol_nodule_infos:
+    #         if not nodule_infos['Nodule_prob']: 
+    #             nodule_infos['Nodule_prob'] = 0.5
+    #         submission = [infos['pid']] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
+    #         submission_recorder.write_row(submission)
 
-    submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
-    time_recording.set_end_time('Total')
+    # submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission.csv'))
+    # time_recording.set_end_time('Total')
 
-    seriesuid = pd.DataFrame(data=pid_list)
-    seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
-    CalculateFROC(cfg.DATASET_NAME, save_path, pid_list)
-    time_recording.show_recording_time()
+    # seriesuid = pd.DataFrame(data=pid_list)
+    # seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
+    CalculateFROC(f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission', save_path)
+    # time_recording.show_recording_time()
 
 
-def CalculateFROC(dataset_name, save_path):
+def CalculateFROC(submission_filename, save_path):
     annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
     if not os.path.isdir(annotation_dir):
         os.makedirs(annotation_dir)
@@ -292,7 +292,7 @@ def CalculateFROC(dataset_name, save_path):
                                                   os.path.join(annotation_dir, 'annotations_excluded.csv'),
                                                 #   'evaluationScript/annotations/seriesuids2.csv',
                                                   os.path.join(annotation_dir, 'seriesuids.csv'),
-                                                  os.path.join(save_path, 'FROC', f'{dataset_name}-submission.csv'),
+                                                  os.path.join(save_path, 'FROC', f'{submission_filename}.csv'),
                                                   os.path.join(save_path, 'FROC'))
 
 
@@ -413,12 +413,12 @@ def luna16_eval():
         cfg.SUBSET_INDICES = [8, 9]
     else:
         cfg.SUBSET_INDICES = None
-    cfg.CASE_INDICES = None
+    cfg.CASE_INDICES = [0,2]
 
     volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
         cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
-    volume_eval(cfg, volume_generator=volume_generator)
-    # # froc(cfg, vol_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator)
+    # volume_eval(cfg, volume_generator=volume_generator)
+    froc(cfg, volume_generator)
     # CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH)
     # calculateFROC(cfg)
     # eval(cfg)
@@ -469,8 +469,8 @@ def asus_benign_eval():
 
 if __name__ == '__main__':
     # asus_benign_eval()
-    asus_malignant_eval()
-    # luna16_eval()
+    # asus_malignant_eval()
+    luna16_eval()
     
     
     
