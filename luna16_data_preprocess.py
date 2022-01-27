@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 
-CROP_RANGE =  {'index': 64, 'row': 64, 'column': 64}
+CROP_RANGE =  {'index': 32, 'row': 32, 'column': 32}
 VOLUME_GENERATOR = luna16_volume_generator.Build_DLP_luna16_volume_generator()
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop'
 
@@ -25,7 +25,10 @@ class LUNA16_CropRange_Builder():
         num_negative_sample = int((1/positive_to_negative_ratio)*num_positive_sample)
         # TODO: negative select way: shuffle and select first num_negative_sample sample
         # TODO: the folder should be indepedent (move and use instantly) (consider relative path)
-        data_samples = pd.concat([positive_crop_range, negative_crop_range.sample(n=num_negative_sample)])
+        negative_crop_range = negative_crop_range.sample(frac=1.0)
+        negative_crop_range_subset = negative_crop_range.iloc[:num_negative_sample]
+        # negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
+        data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
         positive_raw_path = os.path.join(save_path, 'positive', 'Image')
@@ -38,13 +41,13 @@ class LUNA16_CropRange_Builder():
 
         total_raw_path = np.array([])
         for index, data_info in data_samples.iterrows():
-            print(f'Saving LUNA16 nodule volume {index:04d}')
             pid = data_info['seriesuid']
             raw_volume, target_volume, volume_info = luna16_volume_generator.get_data_by_pid(pid)
             
             crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
             raw_chunk = LUNA16_CropRange_Builder.crop_volume(raw_volume, crop_range, crop_center)
             target_chunk = LUNA16_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
+            print(f'Saving LUNA16 nodule volume {index:04d} with shape {raw_chunk.shape}')
 
             if data_info['category'] == 'positive':
                 raw_path = positive_raw_path
@@ -68,7 +71,7 @@ class LUNA16_CropRange_Builder():
         annotations = pd.read_csv('evaluationScript/annotations/annotations.csv')
         
         for vol_idx, (raw_volume, target_volume, volume_info) in enumerate(volume_generator):
-            # if vol_idx >= 80: break
+            # if vol_idx >= 3: break
             pid = volume_info['pid']
             print(vol_idx+1, pid)
             # positive, negative = LUNA16_CropRange_Builder.get_luna16_crop_range(target_volume, crop_range)
@@ -142,19 +145,22 @@ class LUNA16_CropRange_Builder():
         index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
         
         # Get positive samples
-        max_gap_distance = 0
+        crop_range_descend = np.sort(np.array(list(crop_range.values())))[::-1]
+        max_crop_distance = np.linalg.norm(crop_range_descend[:2])
+        max_crop_distance *= 2
         modify_center = lambda center, begin, end: np.clip(center, begin, end)
+        # TODO: crop_range = [128,128,128] in some case index_end will be smaller than index_start due to short depth
         if len(voxel_nodule_center_list) > 0:
             # Because we cannot promise the nodule is smaller than crop range and also we don't need that much negative samples
             for nodule_center in voxel_nodule_center_list:
                 nodule_center = np.array([modify_center(nodule_center[0], index_begin, index_end),
                                           modify_center(nodule_center[1], row_begin, row_end),
                                           modify_center(nodule_center[2], column_begin, column_end)])
-                distance = 2 * np.linalg.norm(nodule_center)
-                if distance > max_gap_distance:
-                    max_gap_distance = distance
+                # distance = 2 * np.linalg.norm(nodule_center)
+                # if distance > max_gap_distance:
+                #     max_gap_distance = distance
                 positive_sample = np.concatenate([positive_sample, nodule_center[np.newaxis]], axis=0) if positive_sample is not None else nodule_center[np.newaxis]
-            max_gap_distance *= 2 # bigger gap between positive and negative
+            # max_gap_distance *= 2 # bigger gap between positive and negative
 
         # Get negative samples
         for candidate_center_index in range(index_begin, index_end, crop_range['index']):
@@ -163,7 +169,8 @@ class LUNA16_CropRange_Builder():
                     candidate_center = np.array([candidate_center_index, candidate_center_row, candidate_center_column])
                     overlap_with_positive = False
                     for nodule_center in voxel_nodule_center_list:
-                        if np.linalg.norm(nodule_center-candidate_center) < max_gap_distance:
+                        distance_btw_positive_negative = np.linalg.norm(nodule_center-candidate_center)
+                        if distance_btw_positive_negative < max_crop_distance:
                             overlap_with_positive = True
                             break
                     
@@ -188,11 +195,22 @@ class LUNA16_CropRange_Builder():
 
     @staticmethod
     def crop_volume(volume, crop_range, crop_center):
-        get_interval = lambda range, center: (center-range//2, center+range//2)
+        def get_interval(center, crop_range_dim, size_dim):
+            begin = center - crop_range_dim//2
+            end = center + crop_range_dim//2
+            if begin < 0:
+                begin, end = 0, end-begin
+            elif end > size_dim:
+                modify_distance = crop_range_dim - size_dim + 1
+                begin, end = begin-modify_distance, size_dim-1
+            assert end-begin == crop_range_dim, f'Actual cropping range {end-begin} not fit the required cropping range{crop_range_dim}'
+            return (begin, end)
+            
+        # get_interval = lambda range, center: (center-range//2, center+range//2)
 
-        index_interval = get_interval(crop_range['index'], crop_center['index'])
-        row_interval = get_interval(crop_range['row'], crop_center['row'])
-        column_interval = get_interval(crop_range['column'], crop_center['column'])
+        index_interval = get_interval(crop_range['index'], crop_center['index'], volume.shape[0])
+        row_interval = get_interval(crop_range['row'], crop_center['row'], volume.shape[1])
+        column_interval = get_interval(crop_range['column'], crop_center['column'], volume.shape[2])
 
         return volume[index_interval[0]:index_interval[1], 
                       row_interval[0]:row_interval[1], 
@@ -202,23 +220,6 @@ class LUNA16_CropRange_Builder():
 def main():
     LUNA16_CropRange_Builder.build_random_sample_subset(CROP_RANGE, VOL_DATA_PATH, VOLUME_GENERATOR)
     
-    # raw_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\backup\center1\luna16-0038-1.3.6.1.4.1.14519.5.2.1.6279.6001.227962600322799211676960828223.npy'
-    # v = np.load(raw_path)
-    # print(v.shape)
-    # m = np.load(mask_path)
-    # import matplotlib.pyplot as plt
-    # for i in range(64):
-    #     if np.sum(m[i])>0:
-    #         plt.imshow(v[i], 'gray')
-    #         plt.imshow(m[i], alpha=0.2)
-    #         plt.title(f'{i}')
-    #         plt.show()
-
-    # from modules.data import dataset_utils
-    # files = dataset_utils.get_files(rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\backup\center1', 'npy', recursive=False)
-    # for f in files:
-    #     v = np.load(f)
-    #     print(v.shape)
 
 if __name__ == '__main__':
     main()

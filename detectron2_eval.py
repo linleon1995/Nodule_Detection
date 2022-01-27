@@ -13,6 +13,8 @@ import cv2
 import random
 import numpy as np
 import matplotlib as mpl
+
+from luna16_data_preprocess import LUNA16_CropRange_Builder
 mpl.use('TkAgg')
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -39,6 +41,7 @@ from utils import Nodule_data_recording, SubmissionDataFrame
 from vis import save_mask
 import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
+from reduce_false_positive import False_Positive_Reducer
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -135,7 +138,7 @@ def eval(cfg):
 #         #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
 #         #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
         
-#     print(cfg.DATASET_NAME, os.path.split(cfg.checkpoint_path)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
+#     print(cfg.DATASET_NAME, os.path.split(cfg.OUTPUT_DIR)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
 #           cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST)
 #     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
 #     submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
@@ -162,6 +165,10 @@ def volume_eval(cfg, volume_generator):
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval()
     metadata_recorder = Nodule_data_recording()
+
+    crop_range = {'index': cfg.crop_range[0], 'row': cfg.crop_range[1], 'column': cfg.crop_range[2]}
+    if cfg.reduce_false_positive:
+        FP_reducer = False_Positive_Reducer(crop_range, cfg.FP_reducer_checkpoint)
         
     # submission_recorder = SubmissionDataFrame()
     
@@ -201,18 +208,22 @@ def volume_eval(cfg, volume_generator):
                 pred = mask_preprocess(pred)
                 pred_vol[img_idx+j] = pred
 
-                time_recording.set_start_time('Save result in image.')
-                # TODO: check behavior: save_image_condition
-                if save_image_condition(vol_idx):
-                    save_mask(img[j][0], mask_vol[img_idx+j], pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{img_idx+j:03d}.png')
-                time_recording.set_end_time('Save result in image.')
-
         time_recording.set_start_time('Nodule Evaluation')
+
+        if cfg.reduce_false_positive:
+            pred_vol = FP_reducer.reduce_false_positive(vol, pred_vol)
+
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
         # vol_nodule_infos = {'Nodule_pid': pid}.update(vol_nodule_infos)
 
-        
+        # TODO: check behavior: save_image_condition
+        if save_image_condition(vol_idx):
+            for j, (img, mask, pred) in enumerate(zip(vol, mask_vol, pred_vol)):
+                time_recording.set_start_time('Save result in image.')
+                save_mask(img, mask, pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{j:03d}')
+                time_recording.set_end_time('Save result in image.')
+
         for nodule_infos in vol_nodule_infos:
             # if nodule_infos['Nodule_prob']:
                 # submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
@@ -232,7 +243,7 @@ def volume_eval(cfg, volume_generator):
         #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
         #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
         
-    print(cfg.DATASET_NAME, os.path.split(cfg.checkpoint_path)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
+    print(cfg.DATASET_NAME, os.path.split(cfg.OUTPUT_DIR)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
           cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST)
     nodule_tp, nodule_fp, nodule_fn, nodule_precision, nodule_recall = vol_metric.evaluation(show_evaluation=True)
     # submission_recorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'FROC', f'{cfg.DATASET_NAME}-submission.csv'))
@@ -330,8 +341,8 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_059'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
-    cfg.checkpoint_path = checkpoint_path
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
+    cfg.OUTPUT_DIR = checkpoint_path
     
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000399.pth")  # path to the model we just trained
@@ -349,10 +360,12 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0019999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0023999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0027999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0029999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0039999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0059999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0069999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0079999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
 
 
@@ -381,7 +394,6 @@ def common_config():
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
-    cfg.OUTPUT_DIR = cfg.checkpoint_path
     cfg.INPUT.MIN_SIZE_TEST = 800
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
@@ -389,14 +401,23 @@ def common_config():
     # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 32
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
-    run = os.path.split(cfg.checkpoint_path)[1]
+    # False Positive reduction
+    cfg.reduce_false_positive = True
+    cfg.crop_range = [48, 48, 48]
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth'
+
+    run = os.path.split(cfg.OUTPUT_DIR)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
-    cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227\maskrcnn-{run}-{weight}-{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}-samples'
-    cfg.MAX_SAVE_IMAGE_CASES = 100
+    # cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227'
+    dir_name = ['maskrcnn', f'{run}', f'{weight}', f'{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}']
+    dir_name.insert(0, 'reducedFP') if cfg.reduce_false_positive else dir_name
+    cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
+    cfg.MAX_SAVE_IMAGE_CASES = 10
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
-    cfg.TEST_BATCH_SIZE = 1
+    cfg.TEST_BATCH_SIZE = 2
+
     return cfg
 
 
@@ -413,12 +434,12 @@ def luna16_eval():
         cfg.SUBSET_INDICES = [8, 9]
     else:
         cfg.SUBSET_INDICES = None
-    cfg.CASE_INDICES = [0,2]
+    cfg.CASE_INDICES = None
 
     volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
         cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
-    # volume_eval(cfg, volume_generator=volume_generator)
-    froc(cfg, volume_generator)
+    volume_eval(cfg, volume_generator=volume_generator)
+    # froc(cfg, volume_generator)
     # CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH)
     # calculateFROC(cfg)
     # eval(cfg)
@@ -430,7 +451,7 @@ def asus_malignant_eval():
     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'train'
+    cfg.DATA_SPLIT = 'test'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':

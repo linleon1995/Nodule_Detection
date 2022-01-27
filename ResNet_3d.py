@@ -1,3 +1,4 @@
+# https://github.com/kenshohara/3D-ResNets-PyTorch/blob/master/models/resnet.py
 import math
 from functools import partial
 
@@ -149,16 +150,22 @@ class ResNet(nn.Module):
                                        stride=2)
 
         self.avgpool = nn.AdaptiveAvgPool3d((1, 1, 1))
-        self.fc = nn.Linear(block_inplanes[3] * block.expansion, n_classes)
+        # TODO: Set shape automatically
+        # self.fc = nn.Linear(block_inplanes[3] * block.expansion, n_classes)
 
-        for m in self.modules():
-            if isinstance(m, nn.Conv3d):
-                nn.init.kaiming_normal_(m.weight,
-                                        mode='fan_out',
-                                        nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm3d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+        self.fc1 = nn.Linear(block_inplanes[3] * block.expansion, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, n_classes)
+        # self.fc = nn.Linear(block_inplanes[3] * block.expansion * 8, n_classes)
+
+        # for m in self.modules():
+        #     if isinstance(m, nn.Conv3d):
+        #         nn.init.kaiming_normal_(m.weight,
+        #                                 mode='fan_out',
+        #                                 nonlinearity='relu')
+        #     elif isinstance(m, nn.BatchNorm3d):
+        #         nn.init.constant_(m.weight, 1)
+        #         nn.init.constant_(m.bias, 0)
 
     def _downsample_basic_block(self, x, planes, stride):
         out = F.avg_pool3d(x, kernel_size=1, stride=stride)
@@ -196,6 +203,8 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        import matplotlib.pyplot as plt
+        
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -207,11 +216,14 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        x = self.avgpool(x)
-        # x = self.final_maxpool(x)
+        # x = self.avgpool(x)
+        x = self.final_maxpool(x)
 
         x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        # x = self.fc(x)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
 
         return x
 

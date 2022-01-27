@@ -45,7 +45,7 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
     case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     if case_indices:
         case_list = np.take(case_list, case_indices)
-    print(f'Evaluating {len(case_list)} cases...')
+    print(f'Generating {len(case_list)} cases...')
     for case_dir in case_list:
         raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
         assert len(raw_and_mask) == 2
@@ -61,7 +61,9 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
                 mask_vol = mask_preprocess(mask_vol)            
                 # mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 1), 1, 2)
         pid = os.path.split(case_dir)[1]
-        infos = {'pid': pid, 'scan_idx': 0, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
+        scan_idx = int(pid[2:])
+        # TODO: what is scan_idx
+        infos = {'pid': pid, 'scan_idx': scan_idx, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
         yield vol, mask_vol, infos
 
 
