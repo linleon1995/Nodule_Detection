@@ -18,7 +18,7 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.engine import DefaultTrainer
 import matplotlib.pyplot as plt
-from utils import cv2_imshow
+from utils.utils import cv2_imshow
 import torch
 from detectron2.engine import HookBase
 from detectron2.data import build_detection_train_loader

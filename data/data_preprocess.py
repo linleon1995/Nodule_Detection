@@ -5,8 +5,8 @@ import pylidc as pl
 import matplotlib.pyplot as plt
 from pylidc.utils import consensus
 import warnings
-from utils import calculate_malignancy, raw_preprocess, mask_preprocess, compare_result, compare_result_enlarge
-from volume_generator import luna16_volume_generator, asus_nodule_volume_generator
+from utils.utils import calculate_malignancy, raw_preprocess, mask_preprocess, compare_result, compare_result_enlarge
+from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from tqdm import tqdm

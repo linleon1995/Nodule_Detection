@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 import random
 
-from luna16_data_preprocess import LUNA16_CropRange_Builder
-from volume_generator import luna16_volume_generator
+from data.luna16_data_preprocess import LUNA16_CropRange_Builder
+from utils.volume_generator import luna16_volume_generator
 from modules.data import dataset_utils
 
 

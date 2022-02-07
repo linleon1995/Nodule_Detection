@@ -1,9 +1,9 @@
 import numpy as np
 import collections
 import torch
-from luna16_data_preprocess import LUNA16_CropRange_Builder
-from ResNet_3d import build_3d_resnet
-from volume_eval import volumetric_data_eval
+from data.luna16_data_preprocess import LUNA16_CropRange_Builder
+from model.ResNet_3d import build_3d_resnet
+from utils.volume_eval import volumetric_data_eval
 from modules.utils import configuration
 
 

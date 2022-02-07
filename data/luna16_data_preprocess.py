@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from torch import positive
-from volume_generator import luna16_volume_generator, asus_nodule_volume_generator
+from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 
 CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
 VOLUME_GENERATOR = luna16_volume_generator.Build_DLP_luna16_volume_generator()

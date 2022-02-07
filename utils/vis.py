@@ -18,7 +18,7 @@ import time
 import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
-from volume_eval import volumetric_data_eval
+from utils.volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
 
     

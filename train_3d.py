@@ -1,8 +1,8 @@
 import site_path
 import os
-from ResNet_3d import build_3d_resnet
+from model.ResNet_3d import build_3d_resnet
 from torch.utils.data import Dataset, DataLoader
-from dataloader import Luna16CropDataset
+from data.dataloader import Luna16CropDataset
 import numpy as np
 import random
 import torch

@@ -5,8 +5,8 @@ from tqdm.contrib import tzip
 import json, itertools
 import os
 import cv2
-from volume_generator import lidc_volume_generator, luna16_volume_generator, asus_nodule_volume_generator
-from utils import cv2_imshow, raw_preprocess, mask_preprocess, split_individual_mask, merge_near_masks
+from utils.volume_generator import lidc_volume_generator, luna16_volume_generator, asus_nodule_volume_generator
+from utils.utils import cv2_imshow, raw_preprocess, mask_preprocess, split_individual_mask, merge_near_masks
 
 import site_path
 from modules.data import dataset_utils

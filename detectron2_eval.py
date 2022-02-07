@@ -14,7 +14,7 @@ import random
 import numpy as np
 import matplotlib as mpl
 
-from luna16_data_preprocess import LUNA16_CropRange_Builder
+from data.luna16_data_preprocess import LUNA16_CropRange_Builder
 mpl.use('TkAgg')
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -35,10 +35,10 @@ import time
 import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
-from volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator, build_pred_generator
-from volume_eval import volumetric_data_eval
-from utils import Nodule_data_recording, SubmissionDataFrame
-from vis import save_mask
+from utils.volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator, build_pred_generator
+from utils.volume_eval import volumetric_data_eval
+from utils.utils import Nodule_data_recording, SubmissionDataFrame
+from utils.vis import save_mask
 import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import False_Positive_Reducer
