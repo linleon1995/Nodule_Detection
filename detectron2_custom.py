@@ -54,21 +54,19 @@ class ValidationLoss(HookBase):
 def common_config():
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-    cfg.DATASETS.TRAIN = ("my_dataset_train",)
-    cfg.DATASETS.VAL = ("my_dataset_valid",)
-    cfg.DATASETS.TEST = ()
+    
     cfg.DATALOADER.NUM_WORKERS = 0
 
-    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032\model_0019999.pth'  # Let training initialize from model zoo
-    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037\model_0015999.pth'  # Let training initialize from model zoo
-    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040\model_0007999.pth'  # Let training initialize from model zoo
-    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052\model_0015999.pth'  # Let training initialize from model zoo
-    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057\model_0009999.pth'  # Let training initialize from model zoo
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
+    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032\model_0019999.pth' 
+    cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037\model_0015999.pth' 
+    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040\model_0007999.pth' 
+    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052\model_0015999.pth' 
+    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057\model_0009999.pth' 
+    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
 
-    cfg.SOLVER.IMS_PER_BATCH = 2
+    cfg.SOLVER.IMS_PER_BATCH = 4
     cfg.SOLVER.BASE_LR = 0.00005  
-    cfg.SOLVER.MAX_ITER = 30000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 10000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -100,8 +98,8 @@ def common_config():
     cfg.INPUT.CROP.TYPE = "relative_range"
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
-    cfg.INPUT.CROP.SIZE = [0.5, 0.5]
-    cfg.SOLVER.CHECKPOINT_PERIOD = 2000
+    cfg.INPUT.CROP.SIZE = [0.7, 0.7]
+    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
     # cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
@@ -113,32 +111,48 @@ def common_config():
     # cfg.MODEL.RPN.BBOX_REG_LOSS_WEIGHT = 5e-3
     # cfg.MODEL.RPN.LOSS_WEIGHT = 5e-3
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_WEIGHT = 5e-3
-    # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 32
-    # cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 32
+    # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 20
+    # cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 20
+    cfg.DATALOADER.FILTER_EMPTY_ANNOTATIONS = False
     return cfg
 
 
 def asus_benign_config():
+    dataset_name = 'ASUS-Benign'
     cfg = common_config()
+    cfg.USING_DATASET.append(dataset_name)
     cfg.TRAIN_JSON_FILE = os.path.join("Annotations", "ASUS_Nodule", "benign", "annotations_train.json")
     cfg.VALID_JSON_FILE = os.path.join("Annotations", "ASUS_Nodule", "benign", "annotations_valid.json")
     cfg.DATA_PATH = rf"C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw"
+    # Prepare the dataset
+    register_coco_instances(f"{dataset_name}-train", {}, cfg.TRAIN_JSON_FILE, cfg.DATA_PATH)
+    register_coco_instances(f"{dataset_name}-valid", {}, cfg.VALID_JSON_FILE, cfg.DATA_PATH)
     return cfg
 
 
 def asus_malignant_config():
+    dataset_name = 'ASUS-Malignant'
     cfg = common_config()
+    cfg.USING_DATASET.append(dataset_name)
     cfg.TRAIN_JSON_FILE = os.path.join("Annotations", "ASUS_Nodule", "malignant", "annotations_train.json")
     cfg.VALID_JSON_FILE = os.path.join("Annotations", "ASUS_Nodule", "malignant", "annotations_valid.json")
     cfg.DATA_PATH = rf"C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw"
+    # Prepare the dataset
+    register_coco_instances(f"{dataset_name}-train", {}, cfg.TRAIN_JSON_FILE, cfg.DATA_PATH)
+    register_coco_instances(f"{dataset_name}-valid", {}, cfg.VALID_JSON_FILE, cfg.DATA_PATH)
     return cfg
 
 
 def luna16_config():
+    dataset_name = 'LUNA16'
     cfg = common_config()
-    cfg.TRAIN_JSON_FILE = os.path.join("Annotations", "LUNA16", "annotations_train.json")
-    cfg.VALID_JSON_FILE = os.path.join("Annotations", "LUNA16", "annotations_valid.json")
-    cfg.DATA_PATH = rf"C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw"
+    cfg.USING_DATASET.append(dataset_name)
+    cfg.TRAIN_JSON_FILE = os.path.join("Annotations", dataset_name, "annotations_train.json")
+    cfg.VALID_JSON_FILE = os.path.join("Annotations", dataset_name, "annotations_valid.json")
+    cfg.DATA_PATH = rf"C:\Users\test\Desktop\Leon\Datasets\{dataset_name}-preprocess\raw"
+    # Prepare the dataset
+    register_coco_instances(f"{dataset_name}-train", {}, cfg.TRAIN_JSON_FILE, cfg.DATA_PATH)
+    register_coco_instances(f"{dataset_name}-valid", {}, cfg.VALID_JSON_FILE, cfg.DATA_PATH)
     return cfg
 
 
@@ -159,26 +173,40 @@ def lidc_config():
     return cfg
 
 
+def dataset_config(cfg, using_dataset):
+    cfg.USING_DATASET = ''
+    for dataset_name in using_dataset:
+        train_json = os.path.join("Annotations", dataset_name, "annotations_train.json")
+        valid_json = os.path.join("Annotations", dataset_name, "annotations_valid.json")
+        datra_path = rf"C:\Users\test\Desktop\Leon\Datasets\{dataset_name}-preprocess\raw"
+        # Prepare the dataset
+        register_coco_instances(f"{dataset_name}-train", {}, train_json, datra_path)
+        register_coco_instances(f"{dataset_name}-valid", {}, valid_json, datra_path)
+    return cfg
+
+
 def main():
-    cfg = luna16_config()
-    # cfg = luna16_round_config()
-    # cfg = asus_benign_config()
-    # cfg = asus_malignant_config()
+    cfg = common_config()
+    using_dataset = ['ASUS-Benign'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
+    cfg = dataset_config(cfg, using_dataset)
 
-    # Prepare the dataset
-    register_coco_instances("my_dataset_train", {}, cfg.TRAIN_JSON_FILE, cfg.DATA_PATH)
-    register_coco_instances("my_dataset_valid", {}, cfg.VALID_JSON_FILE, cfg.DATA_PATH)
+    train_dataset = tuple([f'{dataset_name}-train' for dataset_name in using_dataset])
+    valid_dataset = tuple([f'{dataset_name}-valid' for dataset_name in using_dataset])
 
-    metadata = MetadataCatalog.get("my_dataset_train")
+    cfg.DATASETS.TRAIN = train_dataset
+    cfg.DATASETS.VAL = valid_dataset
+    cfg.DATASETS.TEST = ()
 
-    dataset_dicts = DatasetCatalog.get("my_dataset_train")
-    for image_idx, d in enumerate(random.sample(dataset_dicts, 3)):
-    # for image_idx, d in enumerate(dataset_dicts[:87]):
-    # for image_idx, d in enumerate(dataset_dicts):
-        img = cv2.imread(d["file_name"])
-        visualizer = Visualizer(img, metadata=metadata, scale=1.0)
-        out = visualizer.draw_dataset_dict(d)
-        cv2_imshow(out.get_image(), os.path.join(cfg.OUTPUT_DIR, f'input_samples_{image_idx:03d}.png'))
+    # metadata = MetadataCatalog.get("my_dataset_train")
+
+    # dataset_dicts = DatasetCatalog.get("my_dataset_train")
+    # for image_idx, d in enumerate(random.sample(dataset_dicts, 3)):
+    # # for image_idx, d in enumerate(dataset_dicts[:87]):
+    # # for image_idx, d in enumerate(dataset_dicts):
+    #     img = cv2.imread(d["file_name"])
+    #     visualizer = Visualizer(img, metadata=metadata, scale=1.0)
+    #     out = visualizer.draw_dataset_dict(d)
+    #     cv2_imshow(out.get_image(), os.path.join(cfg.OUTPUT_DIR, f'input_samples_{image_idx:03d}.png'))
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg) 

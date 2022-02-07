@@ -125,6 +125,7 @@ def plot_3d(image, threshold=-300):
 
 
 def save_mask(img, mask, pred, num_class, save_path, save_name='img', saving_condition=True):
+    save_name = save_name.split('.')[-1]
     if saving_condition:
         condition = (np.sum(mask)>0 or np.sum(pred)>0)
     else:

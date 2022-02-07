@@ -87,7 +87,7 @@ if __name__ in "__main__":
             
             preds = preds.cpu().data.numpy()
             masks = pos_g.cpu().data.numpy()
-            metric.calculate(preds, masks)
+            # metric.calculate(preds, masks)
     
             if opt.save:
                 for (ct_img, target, pred, uid, ndx) in zip(ct_t, masks, preds, series_uid, ct_ndx):

@@ -315,15 +315,17 @@ def CalculateFROC(submission_filename, save_path):
 
 def select_model(cfg):
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_003'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_004'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_006'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
@@ -341,33 +343,13 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_059'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
     
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000399.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000799.pth")  # path to the model we just trained
     cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001199.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001599.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0003999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0007999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0009999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0011999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0019999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0023999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0027999.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0029999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0039999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0059999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0069999.pth")  # path to the model we just trained
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0079999.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
+    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
-
 
 def add_dataset_name(cfg):
     for dataset_name in ['LUNA16', 'ASUS', 'LIDC']:
@@ -390,7 +372,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
+    # cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
@@ -398,11 +380,12 @@ def common_config():
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8,  16,  32,  64, 128]]
-    # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 32
+    # cfg.MODEL.ROI_BOX_HEAD.POOLER_RESOLUTION = 20
+    # cfg.MODEL.ROI_MASK_HEAD.POOLER_RESOLUTION = 20
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
     # False Positive reduction
-    cfg.reduce_false_positive = True
+    cfg.reduce_false_positive = False
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth'
 
@@ -412,7 +395,7 @@ def common_config():
     dir_name = ['maskrcnn', f'{run}', f'{weight}', f'{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}']
     dir_name.insert(0, 'reducedFP') if cfg.reduce_false_positive else dir_name
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 10
+    cfg.MAX_SAVE_IMAGE_CASES = 100
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -490,8 +473,8 @@ def asus_benign_eval():
 
 if __name__ == '__main__':
     # asus_benign_eval()
-    # asus_malignant_eval()
-    luna16_eval()
+    asus_malignant_eval()
+    # luna16_eval()
     
     
     
