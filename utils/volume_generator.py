@@ -7,7 +7,7 @@ from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, irc2xyz, segment_lung, mask_preprocess, raw_preprocess
+from utils.utils import cv2_imshow, calculate_malignancy, irc2xyz, segment_lung, mask_preprocess, raw_preprocess
 # import data_preprocess
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
@@ -228,6 +228,37 @@ class luna16_volume_generator():
                     'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
         return raw_vol, mask_vol, infos
 
+
+# def build_pred_generator(data_generator, predictor, batch_size=1):
+#     for vol_idx, (vol, mask_vol, infos) in enumerate(data_generator):
+#         infos['vol_idx'] = vol_idx
+#         pid, scan_idx = infos['pid'], infos['scan_idx']
+#         total_outputs = np.array([])
+#         # mask_vol = np.int32(mask_vol)
+#         # pred_vol = np.zeros_like(mask_vol)
+
+#         for img_idx in range(0, vol.shape[0], batch_size):
+#             if img_idx == 0:
+#                 print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
+#             start, end = img_idx, min(vol.shape[0], img_idx+batch_size)
+#             img = vol[start:end]
+#             img = np.split(img, img.shape[0], axis=0)
+#             outputs = predictor(img) 
+#             total_outputs = np.append(total_outputs, outputs)
+
+#             for j, output in enumerate(outputs):
+#                 pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+#                 if j == 0:
+#                     total_pred = np.zeros(pred.shape[1:])
+#                 if pred.shape[0] > 0:
+#                     print(3)
+#                 total_pred += np.sum(pred, axis=0)
+
+#             total_pred = mask_preprocess(total_pred)
+#             pred_vol[img_idx] = total_pred
+            
+#         yield pid, mask_vol, pred_vol, pred_scores
+#         # yield pid, total_outputs
 
 def build_pred_generator(data_generator, predictor, batch_size=1):
     for vol_idx, (vol, mask_vol, infos) in enumerate(data_generator):

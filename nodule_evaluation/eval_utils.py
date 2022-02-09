@@ -3,7 +3,6 @@ from detectron2.data.catalog import Metadata
 import numpy as np
 import matplotlib.pyplot as plt
 import cc3d
-from utils import utils
 CONNECTIVITY = 26
 AREA_THRESHOLD = 20
 
@@ -18,16 +17,16 @@ class volumetric_data_eval():
         self.save_path = save_path
         self.eval_file = open(os.path.join(self.save_path, 'evaluation.txt'), 'w+')
 
-    def calculate(self, target_vol, pred_vol, vol_infos):
+    def calculate(self, target_vol, pred_vol):
         target_vol, mask_metadata = self.volume_preprocess(target_vol, self.connectivity, self.area_threshold)
         pred_vol, pred_metadata = self.volume_preprocess(pred_vol, self.connectivity, self.area_threshold)
         assert np.shape(target_vol) == np.shape(pred_vol)
-        nodule_infos = self._3D_evaluation(target_vol, pred_vol, mask_metadata, pred_metadata, vol_infos)
+        nodule_infos = self._3D_evaluation(target_vol, pred_vol, mask_metadata, pred_metadata)
         self._2D_evaluation(target_vol, pred_vol)
         return nodule_infos
     
     @classmethod
-    def volume_preprocess(cls, volume, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD):
+    def volume_preprocess(cls, volume, connectivity, area_threshold):
         volume = cc3d.connected_components(volume, connectivity=connectivity)
         total_nodule_metadata = cls.build_nodule_metadata(volume)
         if total_nodule_metadata is not None:
@@ -35,8 +34,7 @@ class volumetric_data_eval():
             volume, total_nodule_metadata = cls.convert_label_value(volume, total_nodule_metadata)
         return volume, total_nodule_metadata
 
-    def _3D_evaluation(self, target_vol, pred_vol, mask_metadata, pred_metadata, vol_infos):
-        # TODO: Distinduish nodule_metadata and nodule_infos
+    def _3D_evaluation(self, target_vol, pred_vol, mask_metadata, pred_metadata):
         tp, fp, fn = 0, 0, 0
         mask_category = list(range(1, np.max(target_vol)+1)) if np.max(target_vol) > 0 else None
         pred_category = list(range(1, np.max(pred_vol)+1)) if np.max(pred_vol) > 0 else None
@@ -64,12 +62,12 @@ class volumetric_data_eval():
                             pred_nodule_category, np.where(pred_nodule_category==pred_nodule_id))))
                     pred_nodule_category = np.array([pred_nodule_id])
 
-                    NoduleIoU = self.BinaryIoU(gt_nodule, pred_nodule)
-                    NoduleDSC = self.BinaryDSC(gt_nodule, pred_nodule)
+                    NoduleIoU = self.IoU(gt_nodule, pred_nodule)
+                    NoduleDSC = self.DSC(gt_nodule, pred_nodule)
                     
                     if NoduleIoU > 0:
                         for slice_idx in range(start_slice_idx, end_slice_idx+1):
-                            SliceIOU = self.BinaryIoU(target_vol[slice_idx]==mask_nodule_metadata['Nodule_id'], pred_vol[slice_idx]==pred_nodule_id)
+                            SliceIOU = self.IoU(target_vol[slice_idx]==mask_nodule_metadata['Nodule_id'], pred_vol[slice_idx]==pred_nodule_id)
                             if SliceIOU > BestSliceIoU:
                                 BestSliceIoU = SliceIOU
                                 BestSliceIndex = slice_idx
@@ -83,14 +81,6 @@ class volumetric_data_eval():
                 nodule_infos['Nodule DSC'] = NoduleDSC
                 nodule_infos['Best Slice IoU'] = BestSliceIoU
                 nodule_infos['Best Slice Index'] = BestSliceIndex
-
-                if NoduleDSC > 0:
-                    pred_center_irc = utils.get_nodule_center(pred_nodule)
-                    pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
-                else:
-                    pred_center_xyz = None
-                nodule_infos['Center_xyz'] = pred_center_xyz
-                nodule_infos['Nodule_prob'] = NoduleDSC
 
                 total_nodule_infos.append(nodule_infos)
         else:
@@ -112,22 +102,6 @@ class volumetric_data_eval():
         self.PixelTP.append(tp)
         self.PixelFP.append(fp)
         self.PixelFN.append(fn)
-
-    @classmethod
-    def get_submission(cls, target_vol, pred_vol, vol_infos, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD):
-        target_vol, target_metadata = cls.volume_preprocess(target_vol, connectivity, area_threshold)
-        pred_vol, pred_metadata = cls.volume_preprocess(pred_vol, connectivity, area_threshold)
-        pred_category = np.unique(pred_vol)[1:]
-        total_nodule_infos = []
-        for label in pred_category:
-            pred_nodule = np.where(pred_vol==label, 1, 0)
-            target_nodule = np.logical_or(target_vol>0, pred_nodule)*target_vol
-            nodule_dsc = cls.BinaryDSC(target_nodule, pred_nodule)
-            pred_center_irc = utils.get_nodule_center(pred_nodule)
-            pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
-            nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_dsc}
-            total_nodule_infos.append(nodule_infos)
-        return total_nodule_infos
 
     @classmethod
     def remove_small_area(cls, volume, total_nodule_metadata, area_threshold):
@@ -168,13 +142,13 @@ class volumetric_data_eval():
         return total_nodule_metadata
 
     @staticmethod
-    def BinaryIoU(target, pred):
+    def IoU(target, pred):
         intersection = np.sum(np.logical_and(target, pred))
         union = np.sum(np.logical_or(target, pred))
         return intersection/union if union != 0 else 0
     
     @staticmethod
-    def BinaryDSC(target, pred):
+    def DSC(target, pred):
         intersection = np.sum(np.logical_and(target, pred))
         union = np.sum(np.logical_or(target, pred))
         return 2*intersection/(union+intersection) if (union+intersection) != 0 else 0
@@ -216,6 +190,9 @@ class volumetric_data_eval():
             self.write_and_print(f'Pixel Precision: {self.Slice_Precision:.4f}')
             self.write_and_print(f'Pixel Recall: {self.Slice_Recall:.4f}')
             self.write_and_print(f'Pixel F1: {self.Slice_F1:.4f}')
+            self.write_and_print('')
+            self.write_and_print(f'mean Precision: {np.mean(self.Precision):.4f}')
+            self.write_and_print(f'mean Recall: {np.mean(self.Recall):.4f}')
             self.eval_file.close()
 
         return self.VoxelTP, self.VoxelFP, self.VoxelFN, self.Volume_Precisiion, self.Volume_Recall

@@ -9,8 +9,8 @@ from skimage import measure
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess
-from utils import raw_preprocess, compare_result, compare_result_enlarge, time_record
+from utils.utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess
+from utils.utils import raw_preprocess, compare_result, compare_result_enlarge, time_record
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
