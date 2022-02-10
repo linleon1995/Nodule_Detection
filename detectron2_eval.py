@@ -257,6 +257,9 @@ def volume_eval(cfg, volume_generator):
 #     time_recording.set_end_time('Total')
 
 #     seriesuid = pd.DataFrame(data=pid_list)
+    # annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
+    # if not os.path.isdir(annotation_dir):
+    #     os.makedirs(annotation_dir)
 #     seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
 
 #     CalculateFROC(f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission', save_path)
@@ -384,7 +387,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    # cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
@@ -433,8 +436,8 @@ def luna16_eval():
 
     volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
         cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES, only_nodule_slices=cfg.ONLY_NODULES)
-    # volume_eval(cfg, volume_generator=volume_generator)
-    froc(cfg, volume_generator)
+    volume_eval(cfg, volume_generator=volume_generator)
+    # froc(cfg, volume_generator)
     # CalculateFROC(cfg.DATASET_NAME, cfg.SAVE_PATH)
     # calculateFROC(cfg)
     # eval(cfg)

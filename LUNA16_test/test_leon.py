@@ -50,8 +50,9 @@ if __name__ in "__main__":
 
     # +++
     import site_path
-    from volume_eval import volumetric_data_eval
-    vol_metric = volumetric_data_eval()
+    from utils.volume_eval import volumetric_data_eval
+    vol_metric = volumetric_data_eval(save_path=opt.save_path)
+    # vol_metric = volumetric_data_eval(opt.save_path, area_thershold=16)
     vol_idx = 0
     SUBSET_LIST = ['subset8', 'subset9']
     # +++
@@ -87,7 +88,7 @@ if __name__ in "__main__":
             
             preds = preds.cpu().data.numpy()
             masks = pos_g.cpu().data.numpy()
-            # metric.calculate(preds, masks)
+            metric.calculate(preds, masks)
     
             if opt.save:
                 for (ct_img, target, pred, uid, ndx) in zip(ct_t, masks, preds, series_uid, ct_ndx):

@@ -18,7 +18,7 @@ class volumetric_data_eval():
         self.save_path = save_path
         self.eval_file = open(os.path.join(self.save_path, 'evaluation.txt'), 'w+')
 
-    def calculate(self, target_vol, pred_vol, vol_infos):
+    def calculate(self, target_vol, pred_vol, vol_infos=None):
         target_vol, mask_metadata = self.volume_preprocess(target_vol, self.connectivity, self.area_threshold)
         pred_vol, pred_metadata = self.volume_preprocess(pred_vol, self.connectivity, self.area_threshold)
         assert np.shape(target_vol) == np.shape(pred_vol)
@@ -84,13 +84,13 @@ class volumetric_data_eval():
                 nodule_infos['Best Slice IoU'] = BestSliceIoU
                 nodule_infos['Best Slice Index'] = BestSliceIndex
 
-                if NoduleDSC > 0:
-                    pred_center_irc = utils.get_nodule_center(pred_nodule)
-                    pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
-                else:
-                    pred_center_xyz = None
-                nodule_infos['Center_xyz'] = pred_center_xyz
-                nodule_infos['Nodule_prob'] = NoduleDSC
+                # if NoduleDSC > 0:
+                #     pred_center_irc = utils.get_nodule_center(pred_nodule)
+                #     pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
+                # else:
+                #     pred_center_xyz = None
+                # nodule_infos['Center_xyz'] = pred_center_xyz
+                # nodule_infos['Nodule_prob'] = NoduleDSC
 
                 total_nodule_infos.append(nodule_infos)
         else:
