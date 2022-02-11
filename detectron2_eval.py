@@ -42,6 +42,7 @@ from utils.vis import save_mask
 import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import False_Positive_Reducer
+from lung_mask_filtering import lung_mask_filtering
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -53,18 +54,62 @@ from modules.utils import evaluator
 from LUNA16_test import util
 
 
+def volume_outputs_to_pred_volume(volume_outputs):
+    volume_shape = [len(volume_outputs)] + list(volume_outputs[0].image_size)
+    pred_vol = np.zeros(volume_shape, np.float32)
+    for img_idx, instance in enumerate(volume_outputs):
+        pred_masks = instance._fields['pred_masks'].cpu().detach().numpy() 
+        pred_mask = np.sum(pred_masks, axis=0)
+        pred_mask = mask_preprocess(pred_mask)
+        pred_vol[img_idx] = pred_mask
+    return pred_vol
 
-def get_pred_nodules(volume_outputs):
-    pred_vol, pred_metadata = volumetric_data_eval.volume_preprocess(pred_volume)
+def volume_outputs_to_pred_scores(volume_outputs):
+    all_slices_scores = []
+    for img_idx, instance in enumerate(volume_outputs):
+        scores = instance._fields['scores'].cpu().detach().numpy() 
+        all_slices_scores.append(scores)
+    return all_slices_scores
+
+def convert_pred_format(volume_outputs):
+    pred_vol = volume_outputs_to_pred_volume(volume_outputs)
+    pred_scores = volume_outputs_to_pred_scores(volume_outputs)
+
+    # TODO: the affect need to be confirmed
+    # Remove single slice prediction
+    # score_filter = []
+    # for img_idx, scores in enumerate(pred_scores):
+    #     if scores.size > 0:
+    #         last, next = max(0, img_idx-1), min(len(pred_scores)-1, img_idx+1)
+    #         if pred_scores[last].size == 0 and pred_scores[next].size == 0:
+    #             pred_scores[img_idx] = np.array([], np.float32)
+    #             score_filter.append(0)
+    #         else:
+    #             score_filter.append(1)
+    #     else:
+    #         score_filter.append(0)
+    # score_filter = np.array(score_filter, np.float32)
+    # score_filter = np.reshape(score_filter, [score_filter.size, 1, 1])
+    # pred_vol *= score_filter
+    return pred_vol, pred_scores
+
+
+def get_output(pred_vol, pred_scores, origin, spacing, direction): 
+    pred_vol, pred_metadata = volumetric_data_eval.volume_preprocess(pred_vol)
     pred_category = np.unique(pred_vol)[1:]
     total_nodule_infos = []
     for label in pred_category:
         pred_nodule = np.where(pred_vol==label, 1, 0)
         pred_center_irc = get_nodule_center(pred_nodule)
-        pred_center_xyz = irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
-        nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_dsc}
+        pred_center_xyz = irc2xyz(pred_center_irc, origin, spacing, direction)
+        # TODO: The nodule prob is actually the mean of all nodule probs of assign slice.
+        # This is suboptimal but temporally acceptable solution.
+        # Because nodule based prob need to convert 2d bbox to 3d bbox which is hard to implement
+        nodule_prob = np.mean(pred_scores[int(pred_center_irc[0])])
+        nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_prob}
         total_nodule_infos.append(nodule_infos)
     return total_nodule_infos
+
 
 class BatchPredictor(DefaultPredictor):
     """Run d2 on a list of images."""
@@ -145,7 +190,7 @@ def volume_eval(cfg, volume_generator):
     crop_range = {'index': cfg.crop_range[0], 'row': cfg.crop_range[1], 'column': cfg.crop_range[2]}
     if cfg.reduce_false_positive:
         FP_reducer = False_Positive_Reducer(crop_range, cfg.FP_reducer_checkpoint)
-        
+
     # submission_recorder = SubmissionDataFrame()
     
     # volume_generator = vol_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
@@ -153,7 +198,7 @@ def volume_eval(cfg, volume_generator):
 
     # xx = luna16_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
     # total_pid = xx.pid_list
-    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
+    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         total_pid.append(pid)
         mask_vol = np.int32(mask_vol)
@@ -165,14 +210,14 @@ def volume_eval(cfg, volume_generator):
             if vol_idx >= cfg.MAX_TEST_CASES:
                 break
 
-        for img_idx in range(0, vol.shape[0], cfg.TEST_BATCH_SIZE):
-            if img_idx == 0:
-                print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
-            start, end = img_idx, min(vol.shape[0], img_idx+cfg.TEST_BATCH_SIZE)
+        for batch_start_index in range(0, vol.shape[0], cfg.TEST_BATCH_SIZE):
+            if batch_start_index == 0:
+                print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {batch_start_index}')
+            start, end = batch_start_index, min(vol.shape[0], batch_start_index+cfg.TEST_BATCH_SIZE)
             img = vol[start:end]
             time_recording.set_start_time('Inference')
-            img = np.split(img, img.shape[0], axis=0)
-            outputs = predictor(img) 
+            img_list = np.split(img, img.shape[0], axis=0)
+            outputs = predictor(img_list) 
             time_recording.set_end_time('Inference')
 
             for j, output in enumerate(outputs):
@@ -181,15 +226,19 @@ def volume_eval(cfg, volume_generator):
                 # TODO: better way to calculate pred score of slice
                 # pred_score = np.mean(output["instances"]._fields['scores'].cpu().detach().numpy() , axis=0)
                 pred = mask_preprocess(pred)
-                pred_vol[img_idx+j] = pred
+                img_idx = batch_start_index + j
+                pred_vol[img_idx] = pred
 
         time_recording.set_start_time('Nodule Evaluation')
 
         if cfg.reduce_false_positive:
             pred_vol = FP_reducer.reduce_false_positive(vol, pred_vol)
 
-        np.save(f'pred_{vol_idx:03d}.npy', pred_vol)
-        np.save(f'target_{vol_idx:03d}.npy', mask_vol)
+        if cfg.lung_mask_filtering:
+            pred_vol = lung_mask_filtering(pred_vol, raw_vol[...,0])
+
+        # np.save(f'pred_{vol_idx:03d}.npy', pred_vol)
+        # np.save(f'target_{vol_idx:03d}.npy', mask_vol)
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
         # vol_nodule_infos = {'Nodule_pid': pid}.update(vol_nodule_infos)
@@ -230,41 +279,6 @@ def volume_eval(cfg, volume_generator):
     time_recording.show_recording_time()
 
 
-# def froc(cfg, volume_generator):
-#     time_recording = time_record()
-#     time_recording.set_start_time('Total')
-
-#     save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
-
-#     if not os.path.isdir(save_path):
-#         os.makedirs(save_path)
-#     pid_list = []
-
-#     predictor = BatchPredictor(cfg)
-#     vol_metric = volumetric_data_eval(save_path)
-#     submission_recorder = SubmissionDataFrame()
-#     for pid, volume_outputs in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
-#         pid_list.append(pid)
-#         vol_nodule_infos = vol_metric.get_pred_nodules(volume_outputs)
-
-#         for nodule_infos in vol_nodule_infos:
-#             if not nodule_infos['Nodule_prob']: 
-#                 nodule_infos['Nodule_prob'] = 0.5
-#             submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
-#             submission_recorder.write_row(submission)
-
-#     submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission.csv'))
-#     time_recording.set_end_time('Total')
-
-#     seriesuid = pd.DataFrame(data=pid_list)
-    # annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
-    # if not os.path.isdir(annotation_dir):
-    #     os.makedirs(annotation_dir)
-#     seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
-
-#     CalculateFROC(f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission', save_path)
-
-
 def froc(cfg, volume_generator):
     time_recording = time_record()
     time_recording.set_start_time('Total')
@@ -278,14 +292,21 @@ def froc(cfg, volume_generator):
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval(save_path)
     submission_recorder = SubmissionDataFrame()
-    for infos, mask_vol, pred_vol in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
-        pid_list.append(infos['pid'])
-        vol_nodule_infos = vol_metric.get_submission(mask_vol, pred_vol, infos)
-        # if infos['vol_idx'] > 1: break
+    idx = 0
+    for pid, volume_outputs, nodule_infos in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
+        if cfg.MAX_TEST_CASES is not None:
+            if idx > cfg.MAX_TEST_CASES: 
+                break
+        idx += 1
+        pid_list.append(pid)
+        pred_vol, pred_scores = convert_pred_format(volume_outputs)
+        vol_nodule_infos = get_output(pred_vol, pred_scores, 
+                                      nodule_infos['origin'], nodule_infos['spacing'], nodule_infos['direction'])
+
         for nodule_infos in vol_nodule_infos:
             if not nodule_infos['Nodule_prob']: 
                 nodule_infos['Nodule_prob'] = 0.5
-            submission = [infos['pid']] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
+            submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
             submission_recorder.write_row(submission)
 
     submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission.csv'))
@@ -298,6 +319,41 @@ def froc(cfg, volume_generator):
     seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
 
     CalculateFROC(f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission', save_path)
+
+
+# def froc(cfg, volume_generator):
+#     time_recording = time_record()
+#     time_recording.set_start_time('Total')
+
+#     save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
+
+#     if not os.path.isdir(save_path):
+#         os.makedirs(save_path)
+#     pid_list = []
+
+#     predictor = BatchPredictor(cfg)
+#     vol_metric = volumetric_data_eval(save_path)
+#     submission_recorder = SubmissionDataFrame()
+#     for infos, mask_vol, pred_vol in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
+#         pid_list.append(infos['pid'])
+#         vol_nodule_infos = vol_metric.get_submission(mask_vol, pred_vol, infos)
+#         # if infos['vol_idx'] > 1: break
+#         for nodule_infos in vol_nodule_infos:
+#             if not nodule_infos['Nodule_prob']: 
+#                 nodule_infos['Nodule_prob'] = 0.5
+#             submission = [infos['pid']] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
+#             submission_recorder.write_row(submission)
+
+#     submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission.csv'))
+#     time_recording.set_end_time('Total')
+
+#     seriesuid = pd.DataFrame(data=pid_list)
+#     annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
+#     if not os.path.isdir(annotation_dir):
+#         os.makedirs(annotation_dir)
+#     seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
+
+#     CalculateFROC(f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission', save_path)
 
 
 def CalculateFROC(submission_filename, save_path):
@@ -340,8 +396,8 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_044'
@@ -360,9 +416,8 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
-    
-    # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
+
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
 
@@ -404,14 +459,17 @@ def common_config():
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth'
 
+    cfg.lung_mask_filtering = True
+    
     run = os.path.split(cfg.OUTPUT_DIR)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     # cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227'
     dir_name = ['maskrcnn', f'{run}', f'{weight}', f'{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}']
-    dir_name.insert(0, 'reducedFP') if cfg.reduce_false_positive else dir_name
+    dir_name.insert(0, 'FPR') if cfg.reduce_false_positive else dir_name
+    dir_name.insert(0, 'LMF') if cfg.lung_mask_filtering else dir_name
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
     cfg.MAX_SAVE_IMAGE_CASES = 100
-    cfg.MAX_TEST_CASES = 2
+    cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
     cfg.TEST_BATCH_SIZE = 2
@@ -477,6 +535,7 @@ def asus_benign_eval():
         cfg.CASE_INDICES = list(range(25))
     elif cfg.DATA_SPLIT == 'test':
         cfg.CASE_INDICES = list(range(27, 35))
+        # cfg.CASE_INDICES = list(range(32, 33))
     else:
         cfg.CASE_INDICES = None
 
@@ -488,8 +547,8 @@ def asus_benign_eval():
 
 if __name__ == '__main__':
     # asus_benign_eval()
-    # asus_malignant_eval()
-    luna16_eval()
+    asus_malignant_eval()
+    # luna16_eval()
     
     
     

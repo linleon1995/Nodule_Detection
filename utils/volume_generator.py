@@ -53,6 +53,8 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
             if 'raw' in _dir:
                 vol_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
                 vol, origin, spacing, direction = dataset_utils.load_itk(vol_path)
+                raw_vol = vol.copy()
+                raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
                 vol = np.clip(vol, -1000, 1000)
                 vol = raw_preprocess(vol, output_dtype=np.uint8)
             if 'mask' in _dir:
@@ -64,7 +66,7 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
         scan_idx = int(pid[2:])
         # TODO: what is scan_idx
         infos = {'pid': pid, 'scan_idx': scan_idx, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
-        yield vol, mask_vol, infos
+        yield raw_vol, vol, mask_vol, infos
 
 
 def make_mask(center, diam, z, width, height, spacing, origin):
@@ -233,7 +235,7 @@ def build_pred_generator(data_generator, predictor, batch_size=1):
     for vol_idx, (vol, mask_vol, infos) in enumerate(data_generator):
         infos['vol_idx'] = vol_idx
         pid, scan_idx = infos['pid'], infos['scan_idx']
-        total_outputs = np.array([])
+        total_outputs = []
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
 
@@ -242,23 +244,13 @@ def build_pred_generator(data_generator, predictor, batch_size=1):
                 print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
             start, end = img_idx, min(vol.shape[0], img_idx+batch_size)
             img = vol[start:end]
-            img = np.split(img, img.shape[0], axis=0)
-            outputs = predictor(img) 
-            total_outputs = np.append(total_outputs, outputs)
-
-            for j, output in enumerate(outputs):
-                pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-                if j == 0:
-                    total_pred = np.zeros(pred.shape[1:])
-                if pred.shape[0] > 0:
-                    print(3)
-                total_pred += np.sum(pred, axis=0)
-
-            total_pred = mask_preprocess(total_pred)
-            pred_vol[img_idx] = total_pred
+            img_list = np.split(img, img.shape[0], axis=0)
+            outputs = predictor(img_list) 
             
-        yield pid, mask_vol, pred_vol, pred_scores
-        # yield pid, total_outputs
+            for j, output in enumerate(outputs):
+                total_outputs.append(output["instances"])
+                
+        yield pid, total_outputs, infos
 
 # def build_pred_generator(data_generator, predictor, batch_size=1):
 #     for vol_idx, (vol, mask_vol, infos) in enumerate(data_generator):
