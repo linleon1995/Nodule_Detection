@@ -7,7 +7,7 @@ from sklearn.cluster import KMeans
 from utils.utils import cv2_imshow
 
 
-def lung_mask_filtering(pred_vol, input_vol=None, lung_mask_path=None):
+def get_lung_mask(pred_vol, input_vol=None, lung_mask_path=None):
     assert input_vol is not None or lung_mask_path is not None, \
     'Either load preprocess lung mask or calculate from input image'
 
@@ -17,9 +17,7 @@ def lung_mask_filtering(pred_vol, input_vol=None, lung_mask_path=None):
         lung_mask_vol = np.zeros_like(input_vol)
         for img_idx, img in enumerate(input_vol):
             lung_mask_vol[img_idx] = segment_lung(img)
-            if img_idx == 68:
-                cv2_imshow(np.uint8(255*lung_mask_vol[img_idx]))
-    return pred_vol * lung_mask_vol
+    return lung_mask_vol
 
 
 def segment_lung(img):

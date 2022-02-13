@@ -35,14 +35,14 @@ import time
 import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
-from utils.volume_generator import luna16_volume_generator, lidc_volume_generator, asus_nodule_volume_generator, build_pred_generator
+from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
 from utils.volume_eval import volumetric_data_eval
 from utils.utils import Nodule_data_recording, SubmissionDataFrame, irc2xyz, get_nodule_center
 from utils.vis import save_mask
 import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import False_Positive_Reducer
-from lung_mask_filtering import lung_mask_filtering
+from lung_mask_filtering import get_lung_mask
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -235,7 +235,13 @@ def volume_eval(cfg, volume_generator):
             pred_vol = FP_reducer.reduce_false_positive(vol, pred_vol)
 
         if cfg.lung_mask_filtering:
-            pred_vol = lung_mask_filtering(pred_vol, raw_vol[...,0])
+            lung_mask_vol = get_lung_mask(pred_vol, raw_vol[...,0])
+            pred_vol *= lung_mask_vol
+            # for img_idx, lung_mask in enumerate(lung_mask_vol):
+            #     lung_mask_save_dir = os.path.join(rf'plot/vis/lung_mask', pid)
+                # if not os.path.isdir(lung_mask_save_dir):
+                #     os.makedirs(lung_mask_save_dir)
+                # cv2_imshow(np.uint8(255*lung_mask_vol[img_idx]), os.path.join(lung_mask_save_dir, f'{img_idx}.png'))
 
         # np.save(f'pred_{vol_idx:03d}.npy', pred_vol)
         # np.save(f'target_{vol_idx:03d}.npy', mask_vol)
@@ -393,11 +399,11 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_044'
@@ -459,7 +465,7 @@ def common_config():
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth'
 
-    cfg.lung_mask_filtering = True
+    cfg.lung_mask_filtering = False
     
     run = os.path.split(cfg.OUTPUT_DIR)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]

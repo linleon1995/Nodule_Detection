@@ -17,9 +17,9 @@ class LUNA16_CropRange_Builder():
                                    vol_data_path, 
                                    volume_generator, 
                                    luna16_annotation_path,
-                                   negative_positive_to_ratio=1.0):
+                                   negative_positive_ratio=1.0):
         file_name_key = LUNA16_CropRange_Builder.get_filename_key(crop_range)
-        save_path = os.path.join(vol_data_path, f'{file_name_key}-{negative_positive_to_ratio}')
+        save_path = os.path.join(vol_data_path, f'{file_name_key}-{negative_positive_ratio}')
         positive_path = os.path.join(save_path, f'positive_IRC_{file_name_key}.csv') 
         negative_path = os.path.join(save_path, f'negative_IRC_{file_name_key}.csv') 
 
@@ -32,7 +32,7 @@ class LUNA16_CropRange_Builder():
 
         # Merge positive and negative samples and save in data_samples
         num_positive_sample = positive_crop_range.shape[0]
-        num_negative_sample = int(negative_positive_to_ratio*num_positive_sample)
+        num_negative_sample = int(negative_positive_ratio*num_positive_sample)
         negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
         data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
@@ -217,7 +217,7 @@ def main():
                                                         vol_data_path=VOL_DATA_PATH, 
                                                         volume_generator=VOLUME_GENERATOR, 
                                                         luna16_annotation_path=LUNA16_ANNOTATION_PATH, 
-                                                        negative_positive_to_ratio=CLASS_RATIO)
+                                                        negative_positive_ratio=CLASS_RATIO)
   
 
 if __name__ == '__main__':

@@ -20,28 +20,35 @@ logging.basicConfig(level=logging.INFO)
 
 from modules.data import dataset_utils
 LUNA16_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+ASUS_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules'
 
 
-# TODO: Wrap all the thing to single object in generarator(raw_vol, mask_vol, spacing, origin, ...)
-def lidc_volume_generator(data_path, case_indices, only_nodule_slices=False):
-    case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
-    case_list = np.array(case_list)[case_indices]
-    for case_dir in case_list:
-        pid = os.path.split(case_dir)[1]
-        scan_list = dataset_utils.get_files(os.path.join(case_dir, rf'Image\lung\vol\npy'), 'npy')
-        for scan_idx, scan_path in enumerate(scan_list):
-            vol = np.load(scan_path)
-            mask_vol = np.load(os.path.join(case_dir, rf'Mask\vol\npy', os.path.split(scan_path)[1]))
-            mask_vol = np.where(mask_vol>=1, 1, 0)
-            if only_nodule_slices:
-                nodule_slice_indices = np.where(np.sum(mask_vol, axis=(0,1)))[0]
-                vol = vol[...,nodule_slice_indices]
-                mask_vol = mask_vol[...,nodule_slice_indices]
-            infos = {'pid': pid, 'scan_idx': scan_idx}
-            yield vol, mask_vol, infos
+def get_data_by_pid_asus(pid, nodule_type):
+    raw_and_mask = dataset_utils.get_files(os.path.join(ASUS_RAW_DATA_PATH, nodule_type, pid), 
+                                           recursive=False, get_dirs=True)
+    for _dir in raw_and_mask:
+        if 'raw' in _dir:
+            raw_dir = _dir
+        elif 'mask' in _dir:
+            mask_dir = _dir
+
+    # raw_dir = os.path.join(ASUS_RAW_DATA_PATH, nodule_type, pid)
+    vol_raw_path = dataset_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
+    vol, origin, spacing, direction = dataset_utils.load_itk(vol_raw_path)
+    raw_vol = vol.copy()
+    raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
+    vol = np.clip(vol, -1000, 1000)
+    vol = raw_preprocess(vol, output_dtype=np.uint8)
+
+    # mask_dir = os.path.join(ASUS_RAW_DATA_PATH, nodule_type, pid, f'{pid} mask mhd')
+    vol_mask_path = dataset_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
+    mask_vol, _, _, _ = dataset_utils.load_itk(vol_mask_path)
+    mask_vol = mask_preprocess(mask_vol)        
+    return raw_vol, vol, mask_vol, origin, spacing, direction    
 
 
 def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=None, only_nodule_slices=False):
+    nodule_type = os.path.split(data_path)[1]
     case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     if case_indices:
         case_list = np.take(case_list, case_indices)
@@ -49,21 +56,11 @@ def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=No
     for case_dir in case_list:
         raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
         assert len(raw_and_mask) == 2
-        for _dir in raw_and_mask:
-            if 'raw' in _dir:
-                vol_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
-                vol, origin, spacing, direction = dataset_utils.load_itk(vol_path)
-                raw_vol = vol.copy()
-                raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
-                vol = np.clip(vol, -1000, 1000)
-                vol = raw_preprocess(vol, output_dtype=np.uint8)
-            if 'mask' in _dir:
-                vol_mask_path = dataset_utils.get_files(_dir, 'mhd', recursive=False)[0]
-                mask_vol, _, _, _ = dataset_utils.load_itk(vol_mask_path)
-                mask_vol = mask_preprocess(mask_vol)            
-                # mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 1), 1, 2)
+           
         pid = os.path.split(case_dir)[1]
         scan_idx = int(pid[2:])
+        raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(pid, nodule_type)
+
         # TODO: what is scan_idx
         infos = {'pid': pid, 'scan_idx': scan_idx, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
         yield raw_vol, vol, mask_vol, infos
@@ -111,6 +108,7 @@ def make_mask(center, diam, z, width, height, spacing, origin):
 @functools.lru_cache(1, typed=True)
 def getCt(series_uid):
     return Ct_luna16_round_mask(series_uid)
+
 
 class Ct_luna16_round_mask(dataset_seg.Ct):
     def __init__(self, series_uid):
