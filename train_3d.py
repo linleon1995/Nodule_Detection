@@ -3,6 +3,7 @@ import os
 from model.ResNet_3d import build_3d_resnet
 from torch.utils.data import Dataset, DataLoader
 from data.dataloader import Luna16CropDataset
+from data.dataloader import ASUSCropDataset
 import numpy as np
 import random
 import torch
@@ -38,11 +39,21 @@ def main(config_reference):
     model = build_3d_resnet(model_depth=config.MODEL.DEPTH, n_classes=config.MODEL.NUM_CLASSES, conv1_t_size=7, conv1_t_stride=2)
     print(model)
 
-    train_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='train')
-    valid_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='valid')
+    train_datasets, valid_datasets = [], []
+    for dataset_name in config.DATA.NAME:
+        if dataset_name == 'LUNA16':
+            train_dataset = Luna16CropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, mode='train')
+            valid_dataset = Luna16CropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, mode='valid')
+        elif dataset_name in ['ASUS-B', 'ASUS-M']:
+            train_dataset = ASUSCropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, negative_to_positive_ratio=1, nodule_type=dataset_name, mode='train')
+            valid_dataset = ASUSCropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, negative_to_positive_ratio=1, nodule_type=dataset_name, mode='valid')
+        print('Train number', len(train_dataset), 'Valid number', len(valid_dataset))
+        train_datasets.append(train_dataset)
+        valid_datasets.append(valid_dataset)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=config.DATA.BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=0)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
+    total_train_dataset, total_valid_dataset = torch.utils.data.ConcatDataset(train_datasets), torch.utils.data.ConcatDataset(valid_datasets)
+    train_dataloader = DataLoader(total_train_dataset, batch_size=config.DATA.BATCH_SIZE, shuffle=True, pin_memory=True, num_workers=0)
+    valid_dataloader = DataLoader(total_valid_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
 
     # Logger
     LOGGER.info("Start Training!!")
@@ -76,7 +87,8 @@ def main(config_reference):
                                     device=config.device,
                                     activation_func=activation_func,
                                     USE_TENSORBOARD=True,
-                                    USE_CUDA=True)
+                                    # USE_CUDA=True,)
+                                    history=rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth')
 
     trainer_instance.fit()
 

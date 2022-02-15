@@ -1,8 +1,9 @@
 import site_path
 import os
-from ResNet_3d import build_3d_resnet
+from model.ResNet_3d import build_3d_resnet
 from torch.utils.data import Dataset, DataLoader
-from dataloader import Luna16CropDataset
+from data.dataloader import Luna16CropDataset
+from data.dataloader import ASUSCropDataset
 import numpy as np
 import random
 import torch
@@ -91,6 +92,7 @@ class Evaluator():
         print('Precision', metrics.precision(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp)))
         print('Recall', metrics.recall(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn)))
         print('Acc', self.avg_test_acc)
+        print('CM', self.eval_tool.total_tp, self.eval_tool.total_fp, self.eval_tool.total_tn, self.eval_tool.total_fn)
     
 
 def main(config_reference):
@@ -106,7 +108,9 @@ def main(config_reference):
     model.load_state_dict(state_key['net'])
     model = model.to(config.device)
 
-    test_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='test')
+    # test_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='test')
+    # test_dataset = ASUSCropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, nodule_type='ASUS-B', mode='test')
+    test_dataset = ASUSCropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, nodule_type='ASUS-M', mode='test')
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
 
     # Logger

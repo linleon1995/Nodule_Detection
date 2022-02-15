@@ -186,6 +186,7 @@ def volume_eval(cfg, volume_generator):
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval(save_path)
     metadata_recorder = Nodule_data_recording()
+    lung_mask_path = os.path.join(cfg.DATA_PATH, 'Lung_Mask_show')
 
     crop_range = {'index': cfg.crop_range[0], 'row': cfg.crop_range[1], 'column': cfg.crop_range[2]}
     if cfg.reduce_false_positive:
@@ -231,20 +232,27 @@ def volume_eval(cfg, volume_generator):
 
         time_recording.set_start_time('Nodule Evaluation')
 
+        if cfg.lung_mask_filtering:
+            lung_mask_case_path = os.path.join(lung_mask_path, pid)
+
+            if not os.path.isdir(lung_mask_case_path):
+                os.makedirs(lung_mask_case_path)
+                lung_mask_vol = get_lung_mask(pred_vol, raw_vol[...,0])
+                for lung_mask_idx, lung_mask in enumerate(lung_mask_vol):
+                    cv2.imwrite(os.path.join(lung_mask_case_path, f'{pid}-{lung_mask_idx:03d}.png'), 255*lung_mask)
+            else:
+                lung_mask_files = dataset_utils.get_files(lung_mask_case_path, 'png')
+                lung_mask_vol = np.zeros_like(pred_vol)
+                for lung_mask_idx, lung_mask in enumerate(lung_mask_files): 
+                    lung_mask_vol[lung_mask_idx] = cv2.imread(lung_mask)[...,0]
+                lung_mask_vol = lung_mask_vol / 255
+                lung_mask_vol = np.int32(lung_mask_vol)
+            pred_vol *= lung_mask_vol
+
+
         if cfg.reduce_false_positive:
             pred_vol = FP_reducer.reduce_false_positive(vol, pred_vol)
 
-        if cfg.lung_mask_filtering:
-            lung_mask_vol = get_lung_mask(pred_vol, raw_vol[...,0])
-            pred_vol *= lung_mask_vol
-            # for img_idx, lung_mask in enumerate(lung_mask_vol):
-            #     lung_mask_save_dir = os.path.join(rf'plot/vis/lung_mask', pid)
-                # if not os.path.isdir(lung_mask_save_dir):
-                #     os.makedirs(lung_mask_save_dir)
-                # cv2_imshow(np.uint8(255*lung_mask_vol[img_idx]), os.path.join(lung_mask_save_dir, f'{img_idx}.png'))
-
-        # np.save(f'pred_{vol_idx:03d}.npy', pred_vol)
-        # np.save(f'target_{vol_idx:03d}.npy', mask_vol)
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
         # vol_nodule_infos = {'Nodule_pid': pid}.update(vol_nodule_infos)
@@ -396,6 +404,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_006'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_020'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
@@ -452,7 +461,7 @@ def common_config():
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
-    cfg.INPUT.MIN_SIZE_TEST = 800
+    cfg.INPUT.MIN_SIZE_TEST = 512
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8,  16,  32,  64, 128]]
@@ -464,6 +473,10 @@ def common_config():
     cfg.reduce_false_positive = False
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_001\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_004\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_010\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_016\ckpt_best.pth'
 
     cfg.lung_mask_filtering = False
     
@@ -471,8 +484,10 @@ def common_config():
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     # cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227'
     dir_name = ['maskrcnn', f'{run}', f'{weight}', f'{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}']
-    dir_name.insert(0, 'FPR') if cfg.reduce_false_positive else dir_name
+    FPR_model_code = os.path.split(os.path.split(cfg.FP_reducer_checkpoint)[0])[1]
+    dir_name.insert(0, f'FPR_{FPR_model_code}') if cfg.reduce_false_positive else dir_name
     dir_name.insert(0, 'LMF') if cfg.lung_mask_filtering else dir_name
+    dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
     cfg.MAX_SAVE_IMAGE_CASES = 100
     cfg.MAX_TEST_CASES = None

@@ -198,7 +198,7 @@ class luna16_volume_generator():
                 # mask_vol = mask_preprocess(mask_vol)
                 # infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset, 
                 #          'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
-                yield raw_vol, mask_vol, infos
+                yield raw_vol, raw_vol, mask_vol, infos
 
     @staticmethod
     def get_case_list(data_path, subset_indices, case_indices):

@@ -20,7 +20,7 @@ NEGATIVE_POSITIVE_RATIO = 10
 CONNECTIVITY = 26
 
 
-class LUNA16_CropRange_Builder():
+class ASUS_CropRange_Builder():
     @staticmethod 
     def build_random_sample_subset(crop_range, 
                                    vol_data_path, 
@@ -35,7 +35,7 @@ class LUNA16_CropRange_Builder():
         # Get cropping samples
         if not os.path.isfile(positive_path) or not os.path.isfile(negative_path):
             luna16_annotations = pd.read_csv(annotation_path)
-            LUNA16_CropRange_Builder.save_luna16_cropping_samples(luna16_annotations, crop_range, save_path, volume_generator)
+            LUNA16_CropRange_Builder.save_luna16_cropping_samples(luna16_annotations, crop_range, save_path, volume_generator, negative_positive_ratio)
         positive_crop_range = pd.read_csv(positive_path)
         negative_crop_range = pd.read_csv(negative_path)
 
@@ -87,7 +87,8 @@ class LUNA16_CropRange_Builder():
     def save_luna16_cropping_samples(luna16_annotations,
                                      crop_range, 
                                      save_path, 
-                                     volume_generator):
+                                     volume_generator,
+                                     negative_positive_ratio):
         # e.g., LUNA16_CropRange_Builder.save_luna16_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
         # where dataset save')
         total_positive, total_negative = None, None
@@ -117,7 +118,7 @@ class LUNA16_CropRange_Builder():
             if negative is not None:
                 total_negative = add_data_sample(total_negative, negative, volume_info, category_key='negative')
 
-        filename_key = LUNA16_CropRange_Builder.get_filename_key(crop_range)
+        filename_key = LUNA16_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio)
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
         total_positive.to_csv(os.path.join(save_path, f'positive_IRC_{filename_key}.csv'), index=False)
@@ -177,9 +178,9 @@ class LUNA16_CropRange_Builder():
         return np.array((int(cri_a[2]), int(cri_a[1]), int(cri_a[0])))
 
     @staticmethod         
-    def get_filename_key(crop_range):
+    def get_filename_key(crop_range, negative_positive_ratio):
         index, row, col = crop_range['index'], crop_range['row'], crop_range['column']
-        return f'{index}x{row}x{col}'
+        return f'{index}x{row}x{col}-{negative_positive_ratio}'
 
     @staticmethod
     def crop_volume(volume, crop_range, crop_center):
