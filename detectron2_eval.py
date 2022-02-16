@@ -403,12 +403,15 @@ def select_model(cfg):
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_004'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_006'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_016'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_017'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_018'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_020'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
@@ -432,7 +435,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
 
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0000999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
 
@@ -457,11 +460,11 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
-    cfg.INPUT.MIN_SIZE_TEST = 512
+    cfg.INPUT.MIN_SIZE_TEST = 800
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8,  16,  32,  64, 128]]
@@ -489,7 +492,7 @@ def common_config():
     dir_name.insert(0, 'LMF') if cfg.lung_mask_filtering else dir_name
     dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 100
+    cfg.MAX_SAVE_IMAGE_CASES = 1
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -507,6 +510,8 @@ def luna16_eval():
 
     if cfg.DATA_SPLIT == 'train':
         cfg.SUBSET_INDICES = list(range(7))
+    elif cfg.DATA_SPLIT == 'valid':
+        cfg.SUBSET_INDICES = [7]
     elif cfg.DATA_SPLIT == 'test':
         cfg.SUBSET_INDICES = [8, 9]
     else:
@@ -533,6 +538,9 @@ def asus_malignant_eval():
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
         cfg.CASE_INDICES = list(range(40))
+    elif cfg.DATA_SPLIT == 'valid':
+        cfg.CASE_INDICES = list(range(40, 45))
+        # cfg.CASE_INDICES = list(range(56, 57))
     elif cfg.DATA_SPLIT == 'test':
         cfg.CASE_INDICES = list(range(45, 57))
     else:
@@ -554,9 +562,10 @@ def asus_benign_eval():
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
         cfg.CASE_INDICES = list(range(25))
+    elif cfg.DATA_SPLIT == 'valid':
+        cfg.CASE_INDICES = list(range(25, 27))
     elif cfg.DATA_SPLIT == 'test':
         cfg.CASE_INDICES = list(range(27, 35))
-        # cfg.CASE_INDICES = list(range(32, 33))
     else:
         cfg.CASE_INDICES = None
 

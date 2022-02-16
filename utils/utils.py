@@ -81,7 +81,7 @@ class Nodule_data_recording():
         self.nodule_idx = 0
 
     def build_data_frame(self):
-        vol_info_attritube = ['Nodule ID', 'Slice Number', 'Size', 'Relative Size', 
+        vol_info_attritube = ['Nodule ID', 'Slice Number', 'Size', 'Relative Size', 'Depth',
                               'Nodule IoU', 'Nodule DSC', 'Best Slice IoU', 'Best Slice Index']
         vol_info_attritube.insert(0, 'Series uid')
         vol_info_attritube.extend(['IoU>0.1', 'IoU>0.3', 'IoU>0.5', 'IoU>0.7', 'IoU>0.9'])

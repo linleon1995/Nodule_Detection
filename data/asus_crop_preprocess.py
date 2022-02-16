@@ -16,7 +16,7 @@ CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
 
 RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
-NEGATIVE_POSITIVE_RATIO = 10
+NEGATIVE_POSITIVE_RATIO = 200
 CONNECTIVITY = 26
 
 
@@ -27,15 +27,15 @@ class ASUS_CropRange_Builder():
                                    volume_generator, 
                                    annotation_path,
                                    negative_positive_ratio=1.0):
-        file_name_key = LUNA16_CropRange_Builder.get_filename_key(crop_range)
-        save_path = os.path.join(vol_data_path, f'{file_name_key}-{negative_positive_ratio}')
+        file_name_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio)
+        save_path = os.path.join(vol_data_path, f'{file_name_key}')
         positive_path = os.path.join(save_path, f'positive_IRC_{file_name_key}.csv') 
         negative_path = os.path.join(save_path, f'negative_IRC_{file_name_key}.csv') 
 
         # Get cropping samples
         if not os.path.isfile(positive_path) or not os.path.isfile(negative_path):
             luna16_annotations = pd.read_csv(annotation_path)
-            LUNA16_CropRange_Builder.save_luna16_cropping_samples(luna16_annotations, crop_range, save_path, volume_generator, negative_positive_ratio)
+            ASUS_CropRange_Builder.save_luna16_cropping_samples(luna16_annotations, crop_range, save_path, volume_generator, negative_positive_ratio)
         positive_crop_range = pd.read_csv(positive_path)
         negative_crop_range = pd.read_csv(negative_path)
 
@@ -66,8 +66,8 @@ class ASUS_CropRange_Builder():
             _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(short_pid, nodule_type)
             
             crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
-            raw_chunk = LUNA16_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
-            target_chunk = LUNA16_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
+            raw_chunk = ASUS_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
+            target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
             print(f'Saving ASUS nodule volume {index:04d} with shape {raw_chunk[...,0].shape}')
 
             if data_info['category'] == 'positive':
@@ -89,7 +89,7 @@ class ASUS_CropRange_Builder():
                                      save_path, 
                                      volume_generator,
                                      negative_positive_ratio):
-        # e.g., LUNA16_CropRange_Builder.save_luna16_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
+        # e.g., ASUS_CropRange_Builder.save_luna16_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
         # where dataset save')
         total_positive, total_negative = None, None
         
@@ -99,7 +99,7 @@ class ASUS_CropRange_Builder():
 
             nodule_annotation = luna16_annotations.loc[luna16_annotations['seriesuid'].isin([volume_info['pid']])]
             nodule_center_xyz = nodule_annotation[['coordX', 'coordY', 'coordZ']].to_numpy()
-            positive, negative = LUNA16_CropRange_Builder.get_luna16_cropping_sample(
+            positive, negative = ASUS_CropRange_Builder.get_luna16_cropping_sample(
                 target_volume, crop_range, nodule_center_xyz, volume_info['origin'], volume_info['spacing'], volume_info['direction'])
             
             def add_data_sample(total_sample, sample_df, volume_info, category_key):
@@ -118,7 +118,7 @@ class ASUS_CropRange_Builder():
             if negative is not None:
                 total_negative = add_data_sample(total_negative, negative, volume_info, category_key='negative')
 
-        filename_key = LUNA16_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio)
+        filename_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio)
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
         total_positive.to_csv(os.path.join(save_path, f'positive_IRC_{filename_key}.csv'), index=False)
@@ -131,7 +131,7 @@ class ASUS_CropRange_Builder():
         positive_sample, negative_samples = None, None
 
         # nodule centers in voxel coord.
-        voxel_nodule_center_list = [LUNA16_CropRange_Builder.xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+        voxel_nodule_center_list = [ASUS_CropRange_Builder.xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
 
         index_begin, row_begin, column_begin = crop_range['index']//2, crop_range['row']//2, crop_range['column']//2
         index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
@@ -235,6 +235,7 @@ def save_asus_center_info(volume_generator, connectivity, save_path):
 
 def main():
     for nodule_type in ['benign', 'malignant']:
+    # for nodule_type in ['malignant']:
         vol_data_path = os.path.join(VOL_DATA_PATH, nodule_type, 'crop')
         DATA_PATH = os.path.join(RAW_DATA_PATH, nodule_type)
         VOLUME_GENERATOR = asus_nodule_volume_generator(DATA_PATH)
@@ -242,7 +243,7 @@ def main():
 
         if not os.path.isfile(ANNOTATION_PATH):
             save_asus_center_info(volume_generator=VOLUME_GENERATOR, connectivity=CONNECTIVITY, save_path=ANNOTATION_PATH)
-        LUNA16_CropRange_Builder.build_random_sample_subset(crop_range=CROP_RANGE, 
+        ASUS_CropRange_Builder.build_random_sample_subset(crop_range=CROP_RANGE, 
                                                             vol_data_path=vol_data_path, 
                                                             volume_generator=VOLUME_GENERATOR, 
                                                             annotation_path=ANNOTATION_PATH, 
@@ -250,16 +251,16 @@ def main():
   
 
 if __name__ == '__main__':
-    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Image\asus-0001-1m0002.npy'
-    mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
-    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\negative\Image\asus-0004-1m0001.npy'
-    mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\negative\Mask\asus-0004-1m0001.npy'
-    vol = np.load(img_path)
-    mask_vol = np.load(mask_path)
-    import matplotlib.pyplot as plt
-    for img, m in zip(vol, mask_vol):
-        # if np.sum(m) > 0:
-        plt.imshow(img, 'gray')
-        plt.imshow(m, alpha=0.2)
-        plt.show()
-    # main()
+    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Image\asus-0001-1m0002.npy'
+    # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
+    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\negative\Image\asus-0004-1m0001.npy'
+    # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\negative\Mask\asus-0004-1m0001.npy'
+    # vol = np.load(img_path)
+    # mask_vol = np.load(mask_path)
+    # import matplotlib.pyplot as plt
+    # for img, m in zip(vol, mask_vol):
+    #     # if np.sum(m) > 0:
+    #     plt.imshow(img, 'gray')
+    #     plt.imshow(m, alpha=0.2)
+    #     plt.show()
+    main()

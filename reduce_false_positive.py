@@ -4,6 +4,7 @@ import torch
 from data.luna16_data_preprocess import LUNA16_CropRange_Builder
 from model.ResNet_3d import build_3d_resnet
 from utils.volume_eval import volumetric_data_eval
+from utils.utils import compare_result, compare_result_enlarge
 from modules.utils import configuration
 
 
@@ -18,6 +19,11 @@ class False_Positive_Reducer():
         pred_volume, _ = volumetric_data_eval.volume_preprocess(pred_volume, connectivity=26, area_threshold=20)
         pred_nodules = self.get_nodule_center(pred_volume)
         for nodule in pred_nodules:
+            # fig, ax = compare_result(raw_volume[nodule['Center']['index']], pred_volume[nodule['Center']['index']], pred_volume[nodule['Center']['index']])
+            # fig2, ax2 = compare_result_enlarge(raw_volume[nodule['Center']['index']], pred_volume[nodule['Center']['index']], pred_volume[nodule['Center']['index']])
+            # nodule_index = nodule['Center']['index']
+            # fig.savefig(f'plot/fpr/{nodule_index:03d}.png')
+            # fig2.savefig(f'plot/fpr/{nodule_index:03d}-en.png')
             crop_raw_volume = LUNA16_CropRange_Builder.crop_volume(raw_volume, self.crop_range, nodule['Center'])
             crop_raw_volume = np.swapaxes(np.expand_dims(crop_raw_volume, (0, 1)), 1, 5)[...,0]
             crop_raw_volume = torch.from_numpy(crop_raw_volume).float().to(self.device)
@@ -47,6 +53,7 @@ class False_Positive_Reducer():
             center_index, center_row, center_column = np.mean(zs), np.mean(ys), np.mean(xs)
             total_nodule_center.append({'Nodule_label': label, 
                                         'Center': {'index': np.mean(center_index).astype('int32'), 'row': np.mean(center_row).astype('int32'), 'column': np.mean(center_column).astype('int32')}})
+
         return total_nodule_center
 
 

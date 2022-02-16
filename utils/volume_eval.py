@@ -52,7 +52,8 @@ class volumetric_data_eval():
                 nodule_infos = {'Nodule ID': np.int32(mask_nodule_metadata['Nodule_id']),
                                 'Slice Number': np.int32(num_slice), 
                                 'Size': np.int32(mask_nodule_metadata['Nodule_size']), 
-                                'Relative Size': mask_nodule_metadata['Nodule_size']/target_vol.size}
+                                'Relative Size': mask_nodule_metadata['Nodule_size']/target_vol.size,
+                                'Depth': target_vol.shape[0]}
                 
                 gt_nodule_mask = np.logical_and(gt_nodule>0, pred_vol>0)
                 pred_nodule_category = np.unique(gt_nodule_mask*pred_vol)[1:]
