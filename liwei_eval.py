@@ -10,6 +10,8 @@ import torchvision
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
+from Liwei.FTP1m_test import test
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch-size', type=int, default=4, help='Batch size to use for training')
 parser.add_argument('--num-workers', type=int, default=0, help='Number of worker processes for background data loading')
@@ -59,6 +61,10 @@ def liwei_predictor(opt, images):
         preds = preds.cpu().data.numpy()
     return preds
 
+
+
+def liwei_eval():
+    volume_generator = test.asus_pred_generator
 
 def main(opt):
     preds = liwei_predictor(opt, images)

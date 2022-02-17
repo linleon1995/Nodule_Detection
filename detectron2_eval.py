@@ -13,6 +13,7 @@ import cv2
 import random
 import numpy as np
 import matplotlib as mpl
+import argparse
 
 from data.luna16_data_preprocess import LUNA16_CropRange_Builder
 mpl.use('TkAgg')
@@ -51,7 +52,8 @@ from modules.data import dataset_utils
 from modules.utils import metrics2
 from modules.utils import evaluator
 
-from LUNA16_test import util
+from Liwei.LUNA16_test import util
+from Liwei.FTP1m_test import test
 
 
 def volume_outputs_to_pred_volume(volume_outputs):
@@ -404,7 +406,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_006'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_016'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_017'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_017'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_018'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_020'
@@ -435,7 +437,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
 
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0001999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0004999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
 
@@ -464,7 +466,7 @@ def common_config():
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
-    cfg.INPUT.MIN_SIZE_TEST = 800
+    cfg.INPUT.MIN_SIZE_TEST = 1120
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[4,  8,  16,  32,  64]]
     # cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[0.5, 1.2]]
     # cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[8,  16,  32,  64, 128]]
@@ -481,6 +483,12 @@ def common_config():
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_010\ckpt_best.pth'
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_016\ckpt_best.pth'
 
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_019\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_020\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_021\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_022\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
+
     cfg.lung_mask_filtering = False
     
     run = os.path.split(cfg.OUTPUT_DIR)[1]
@@ -492,7 +500,7 @@ def common_config():
     dir_name.insert(0, 'LMF') if cfg.lung_mask_filtering else dir_name
     dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 1
+    cfg.MAX_SAVE_IMAGE_CASES = 100
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -533,7 +541,7 @@ def asus_malignant_eval():
     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'test'
+    cfg.DATA_SPLIT = 'train'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
@@ -548,6 +556,45 @@ def asus_malignant_eval():
 
     volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
+    volume_eval(cfg, volume_generator=volume_generator)
+    return cfg
+
+
+def liwei_asus_malignant_eval():
+    cfg = common_config()
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
+    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
+    cfg = add_dataset_name(cfg)
+    cfg.DATA_SPLIT = 'test'
+
+    cfg.SUBSET_INDICES = None
+    if cfg.DATA_SPLIT == 'train':
+        cfg.CASE_INDICES = list(range(40))
+    elif cfg.DATA_SPLIT == 'valid':
+        cfg.CASE_INDICES = list(range(40, 45))
+        # cfg.CASE_INDICES = list(range(56, 57))
+    elif cfg.DATA_SPLIT == 'test':
+        cfg.CASE_INDICES = list(range(45, 57))
+    else:
+        cfg.CASE_INDICES = None
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--batch-size', type=int, default=4, help='Batch size to use for training')
+    parser.add_argument('--num-workers', type=int, default=0, help='Number of worker processes for background data loading')
+
+    parser.add_argument('--n_classes', type=int, default=2)
+    parser.add_argument('--val_stride', type=int, default=10)
+    parser.add_argument('--contextSlices_count', type=int, default=3)
+    parser.add_argument('--contextSlices_shift', type=int, default=1)
+    parser.add_argument('--fullCt_bool', type=bool, default=True)
+        
+    parser.add_argument('--loss', type=str, default='SoftIoU', help='use BinaryDice or Focal or SoftIoU or CrossEntropy')
+    parser.add_argument('--pretrain_path', default='./FCN_IOUFocal/FCN_all_best.pt')
+    parser.add_argument('--save_path', default='./Show_output')
+    parser.add_argument('--save', default=False)
+    opt = parser.parse_args()
+    volume_generator = test.asus_pred_generator(opt)
+
     volume_eval(cfg, volume_generator=volume_generator)
     return cfg
 
@@ -579,6 +626,8 @@ if __name__ == '__main__':
     # asus_benign_eval()
     asus_malignant_eval()
     # luna16_eval()
+
+    # liwei_asus_malignant_eval()
     
     
     

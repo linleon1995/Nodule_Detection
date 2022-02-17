@@ -6,9 +6,6 @@ import time
 import matplotlib.pyplot as plt
 from scipy import ndimage
 import random
-
-from data.luna16_data_preprocess import LUNA16_CropRange_Builder
-from data.asus_crop_preprocess import ASUS_CropRange_Builder
 from utils.volume_generator import luna16_volume_generator
 from modules.data import dataset_utils
 
@@ -17,14 +14,14 @@ from modules.data import dataset_utils
 
 
 class ASUSCropDataset(Dataset):
-    def __init__(self, data_path, crop_range, nodule_type, negative_to_positive_ratio=1, mode='train'):
+    def __init__(self, data_path, crop_range, nodule_type, negative_to_positive_ratio=1, mode='train', data_augmentation=False):
         self.data_path = data_path
         self.crop_range = crop_range
-        self.file_name_key = ASUS_CropRange_Builder.get_filename_key(self.crop_range, 10)
         self.nodule_type = nodule_type
         self.seriesuid = self.get_seriesuid(nodule_type, mode)
+        self.data_augmentation = data_augmentation
 
-        input_files = pd.read_csv(os.path.join(self.data_path, self.file_name_key, 'data_samples.csv'))
+        input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
         input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
         positive_files = input_files[input_files.category == 'positive']
         negative_files = input_files[input_files.category == 'negative']
@@ -38,7 +35,9 @@ class ASUSCropDataset(Dataset):
     def __getitem__(self, idx):
         volume_data_path = self.input_files['path'].iloc[idx]
         
-        raw_chunk = np.load(os.path.join(self.data_path, self.file_name_key, volume_data_path))
+        raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
+        if self.data_augmentation:
+            raw_chunk = self.transform(raw_chunk)
         raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
         target = 1 if 'positive' in volume_data_path else 0
         target = np.array(target, dtype='float')[np.newaxis]
@@ -60,6 +59,10 @@ class ASUSCropDataset(Dataset):
             elif mode == 'test':
                 seriesuid = [f'1m{i:04d}' for i in range(45, 57)]
         return seriesuid
+
+    def transform(self, volume):
+        volume = self.random_flip_3d(volume)
+        return volume
 
     def random_flip_3d(self, volume):
         random_prob = np.random.random(3)
@@ -89,7 +92,6 @@ class Luna16CropDataset(Dataset):
     def __init__(self, data_path, crop_range, mode='train'):
         self.data_path = data_path
         self.crop_range = crop_range
-        self.file_name_key = LUNA16_CropRange_Builder.get_filename_key(self.crop_range)
 
         if mode == 'train':
             self.subsets = [f'subset{i}' for i in range(7)]
@@ -98,7 +100,7 @@ class Luna16CropDataset(Dataset):
         elif mode == 'test':
             self.subsets = ['subset8', 'subset9']
         
-        input_files = pd.read_csv(os.path.join(self.data_path, self.file_name_key, 'data_samples.csv'))
+        input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
         self.input_files = input_files[input_files['subset'].isin(self.subsets)]
         
     def __len__(self):
@@ -107,7 +109,7 @@ class Luna16CropDataset(Dataset):
     def __getitem__(self, idx):
         volume_data_path = self.input_files['path'].iloc[idx]
         
-        raw_chunk = np.load(os.path.join(self.data_path, self.file_name_key, volume_data_path))
+        raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
         raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
         target = 1 if 'positive' in volume_data_path else 0
         target = np.array(target, dtype='float')[np.newaxis]

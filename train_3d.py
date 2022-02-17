@@ -9,6 +9,8 @@ import random
 import torch
 from pprint import pprint
 import tensorboardX
+from data.luna16_data_preprocess import LUNA16_CropRange_Builder
+from data.asus_crop_preprocess import ASUS_CropRange_Builder
 
 from modules.train import trainer
 from modules.utils import configuration
@@ -42,11 +44,17 @@ def main(config_reference):
     train_datasets, valid_datasets = [], []
     for dataset_name in config.DATA.NAME:
         if dataset_name == 'LUNA16':
-            train_dataset = Luna16CropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, mode='train')
-            valid_dataset = Luna16CropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, mode='valid')
+            file_name_key = LUNA16_CropRange_Builder.get_filename_key(config.DATA.CROP_RANGE, config.DATA.NPratio)
+            data_path = os.path.join(config.DATA.DATA_PATH[dataset_name], file_name_key)
+            train_dataset = Luna16CropDataset(data_path, config.DATA.CROP_RANGE, mode='train')
+            valid_dataset = Luna16CropDataset(data_path, config.DATA.CROP_RANGE, mode='valid')
         elif dataset_name in ['ASUS-B', 'ASUS-M']:
-            train_dataset = ASUSCropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, negative_to_positive_ratio=1, nodule_type=dataset_name, mode='train')
-            valid_dataset = ASUSCropDataset(config.DATA.DATA_PATH[dataset_name], config.DATA.CROP_RANGE, negative_to_positive_ratio=1, nodule_type=dataset_name, mode='valid')
+            file_name_key = ASUS_CropRange_Builder.get_filename_key(config.DATA.CROP_RANGE, config.DATA.NPratio)
+            data_path = os.path.join(config.DATA.DATA_PATH[dataset_name], file_name_key)
+            train_dataset = ASUSCropDataset(data_path, config.DATA.CROP_RANGE, negative_to_positive_ratio=config.DATA.NPratio_test, 
+                                            nodule_type=dataset_name, mode='train', data_augmentation=config.DATA.AUG)
+            valid_dataset = ASUSCropDataset(data_path, config.DATA.CROP_RANGE, negative_to_positive_ratio=config.DATA.NPratio_test, 
+                                            nodule_type=dataset_name, mode='valid', data_augmentation=config.DATA.AUG)
         print('Train number', len(train_dataset), 'Valid number', len(valid_dataset))
         train_datasets.append(train_dataset)
         valid_datasets.append(valid_dataset)

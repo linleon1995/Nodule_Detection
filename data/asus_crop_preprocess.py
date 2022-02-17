@@ -42,8 +42,23 @@ class ASUS_CropRange_Builder():
         # Merge positive and negative samples and save in data_samples
         num_positive_sample = positive_crop_range.shape[0]
         num_negative_sample = int(negative_positive_ratio*num_positive_sample)
-        negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
-        data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
+        # negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
+        # data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
+        data_samples = pd.concat([positive_crop_range, negative_crop_range])
+
+        # Add 'path' in DataFrame
+        total_raw_path, total_file_name = [], []
+        for index, data_info in data_samples.iterrows():
+            short_pid = data_info['seriesuid'].split('.')[-1]
+            if short_pid[1] == 'B':
+                nodule_type = 'benign'
+            elif short_pid[1] == 'm':
+                nodule_type = 'malignant'
+            file_name = f'asus-{index:04d}-{short_pid}'
+            file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
+            total_file_name.append(file_name)
+            total_raw_path.append(file_path)
+        data_samples['path'] = total_raw_path
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
         # Make directory
@@ -55,7 +70,6 @@ class ASUS_CropRange_Builder():
             if not os.path.isdir(save_dir):
                 os.makedirs(save_dir)
 
-        total_raw_path = np.array([])
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
             if short_pid[1] == 'B':
@@ -63,24 +77,30 @@ class ASUS_CropRange_Builder():
             elif short_pid[1] == 'm':
                 nodule_type = 'malignant'
 
-            _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(short_pid, nodule_type)
+            file_name = f'asus-{index:04d}-{short_pid}'
+            file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
             
-            crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
-            raw_chunk = ASUS_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
-            target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
-            print(f'Saving ASUS nodule volume {index:04d} with shape {raw_chunk[...,0].shape}')
-
             if data_info['category'] == 'positive':
                 raw_path, target_path = positive_raw_path, positive_target_path
             elif data_info['category'] == 'negative':
                 raw_path, target_path = negative_raw_path, negative_target_path
                 
-            file_name = f'asus-{index:04d}-{short_pid}'
-            np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk[...,0])
-            np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
-            total_raw_path = np.append(total_raw_path, os.path.join(data_info['category'], 'Image', f'{file_name}.npy'))
+            raw_file, target_file = os.path.join(raw_path, f'{file_name}.npy'), os.path.join(target_path, f'{file_name}.npy')
+            if not os.path.isfile(raw_file) or not os.path.isfile(target_file):
+                print(f'Saving ASUS nodule volume {index:04d} with shape {crop_range}')
+                _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(short_pid, nodule_type)
+                crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
 
-        data_samples['path'] = total_raw_path
+                if not os.path.isfile(raw_file):
+                    raw_chunk = ASUS_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
+                    np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk[...,0])
+
+                if not os.path.isfile(target_file):
+                    target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
+                    np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
+                # total_raw_path = np.append(total_raw_path, os.path.join(data_info['category'], 'Image', f'{file_name}.npy'))
+
+        # data_samples['path'] = total_raw_path
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
     @staticmethod
@@ -251,16 +271,16 @@ def main():
   
 
 if __name__ == '__main__':
-    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Image\asus-0001-1m0002.npy'
-    # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
-    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\negative\Image\asus-0004-1m0001.npy'
-    # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\negative\Mask\asus-0004-1m0001.npy'
-    # vol = np.load(img_path)
-    # mask_vol = np.load(mask_path)
-    # import matplotlib.pyplot as plt
-    # for img, m in zip(vol, mask_vol):
-    #     # if np.sum(m) > 0:
-    #     plt.imshow(img, 'gray')
-    #     plt.imshow(m, alpha=0.2)
-    #     plt.show()
-    main()
+    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Image\asus-0001-1m0002.npy'
+    mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
+    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-200\positive\Image\asus-0057-1m0056.npy'
+    mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-200\positive\Mask\asus-0057-1m0056.npy'
+    vol = np.load(img_path)
+    mask_vol = np.load(mask_path)
+    import matplotlib.pyplot as plt
+    for img, m in zip(vol, mask_vol):
+        if np.sum(m) > 0:
+            plt.imshow(img, 'gray')
+            plt.imshow(m, alpha=0.2)
+            plt.show()
+    # main()

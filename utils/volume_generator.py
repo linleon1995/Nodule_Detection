@@ -12,8 +12,8 @@ from utils.utils import cv2_imshow, calculate_malignancy, irc2xyz, segment_lung,
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 import pandas as pd
-from LUNA16_test.disk import getCache
-from LUNA16_test import dataset_seg, util
+from Liwei.LUNA16_test.disk import getCache
+from Liwei.LUNA16_test import dataset_seg, util
 raw_cache = getCache('part2segment')
 
 logging.basicConfig(level=logging.INFO)

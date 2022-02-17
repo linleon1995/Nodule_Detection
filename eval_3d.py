@@ -9,6 +9,8 @@ import random
 import torch
 from pprint import pprint
 import tensorboardX
+from data.luna16_data_preprocess import LUNA16_CropRange_Builder
+from data.asus_crop_preprocess import ASUS_CropRange_Builder
 
 from modules.train import trainer
 from modules.utils import configuration
@@ -89,10 +91,15 @@ class Evaluator():
 
         self.avg_test_acc = metrics.accuracy(
                 np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp), np.sum(self.eval_tool.total_fn), np.sum(self.eval_tool.total_tn)).item()
-        print('Precision', metrics.precision(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp)))
-        print('Recall', metrics.recall(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn)))
+        precision = metrics.precision(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp))
+        recall = metrics.recall(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn))
+        print(f'Precision: {precision*100:.02f}')
+        print(f'Recall: {recall*100:.02f}')
         print('Acc', self.avg_test_acc)
-        print('CM', self.eval_tool.total_tp, self.eval_tool.total_fp, self.eval_tool.total_tn, self.eval_tool.total_fn)
+        print(f'TP: {self.eval_tool.total_tp}', 
+              f'FP: {self.eval_tool.total_fp}',
+              f'TN: {self.eval_tool.total_tn}',
+              f'FN: {self.eval_tool.total_fn}')
     
 
 def main(config_reference):
@@ -108,10 +115,29 @@ def main(config_reference):
     model.load_state_dict(state_key['net'])
     model = model.to(config.device)
 
-    # test_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='test')
-    # test_dataset = ASUSCropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, nodule_type='ASUS-B', mode='test')
-    test_dataset = ASUSCropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, nodule_type='ASUS-M', mode='test')
-    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
+    test_datasets = []
+    for dataset_name in config.DATA.NAME:
+        
+        if dataset_name == 'LUNA16':
+            file_name_key = LUNA16_CropRange_Builder.get_filename_key(config.DATA.CROP_RANGE, config.DATA.NPratio)
+            data_path = os.path.join(config.DATA.DATA_PATH[dataset_name], file_name_key)
+            test_dataset = Luna16CropDataset(data_path, config.DATA.CROP_RANGE, mode='test')
+        elif dataset_name in ['ASUS-B', 'ASUS-M']:
+            file_name_key = ASUS_CropRange_Builder.get_filename_key(config.DATA.CROP_RANGE, config.DATA.NPratio)
+            data_path = os.path.join(config.DATA.DATA_PATH[dataset_name], file_name_key)
+            test_dataset = ASUSCropDataset(data_path, config.DATA.CROP_RANGE, negative_to_positive_ratio=config.DATA.NPratio_test, nodule_type=dataset_name, mode='test')
+
+        print(f'Dataset: {config.DATA.NAME} Test number: {len(test_dataset)}')
+        test_datasets.append(test_dataset)
+
+    total_test_dataset = torch.utils.data.ConcatDataset(test_datasets)
+    test_dataloader = DataLoader(total_test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
+
+
+    # # test_dataset = Luna16CropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, mode='test')
+    # # test_dataset = ASUSCropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, nodule_type='ASUS-B', mode='test')
+    # test_dataset = ASUSCropDataset(config.DATA.DATA_PATH, config.DATA.CROP_RANGE, nodule_type='ASUS-M', mode='test')
+    # test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
 
     # Logger
     LOGGER.info("Start Evaluation!!")
