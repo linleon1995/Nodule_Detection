@@ -52,9 +52,9 @@ def main(config_reference):
             file_name_key = ASUS_CropRange_Builder.get_filename_key(config.DATA.CROP_RANGE, config.DATA.NPratio)
             data_path = os.path.join(config.DATA.DATA_PATH[dataset_name], file_name_key)
             train_dataset = ASUSCropDataset(data_path, config.DATA.CROP_RANGE, negative_to_positive_ratio=config.DATA.NPratio_test, 
-                                            nodule_type=dataset_name, mode='train', data_augmentation=config.DATA.AUG)
+                                            nodule_type=dataset_name, mode='train', data_augmentation=config.DATA.IS_DATA_AUGMENTATION)
             valid_dataset = ASUSCropDataset(data_path, config.DATA.CROP_RANGE, negative_to_positive_ratio=config.DATA.NPratio_test, 
-                                            nodule_type=dataset_name, mode='valid', data_augmentation=config.DATA.AUG)
+                                            nodule_type=dataset_name, mode='valid', data_augmentation=config.DATA.IS_DATA_AUGMENTATION)
         print('Train number', len(train_dataset), 'Valid number', len(valid_dataset))
         train_datasets.append(train_dataset)
         valid_datasets.append(valid_dataset)

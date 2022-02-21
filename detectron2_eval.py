@@ -408,8 +408,9 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_016'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_017'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_018'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_020'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_021'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
@@ -462,7 +463,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9  # set a custom testing threshold
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
@@ -484,10 +485,13 @@ def common_config():
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_016\ckpt_best.pth'
 
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_019\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_020\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_021\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_022\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_020\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_021\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_022\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_027\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_028\ckpt_best.pth'
 
     cfg.lung_mask_filtering = False
     
@@ -500,7 +504,7 @@ def common_config():
     dir_name.insert(0, 'LMF') if cfg.lung_mask_filtering else dir_name
     dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 100
+    cfg.MAX_SAVE_IMAGE_CASES = 1
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -538,19 +542,21 @@ def luna16_eval():
 
 def asus_malignant_eval():
     cfg = common_config()
-    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
-    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
+    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'train'
+    cfg.DATA_SPLIT = 'test'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
-        cfg.CASE_INDICES = list(range(40))
+        cfg.CASE_INDICES = list(range(14, 44))
+        # cfg.CASE_INDICES = list(range(40))
     elif cfg.DATA_SPLIT == 'valid':
-        cfg.CASE_INDICES = list(range(40, 45))
-        # cfg.CASE_INDICES = list(range(56, 57))
+        cfg.CASE_INDICES = list(range(9, 14))
+        # cfg.CASE_INDICES = list(range(40, 45))
     elif cfg.DATA_SPLIT == 'test':
-        cfg.CASE_INDICES = list(range(45, 57))
+        cfg.CASE_INDICES = list(range(9))
+        # cfg.CASE_INDICES = list(range(45, 57))
     else:
         cfg.CASE_INDICES = None
 
@@ -560,59 +566,23 @@ def asus_malignant_eval():
     return cfg
 
 
-def liwei_asus_malignant_eval():
-    cfg = common_config()
-    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
-    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
-    cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'test'
-
-    cfg.SUBSET_INDICES = None
-    if cfg.DATA_SPLIT == 'train':
-        cfg.CASE_INDICES = list(range(40))
-    elif cfg.DATA_SPLIT == 'valid':
-        cfg.CASE_INDICES = list(range(40, 45))
-        # cfg.CASE_INDICES = list(range(56, 57))
-    elif cfg.DATA_SPLIT == 'test':
-        cfg.CASE_INDICES = list(range(45, 57))
-    else:
-        cfg.CASE_INDICES = None
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch-size', type=int, default=4, help='Batch size to use for training')
-    parser.add_argument('--num-workers', type=int, default=0, help='Number of worker processes for background data loading')
-
-    parser.add_argument('--n_classes', type=int, default=2)
-    parser.add_argument('--val_stride', type=int, default=10)
-    parser.add_argument('--contextSlices_count', type=int, default=3)
-    parser.add_argument('--contextSlices_shift', type=int, default=1)
-    parser.add_argument('--fullCt_bool', type=bool, default=True)
-        
-    parser.add_argument('--loss', type=str, default='SoftIoU', help='use BinaryDice or Focal or SoftIoU or CrossEntropy')
-    parser.add_argument('--pretrain_path', default='./FCN_IOUFocal/FCN_all_best.pt')
-    parser.add_argument('--save_path', default='./Show_output')
-    parser.add_argument('--save', default=False)
-    opt = parser.parse_args()
-    volume_generator = test.asus_pred_generator(opt)
-
-    volume_eval(cfg, volume_generator=volume_generator)
-    return cfg
-
-
 def asus_benign_eval():
     cfg = common_config()
-    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
-    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw'
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
+    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
     cfg = add_dataset_name(cfg)
     cfg.DATA_SPLIT = 'test'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
-        cfg.CASE_INDICES = list(range(25))
+        # cfg.CASE_INDICES = list(range(25))
+        cfg.CASE_INDICES = list(range(8, 25))
     elif cfg.DATA_SPLIT == 'valid':
-        cfg.CASE_INDICES = list(range(25, 27))
+        # cfg.CASE_INDICES = list(range(25, 27))
+        cfg.CASE_INDICES = list(range(5, 8))
     elif cfg.DATA_SPLIT == 'test':
-        cfg.CASE_INDICES = list(range(27, 35))
+        # cfg.CASE_INDICES = list(range(27, 35))
+        cfg.CASE_INDICES = list(range(5))
     else:
         cfg.CASE_INDICES = None
 
@@ -623,7 +593,7 @@ def asus_benign_eval():
 
 
 if __name__ == '__main__':
-    # asus_benign_eval()
+    asus_benign_eval()
     asus_malignant_eval()
     # luna16_eval()
 

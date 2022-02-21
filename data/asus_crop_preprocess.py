@@ -16,9 +16,9 @@ CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
 
 RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
-NEGATIVE_POSITIVE_RATIO = 200
+NEGATIVE_POSITIVE_RATIO = 1
 CONNECTIVITY = 26
-
+center_shift = True
 
 class ASUS_CropRange_Builder():
     @staticmethod 
@@ -42,9 +42,9 @@ class ASUS_CropRange_Builder():
         # Merge positive and negative samples and save in data_samples
         num_positive_sample = positive_crop_range.shape[0]
         num_negative_sample = int(negative_positive_ratio*num_positive_sample)
-        # negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
+        negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
         # data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
-        data_samples = pd.concat([positive_crop_range, negative_crop_range])
+        data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
 
         # Add 'path' in DataFrame
         total_raw_path, total_file_name = [], []
@@ -98,9 +98,24 @@ class ASUS_CropRange_Builder():
                 if not os.path.isfile(target_file):
                     target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
                     np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
-                # total_raw_path = np.append(total_raw_path, os.path.join(data_info['category'], 'Image', f'{file_name}.npy'))
+                
+                # if center_shift and shift_step>0:
+                #     # 8-directions
+                #     # TODO: consider 26-directions
+                #     for shift in [-shift_step, shift_step]:
+                #         for _dim in ['index', 'row', 'column']:
+                #             crop_center[_dim] = crop_center[_dim] + shift
+                #             raw_file = os.path.join(raw_path, f'{file_name}_{_dim}_{shift}.npy')
+                #             target_file = os.path.join(target_path, f'{file_name}_{_dim}_{shift}.npy')
+                            
+                #             if not os.path.isfile(raw_file):
+                #                 raw_chunk = ASUS_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
+                #                 np.save(raw_file, raw_chunk[...,0])
 
-        # data_samples['path'] = total_raw_path
+                #             if not os.path.isfile(target_file):
+                #                 target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
+                #                 np.save(target_file, target_chunk)
+                                
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
     @staticmethod
@@ -166,10 +181,23 @@ class ASUS_CropRange_Builder():
         if len(voxel_nodule_center_list) > 0:
             # Because we cannot promise the nodule is smaller than crop range and also we don't need that much negative samples
             for nodule_center in voxel_nodule_center_list:
-                nodule_center = np.array([modify_center(nodule_center[0], index_begin, index_end),
-                                          modify_center(nodule_center[1], row_begin, row_end),
-                                          modify_center(nodule_center[2], column_begin, column_end)])
-                positive_sample = np.concatenate([positive_sample, nodule_center[np.newaxis]], axis=0) if positive_sample is not None else nodule_center[np.newaxis]
+                if center_shift and shift_step>0:
+                    for index_shift in [-shift_step, shift_step]:
+                        for row_shift in [-shift_step, shift_step]:
+                            for column_shift in [-shift_step, shift_step]:
+                                nodule_center[0] = nodule_center[0] + index_shift
+                                nodule_center[1] = nodule_center[1] + row_shift
+                                nodule_center[2] = nodule_center[2] + column_shift
+
+                                nodule_center = np.array([modify_center(nodule_center[0], index_begin, index_end),
+                                            modify_center(nodule_center[1], row_begin, row_end),
+                                            modify_center(nodule_center[2], column_begin, column_end)])
+                                positive_sample = np.concatenate([positive_sample, nodule_center[np.newaxis]], axis=0) if positive_sample is not None else nodule_center[np.newaxis]
+                else:       
+                    nodule_center = np.array([modify_center(nodule_center[0], index_begin, index_end),
+                                            modify_center(nodule_center[1], row_begin, row_end),
+                                            modify_center(nodule_center[2], column_begin, column_end)])
+                    positive_sample = np.concatenate([positive_sample, nodule_center[np.newaxis]], axis=0) if positive_sample is not None else nodule_center[np.newaxis]
 
         # Get negative samples
         for candidate_center_index in range(index_begin, index_end, crop_range['index']):
@@ -270,17 +298,50 @@ def main():
                                                             negative_positive_ratio=NEGATIVE_POSITIVE_RATIO)
   
 
+def check_data_repeat():
+    from modules.data import dataset_utils
+    from pprint import pprint
+    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
+    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant'
+    img_list = dataset_utils.get_files(img_path, 'mhd')
+    raw_list = [path for path in img_list if 'raw' in path]
+
+    total_same = []
+    for main_idx, path in enumerate(raw_list):
+        main_vol, _, _, _ = dataset_utils.load_itk(path)
+        raw_list.pop(main_idx)
+        same = []
+        print(main_idx)
+        for side_idx, path2 in enumerate(raw_list):
+            side_vol, _, _, _ = dataset_utils.load_itk(path2)
+            if np.sum(main_vol==side_vol) == main_vol.size:
+                raw_list.pop(side_idx)
+                same.append(path)
+                same.append(path2)
+        total_same.append(list(set(same)))
+
+    pprint(total_same)
+
 if __name__ == '__main__':
-    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Image\asus-0001-1m0002.npy'
-    mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
-    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-200\positive\Image\asus-0057-1m0056.npy'
-    mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-200\positive\Mask\asus-0057-1m0056.npy'
-    vol = np.load(img_path)
-    mask_vol = np.load(mask_path)
-    import matplotlib.pyplot as plt
-    for img, m in zip(vol, mask_vol):
-        if np.sum(m) > 0:
-            plt.imshow(img, 'gray')
-            plt.imshow(m, alpha=0.2)
-            plt.show()
+    check_data_repeat()
+    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant\1m0053\1m0053\1m0053raw mhd\1.2.826.0.1.3680043.2.1125.1.7616989327429453559913038648123144.mhd'
+    # # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
+    # img2_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant\1m0054\1m0054\1m0054raw mhd\1.2.826.0.1.3680043.2.1125.1.7616989327429453559913038648123144.mhd'
+    # # mask2_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-200\positive\Mask\asus-0057-1m0056.npy'
+    # from modules.data import dataset_utils
+    # vol, _, _, _ = dataset_utils.load_itk(img_path)
+    # vol2, _, _, _ = dataset_utils.load_itk(img2_path)
+    # print(np.sum(vol==vol2)/512/512)
+
+    # vol = np.load(img_path)
+    # vol2 = np.load(img2_path)
+    # mask_vol = np.load(mask_path)
+
+    # import matplotlib.pyplot as plt
+    # for idx, (img, m) in enumerate(zip(vol, mask_vol)):
+    #     if np.sum(m) > 0:
+    #         plt.imshow(img, 'gray')
+    #         plt.imshow(m, alpha=0.2)
+    #         plt.title(str(idx))
+    #         plt.show()
     # main()

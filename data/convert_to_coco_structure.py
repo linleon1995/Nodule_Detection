@@ -5,7 +5,7 @@ from tqdm.contrib import tzip
 import json, itertools
 import os
 import cv2
-from utils.volume_generator import lidc_volume_generator, luna16_volume_generator, asus_nodule_volume_generator
+from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 from utils.utils import cv2_imshow, raw_preprocess, mask_preprocess, split_individual_mask, merge_near_masks
 
 import site_path
@@ -108,6 +108,10 @@ def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_th
     subset_mask_path = os.path.join(data_path, 'Mask')
     subset_image_list = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
     subset_mask_list = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+
+    # subset_image_list = subset_image_list[::-1]
+    # subset_mask_list = subset_mask_list[::-1]
+
     cat_ids = cat_ids = {'nodule': 1}
     train_converter = coco_structure_converter(cat_ids)
     valid_converter = coco_structure_converter(cat_ids)
@@ -283,7 +287,7 @@ def lidc_to_coco_structure(df, data_root, seg_root=None):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
-def luun16_round_to_coco_main():
+def luna16_round_to_coco_main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round\raw'
     annotation_root = os.path.join('Annotations', 'LUNA16-round')
     if not os.path.isdir(annotation_root):
@@ -298,7 +302,7 @@ def luun16_round_to_coco_main():
         json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
 
-def luun16_to_coco_main():
+def luna16_to_coco_main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
     annotation_root = os.path.join('Annotations', 'LUNA16')
     if not os.path.isdir(annotation_root):
@@ -314,8 +318,8 @@ def luun16_to_coco_main():
 
 
 def asus_benign_to_coco_main():
-    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw'
-    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'benign')
+    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
+    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'benign_merge')
     if not os.path.isdir(annotation_root):
         os.makedirs(annotation_root)
 
@@ -332,25 +336,25 @@ def asus_benign_to_coco_main():
 
 
 def asus_malignant_to_coco_main():
-    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw'
-    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'malignant')
+    DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
+    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'malignant_merge')
     if not os.path.isdir(annotation_root):
         os.makedirs(annotation_root)
 
     train_root, valid_root, test_root = asus_nodule_to_coco_structure(DATA_PATH, area_threshold=8)
 
-    # with open(os.path.join(annotation_root, 'annotations_train.json'), 'w', encoding='utf-8') as jsonfile:
-    #     json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
+    with open(os.path.join(annotation_root, 'annotations_train.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(train_root, jsonfile, ensure_ascii=True, indent=4)
 
-    # with open(os.path.join(annotation_root, 'annotations_valid.json'), 'w', encoding='utf-8') as jsonfile:
-    #     json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
+    with open(os.path.join(annotation_root, 'annotations_valid.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(valid_root, jsonfile, ensure_ascii=True, indent=4)
 
-    # with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
-    #     json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
+    with open(os.path.join(annotation_root, 'annotations_test.json'), 'w', encoding='utf-8') as jsonfile:
+        json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
 
 
 if __name__ == '__main__':
-    # luun16_round_to_coco_main()
-    # luun16_to_coco_main()
+    # luna16_round_to_coco_main()
+    # luna16_to_coco_main()
     asus_benign_to_coco_main()
-    # asus_malignant_to_coco_main()
+    asus_malignant_to_coco_main()

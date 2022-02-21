@@ -22,12 +22,15 @@ class ASUSCropDataset(Dataset):
         self.data_augmentation = data_augmentation
 
         input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
+        # input_files = input_files.sample(frac=1)
+        # input_files.to_csv(os.path.join(self.data_path, 'data_samples2.csv'))
         input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
         positive_files = input_files[input_files.category == 'positive']
         negative_files = input_files[input_files.category == 'negative']
         num_positive = positive_files.shape[0]
         num_negative = int(num_positive*negative_to_positive_ratio)
-        self.input_files = pd.concat([positive_files, negative_files.iloc[:num_negative]])
+        negative_subset = negative_files.iloc[:num_negative]
+        self.input_files = pd.concat([positive_files, negative_subset])
 
     def __len__(self):
         return self.input_files.shape[0]
@@ -43,21 +46,38 @@ class ASUSCropDataset(Dataset):
         target = np.array(target, dtype='float')[np.newaxis]
         return {'input':raw_chunk, 'target': target}
 
+    # def get_seriesuid(self, nodule_type, mode):
+    #     if nodule_type == 'ASUS-B':
+    #         if mode == 'train':
+    #             seriesuid = [f'1B{i:03d}' for i in range(11, 36)]
+    #         elif mode == 'valid':
+    #             seriesuid = [f'1B{i:03d}' for i in range(9, 11)]
+    #         elif mode == 'test':
+    #             seriesuid = [f'1B{i:03d}' for i in range(9)]
+    #     elif nodule_type == 'ASUS-M':
+    #         if mode == 'train':
+    #             seriesuid = [f'1m{i:04d}' for i in range(18, 58)]
+    #         elif mode == 'valid':
+    #             seriesuid = [f'1m{i:04d}' for i in range(13, 18)]
+    #         elif mode == 'test':
+    #             seriesuid = [f'1m{i:04d}' for i in range(18)]
+    #     return seriesuid
+
     def get_seriesuid(self, nodule_type, mode):
         if nodule_type == 'ASUS-B':
             if mode == 'train':
-                seriesuid = [f'1B{i:03d}' for i in range(0, 25)]
+                seriesuid = [f'1B{i:03d}' for i in range(1, 26)]
             elif mode == 'valid':
-                seriesuid = [f'1B{i:03d}' for i in range(25, 27)]
+                seriesuid = [f'1B{i:03d}' for i in range(26, 28)]
             elif mode == 'test':
-                seriesuid = [f'1B{i:03d}' for i in range(27, 35)]
+                seriesuid = [f'1B{i:03d}' for i in range(28, 36)]
         elif nodule_type == 'ASUS-M':
             if mode == 'train':
-                seriesuid = [f'1m{i:04d}' for i in range(0, 40)]
+                seriesuid = [f'1m{i:04d}' for i in range(1, 41)]
             elif mode == 'valid':
-                seriesuid = [f'1m{i:04d}' for i in range(40, 45)]
+                seriesuid = [f'1m{i:04d}' for i in range(41, 46)]
             elif mode == 'test':
-                seriesuid = [f'1m{i:04d}' for i in range(45, 57)]
+                seriesuid = [f'1m{i:04d}' for i in range(46, 58)]
         return seriesuid
 
     def transform(self, volume):

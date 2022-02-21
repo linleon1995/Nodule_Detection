@@ -20,6 +20,41 @@ import time
 import pandas as pd
 
 from modules.data import dataset_utils
+from modules.visualize import vis_utils
+
+
+def build_size_figure(nodule_list):
+    min_size, max_size, size_step = 0, 20000, 5
+    size_thresholds = np.arange(min_size, max_size+1, max_size//(size_step-1))
+    nodule_info_split_in_size = {}
+    for threshold in size_thresholds:
+        nodule_info_split_in_size[threshold] = []
+
+    # Orgnize data
+    data = {'index': [], 'data': []}
+    for nodule_info in nodule_list:
+        nodule_size = nodule_info['size']
+        # assert nodule_size < min_size or module_size >= max_size, 'Nodule size out of range'
+        data['index'].append(nodule['size'])
+        data['data'].append(nodule['score'])
+        # TODO: ugly, fix it
+        for idx in len(size_thresholds):
+            if idx == len(size_thresholds)-1:
+                lower_size = size_thresholds[idx]
+                if nodule_size > lower_size:
+                    nodule_info_split_in_size[lowe_size].append(nodule_info)
+            else:
+                lower_size, upper_size = size_thresholds[idx], size_thresholds[idx+1]
+                if nodule_size > lower_size and nodule_size <= upper_size:
+                    nodule_info_split_in_size[lowe_size].append(nodule_info)
+
+    # Create figure
+    bar_generator = vis_utils.BarGraphGenerator(title='Noudle size',
+                                                x_label='Nodule size (pixel)',
+                                                y_label='score')
+    
+    fig, ax = bar_generator.build_bar_graph(data)
+    fig.show()
 
 
 def irc2xyz(coord_irc, origin_xyz, vxSize_xyz, direction_a):
