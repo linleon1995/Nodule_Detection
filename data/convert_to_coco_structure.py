@@ -116,13 +116,17 @@ def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_th
     train_converter = coco_structure_converter(cat_ids)
     valid_converter = coco_structure_converter(cat_ids)
     test_converter = coco_structure_converter(cat_ids)
-    def decide_subset(num_sample, split_rate):
-        # TODO: why sum(split_rate) = 0.999...
-        # assert sum(split_rate) == 1.0, 'Split rate error'
-        case_split_indices = (int(num_sample*split_rate[0]), int(num_sample*(split_rate[0]+split_rate[1])))
-        return case_split_indices
-    case_split_indices = decide_subset(num_sample=len(subset_image_list), split_rate=split_rate)
+    # def decide_subset(num_sample, split_rate):
+    #     # TODO: why sum(split_rate) = 0.999...
+    #     # assert sum(split_rate) == 1.0, 'Split rate error'
+    #     case_split_indices = (int(num_sample*split_rate[0]), int(num_sample*(split_rate[0]+split_rate[1])))
+    #     return case_split_indices
+    # case_split_indices = decide_subset(num_sample=len(subset_image_list), split_rate=split_rate)
     
+    case_split_indices = (17, 19) # benign
+    case_split_indices = (34, 36) # malignant
+    
+
     for case_idx, (case_img_dir, case_mask_dir) in enumerate(tzip(subset_image_list, subset_mask_list)):
         case_image_list = dataset_utils.get_files(case_img_dir, 'png', recursive=False)
         case_mask_list = dataset_utils.get_files(case_mask_dir, 'png', recursive=False)
@@ -356,5 +360,5 @@ def asus_malignant_to_coco_main():
 if __name__ == '__main__':
     # luna16_round_to_coco_main()
     # luna16_to_coco_main()
-    asus_benign_to_coco_main()
+    # asus_benign_to_coco_main()
     asus_malignant_to_coco_main()

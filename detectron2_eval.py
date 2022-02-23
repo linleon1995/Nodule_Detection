@@ -411,7 +411,9 @@ def select_model(cfg):
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_020'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_021'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_022'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_024'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
@@ -438,7 +440,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
 
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0004999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0039999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
 
@@ -463,7 +465,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
@@ -491,7 +493,7 @@ def common_config():
     # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
     # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
     # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_027\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_028\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_028\ckpt_best.pth'
 
     cfg.lung_mask_filtering = False
     
@@ -549,13 +551,13 @@ def asus_malignant_eval():
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
-        cfg.CASE_INDICES = list(range(14, 44))
+        cfg.CASE_INDICES = list(range(34))
         # cfg.CASE_INDICES = list(range(40))
     elif cfg.DATA_SPLIT == 'valid':
-        cfg.CASE_INDICES = list(range(9, 14))
+        cfg.CASE_INDICES = list(range(34, 36))
         # cfg.CASE_INDICES = list(range(40, 45))
     elif cfg.DATA_SPLIT == 'test':
-        cfg.CASE_INDICES = list(range(9))
+        cfg.CASE_INDICES = list(range(36, 44))
         # cfg.CASE_INDICES = list(range(45, 57))
     else:
         cfg.CASE_INDICES = None
@@ -576,13 +578,13 @@ def asus_benign_eval():
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
         # cfg.CASE_INDICES = list(range(25))
-        cfg.CASE_INDICES = list(range(8, 25))
+        cfg.CASE_INDICES = list(range(17))
     elif cfg.DATA_SPLIT == 'valid':
         # cfg.CASE_INDICES = list(range(25, 27))
-        cfg.CASE_INDICES = list(range(5, 8))
+        cfg.CASE_INDICES = list(range(17, 18))
     elif cfg.DATA_SPLIT == 'test':
         # cfg.CASE_INDICES = list(range(27, 35))
-        cfg.CASE_INDICES = list(range(5))
+        cfg.CASE_INDICES = list(range(19, 25))
     else:
         cfg.CASE_INDICES = None
 
@@ -593,9 +595,9 @@ def asus_benign_eval():
 
 
 if __name__ == '__main__':
-    asus_benign_eval()
-    asus_malignant_eval()
-    # luna16_eval()
+    # asus_benign_eval()
+    # asus_malignant_eval()
+    luna16_eval()
 
     # liwei_asus_malignant_eval()
     

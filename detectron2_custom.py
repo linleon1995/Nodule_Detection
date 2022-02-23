@@ -59,15 +59,15 @@ def common_config():
 
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_015\model_0031999.pth' 
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032\model_0019999.pth' 
-    cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037\model_0015999.pth' 
+    # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037\model_0015999.pth' 
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040\model_0007999.pth' 
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052\model_0015999.pth' 
     # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057\model_0009999.pth' 
-    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
 
-    cfg.SOLVER.IMS_PER_BATCH = 4
+    cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = 0.00005  
-    cfg.SOLVER.MAX_ITER = 10000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 40000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -77,7 +77,7 @@ def common_config():
     # Please refer to ResizeShortestEdge for detailed definition.
     # Size of the smallest side of the image during training
     cfg.INPUT.MIN_SIZE_TRAIN = (512, 800)
-    # cfg.INPUT.MIN_SIZE_TRAIN = (640, 800)
+    cfg.INPUT.MIN_SIZE_TRAIN = (800, 1240)
     # Sample size of smallest side by choice or random selection from range give by
     # INPUT.MIN_SIZE_TRAIN
     cfg.INPUT.MIN_SIZE_TRAIN_SAMPLING = "range"
@@ -100,7 +100,7 @@ def common_config():
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
     cfg.INPUT.CROP.SIZE = [0.7, 0.7]
-    cfg.SOLVER.CHECKPOINT_PERIOD = 1000
+    cfg.SOLVER.CHECKPOINT_PERIOD = 2000
     # cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
@@ -190,7 +190,7 @@ def dataset_config(cfg, using_dataset):
 
 def main():
     cfg = common_config()
-    using_dataset = ['ASUS-Benign', 'ASUS-Malignant'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
+    using_dataset = ['LUNA16'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
     cfg = dataset_config(cfg, using_dataset)
 
     train_dataset = tuple([f'{dataset_name}-train' for dataset_name in using_dataset])
