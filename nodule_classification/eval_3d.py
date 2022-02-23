@@ -2,14 +2,14 @@ import site_path
 import os
 from model.ResNet_3d import build_3d_resnet
 from torch.utils.data import Dataset, DataLoader
-from data.dataloader import Luna16CropDataset
-from data.dataloader import ASUSCropDataset
+from data.data_loader import Luna16CropDataset
+from data.data_loader import ASUSCropDataset
 import numpy as np
 import random
 import torch
 from pprint import pprint
 import tensorboardX
-from data.luna16_data_preprocess import LUNA16_CropRange_Builder
+from data.luna16_crop_preprocess import LUNA16_CropRange_Builder
 from data.asus_crop_preprocess import ASUS_CropRange_Builder
 from utils.utils import build_size_figure
 
@@ -163,11 +163,11 @@ def main(config_reference):
 
 
 if __name__ == '__main__':
-    # main(CONFIG_PATH)
+    main(CONFIG_PATH)
 
     # min_size, max_size, size_step = 0, 20001, 20000//(5-1)
     # size_threshold = np.arange(min_size, max_size, size_step)
     # print(size_threshold)
 
-    data = [{'size': 500, 'score': 0.67}, {'size': 5000, 'score': 0.77}, {'size': 50000, 'score': 0.87}]
-    build_size_figure(data)
+    # data = [{'size': 500, 'score': 0.67}, {'size': 5000, 'score': 0.77}, {'size': 50000, 'score': 0.87}]
+    # build_size_figure(data)
