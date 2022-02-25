@@ -48,9 +48,6 @@ logging.basicConfig(level=logging.INFO)
 
 import site_path
 from modules.data import dataset_utils
-# from modules.utils import metrics
-from modules.utils import metrics2
-from modules.utils import evaluator
 
 from Liwei.LUNA16_test import util
 from Liwei.FTP1m_test import test

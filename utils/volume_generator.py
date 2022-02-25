@@ -188,16 +188,6 @@ class luna16_volume_generator():
                 
                 raw_vol, mask_vol, infos = luna16_volume_generator.get_data_by_pid(series_uid, mask_generating_op)
                 infos['subset'] = subset
-                # # preprocess
-                # ct = mask_generating_op(series_uid)
-                # vol = ct.hu_a
-                # mask_vol = ct.positive_mask
-                
-                # vol = np.clip(vol, -1000, 1000)
-                # vol = raw_preprocess(vol, output_dtype=np.uint8)
-                # mask_vol = mask_preprocess(mask_vol)
-                # infos = {'dataset': 'LUNA16', 'pid': series_uid, 'scan_idx': 0, 'subset': subset, 
-                #          'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
                 yield raw_vol, raw_vol, mask_vol, infos
 
     @staticmethod
@@ -249,25 +239,3 @@ def build_pred_generator(data_generator, predictor, batch_size=1):
                 total_outputs.append(output["instances"])
                 
         yield pid, total_outputs, infos
-
-# def build_pred_generator(data_generator, predictor, batch_size=1):
-#     for vol_idx, (vol, mask_vol, infos) in enumerate(data_generator):
-#         infos['vol_idx'] = vol_idx
-#         pid, scan_idx = infos['pid'], infos['scan_idx']
-#         mask_vol = np.int32(mask_vol)
-#         pred_vol = np.zeros_like(mask_vol)
-
-#         for img_idx in range(0, vol.shape[0], batch_size):
-#             if img_idx == 0:
-#                 print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
-#             start, end = img_idx, min(vol.shape[0], img_idx+batch_size)
-#             img = vol[start:end]
-#             img = np.split(img, img.shape[0], axis=0)
-#             outputs = predictor(img) 
-#             for j, output in enumerate(outputs):
-#                 pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
-#                 pred = np.sum(pred, axis=0)
-#                 pred = mask_preprocess(pred)
-#                 pred_vol[img_idx+j] = pred
-            
-#         yield infos, mask_vol, pred_vol
