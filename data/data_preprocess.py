@@ -137,7 +137,6 @@ def asus_benign_volume_preprocess():
     #                               vol_generator_func=asus_nodule_volume_generator)
 
 
-
 def asus_malignant_volume_preprocess():
     src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
     dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
@@ -148,7 +147,6 @@ def asus_malignant_volume_preprocess():
     #                               vol_generator_func=asus_nodule_volume_generator)
 
 
-    
 if __name__ == '__main__':
     # luna16_volume_preprocess()
     # luna16_volume_preprocess_round()

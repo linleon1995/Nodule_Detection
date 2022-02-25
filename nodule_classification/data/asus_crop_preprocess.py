@@ -16,9 +16,10 @@ CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
 
 RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
-NEGATIVE_POSITIVE_RATIO = 1
+NEGATIVE_POSITIVE_RATIO = 100
 CONNECTIVITY = 26
 center_shift = True
+shift_step = 2
 
 class ASUS_CropRange_Builder():
     @staticmethod 
@@ -51,9 +52,9 @@ class ASUS_CropRange_Builder():
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
             if short_pid[1] == 'B':
-                nodule_type = 'benign'
+                nodule_type = 'benign_merge'
             elif short_pid[1] == 'm':
-                nodule_type = 'malignant'
+                nodule_type = 'malignant_merge'
             file_name = f'asus-{index:04d}-{short_pid}'
             file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
             total_file_name.append(file_name)
@@ -73,9 +74,9 @@ class ASUS_CropRange_Builder():
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
             if short_pid[1] == 'B':
-                nodule_type = 'benign'
+                nodule_type = 'benign_merge'
             elif short_pid[1] == 'm':
-                nodule_type = 'malignant'
+                nodule_type = 'malignant_merge'
 
             file_name = f'asus-{index:04d}-{short_pid}'
             file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
@@ -282,7 +283,8 @@ def save_asus_center_info(volume_generator, connectivity, save_path):
 
 
 def main():
-    for nodule_type in ['benign', 'malignant']:
+    # for nodule_type in ['benign_merge', 'malignant_merge']:
+    for nodule_type in ['malignant_merge']:
     # for nodule_type in ['malignant']:
         vol_data_path = os.path.join(VOL_DATA_PATH, nodule_type, 'crop')
         DATA_PATH = os.path.join(RAW_DATA_PATH, nodule_type)
@@ -323,7 +325,8 @@ def check_data_repeat():
     pprint(total_same)
 
 if __name__ == '__main__':
-    check_data_repeat()
+    # check_data_repeat()
+
     # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant\1m0053\1m0053\1m0053raw mhd\1.2.826.0.1.3680043.2.1125.1.7616989327429453559913038648123144.mhd'
     # # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
     # img2_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant\1m0054\1m0054\1m0054raw mhd\1.2.826.0.1.3680043.2.1125.1.7616989327429453559913038648123144.mhd'
@@ -344,4 +347,4 @@ if __name__ == '__main__':
     #         plt.imshow(m, alpha=0.2)
     #         plt.title(str(idx))
     #         plt.show()
-    # main()
+    main()
