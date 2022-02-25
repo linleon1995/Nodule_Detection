@@ -190,7 +190,7 @@ def dataset_config(cfg, using_dataset):
 
 def main():
     cfg = common_config()
-    using_dataset = ['LUNA16'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
+    using_dataset = ['ASUS-Benign'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
     cfg = dataset_config(cfg, using_dataset)
 
     train_dataset = tuple([f'{dataset_name}-train' for dataset_name in using_dataset])

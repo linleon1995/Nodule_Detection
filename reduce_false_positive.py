@@ -1,8 +1,8 @@
 import numpy as np
 import collections
 import torch
-from data.luna16_data_preprocess import LUNA16_CropRange_Builder
-from model.ResNet_3d import build_3d_resnet
+from nodule_classification.data.luna16_crop_preprocess import LUNA16_CropRange_Builder
+from nodule_classification.model.ResNet_3d import build_3d_resnet
 from utils.volume_eval import volumetric_data_eval
 from utils.utils import compare_result, compare_result_enlarge
 from modules.utils import configuration

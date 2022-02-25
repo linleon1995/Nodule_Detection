@@ -15,7 +15,9 @@ import numpy as np
 import matplotlib as mpl
 import argparse
 
-from data.luna16_data_preprocess import LUNA16_CropRange_Builder
+from utils import volume_generator
+
+# from data.luna16_crop_preprocess import LUNA16_CropRange_Builder
 mpl.use('TkAgg')
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -40,10 +42,10 @@ from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_g
 from utils.volume_eval import volumetric_data_eval
 from utils.utils import Nodule_data_recording, SubmissionDataFrame, irc2xyz, get_nodule_center
 from utils.vis import save_mask
-import liwei_eval
+# import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import False_Positive_Reducer
-from lung_mask_filtering import get_lung_mask
+from lung_mask_filtering import get_lung_mask, remove_unusual_nodule
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -54,6 +56,20 @@ from modules.utils import evaluator
 
 from Liwei.LUNA16_test import util
 from Liwei.FTP1m_test import test
+import cc3d
+
+
+def _1_slice_removal(pred_vol, slice_threshold=1):
+    pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
+    pred_category = np.unique(pred_vol)[1:]
+    total_nodule_infos = []
+    for label in pred_category:
+        binary_mask = pred_vol==label
+        zs, ys, xs = np.where(binary_mask)
+        if np.unique(zs).size <= slice_threshold:
+            pred_vol[pred_vol==label] = 0
+    pred_vol = np.where(pred_vol>0, 1, 0)
+    return pred_vol
 
 
 def volume_outputs_to_pred_volume(volume_outputs):
@@ -234,9 +250,15 @@ def volume_eval(cfg, volume_generator):
 
         time_recording.set_start_time('Nodule Evaluation')
 
-        if cfg.lung_mask_filtering:
-            lung_mask_case_path = os.path.join(lung_mask_path, pid)
 
+        if cfg.reduce_false_positive:
+            pred_vol = FP_reducer.reduce_false_positive(vol, pred_vol)
+
+        if cfg.remove_1_slice:
+            pred_vol = _1_slice_removal(pred_vol)
+
+        if cfg.lung_mask_filtering or cfg.remove_unusual_nodule:
+            lung_mask_case_path = os.path.join(lung_mask_path, pid)
             if not os.path.isdir(lung_mask_case_path):
                 os.makedirs(lung_mask_case_path)
                 lung_mask_vol = get_lung_mask(pred_vol, raw_vol[...,0])
@@ -249,11 +271,13 @@ def volume_eval(cfg, volume_generator):
                     lung_mask_vol[lung_mask_idx] = cv2.imread(lung_mask)[...,0]
                 lung_mask_vol = lung_mask_vol / 255
                 lung_mask_vol = np.int32(lung_mask_vol)
-            pred_vol *= lung_mask_vol
 
+            if cfg.remove_unusual_nodule:
+                pred_vol = remove_unusual_nodule(pred_vol, lung_mask_vol)
 
-        if cfg.reduce_false_positive:
-            pred_vol = FP_reducer.reduce_false_positive(vol, pred_vol)
+            if cfg.lung_mask_filtering:
+                pred_vol *= lung_mask_vol
+
 
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
@@ -413,7 +437,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_021'
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_022'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_024'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_024'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
@@ -440,7 +464,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
 
-    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0039999.pth")  # path to the model we just trained
+    cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     return cfg
 
@@ -465,7 +489,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
@@ -496,17 +520,21 @@ def common_config():
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_028\ckpt_best.pth'
 
     cfg.lung_mask_filtering = False
+    cfg.remove_1_slice = False
+    cfg.remove_unusual_nodule = False
     
     run = os.path.split(cfg.OUTPUT_DIR)[1]
     weight = os.path.split(cfg.MODEL.WEIGHTS)[1].split('.')[0]
     # cfg.SAVE_PATH = rf'C:\Users\test\Desktop\Leon\Weekly\1227'
     dir_name = ['maskrcnn', f'{run}', f'{weight}', f'{cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST}']
     FPR_model_code = os.path.split(os.path.split(cfg.FP_reducer_checkpoint)[0])[1]
-    dir_name.insert(0, f'FPR_{FPR_model_code}') if cfg.reduce_false_positive else dir_name
+    dir_name.insert(0, '1SR') if cfg.remove_1_slice else dir_name
+    dir_name.insert(0, 'RUN') if cfg.remove_unusual_nodule else dir_name
     dir_name.insert(0, 'LMF') if cfg.lung_mask_filtering else dir_name
+    dir_name.insert(0, f'FPR_{FPR_model_code}') if cfg.reduce_false_positive else dir_name
     dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 1
+    cfg.MAX_SAVE_IMAGE_CASES = 100
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -594,10 +622,62 @@ def asus_benign_eval():
     return cfg
 
 
+def nodule_test():
+    cfg = common_config()
+
+    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
+    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
+
+    # cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
+    # cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
+
+    cfg = add_dataset_name(cfg)
+    cfg.DATA_SPLIT = 'test'
+
+    cfg.SUBSET_INDICES = None
+    if cfg.DATA_SPLIT == 'train':
+        # cfg.CASE_INDICES = list(range(25))
+        cfg.CASE_INDICES = list(range(17))
+    elif cfg.DATA_SPLIT == 'valid':
+        # cfg.CASE_INDICES = list(range(25, 27))
+        cfg.CASE_INDICES = list(range(17, 18))
+    elif cfg.DATA_SPLIT == 'test':
+        # cfg.CASE_INDICES = list(range(27, 35))
+        cfg.CASE_INDICES = list(range(19, 25))
+    else:
+        cfg.CASE_INDICES = None
+
+    train_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
+                                                   subset_indices=cfg.SUBSET_INDICES, 
+                                                   case_indices=list(range(17)),
+                                                #    case_indices=list(range(34)),
+                                                   only_nodule_slices=cfg.ONLY_NODULES)
+    test_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
+                                                  subset_indices=cfg.SUBSET_INDICES, 
+                                                  case_indices=list(range(19, 25)),
+                                                #   case_indices=list(range(36, 44)),
+                                                  only_nodule_slices=cfg.ONLY_NODULES)
+
+    from data import data_analysis
+
+    train_volumes = []
+    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(train_generator):
+        train_volumes.append(mask_vol)
+
+    test_volumes = []
+    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(test_generator):
+        test_volumes.append(mask_vol)
+
+    data_analysis.multi_nodule_dist(train_volumes, test_volumes)
+    # data_analysis.multi_nodule_dist(test_volumes[:3], test_volumes[3:])
+
+
+
 if __name__ == '__main__':
-    # asus_benign_eval()
-    # asus_malignant_eval()
-    luna16_eval()
+    # nodule_test()
+    asus_benign_eval()
+    asus_malignant_eval()
+    # luna16_eval()
 
     # liwei_asus_malignant_eval()
     
