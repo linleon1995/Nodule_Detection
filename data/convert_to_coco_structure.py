@@ -103,6 +103,38 @@ def coco_structure(train_df):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
+def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
+    coco_converter = coco_structure_converter(cat_ids)
+
+    for img_path, mask_path in zip(input_paths, target_paths):
+        mask = cv2.imread(mask_path)
+        image_id = os.path.split(img_path)[1][:-4]
+        splited_mask = split_individual_mask(mask[...,0])
+        splited_mask = merge_near_masks(splited_mask)
+        if len(splited_mask):
+            for i, mask in enumerate(splited_mask, 1):
+                if np.sum(mask) > area_threshold:
+                    coco_converter.sample(img_path, mask, image_id)
+
+    return coco_converter.create_coco_structure()
+
+
+def build_asus_nodule_coco(data_path, save_path, cat_ids, area_threshold, split_indices):
+    subset_image_path = os.path.join(data_path, 'Image')
+    subset_mask_path = os.path.join(data_path, 'Mask')
+    case_images = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
+    case_masks = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+
+    for split_name, indices in split_indices.items():
+        split_images, split_masks = np.take(case_images, indices), np.take(case_masks, indices)
+        
+        image_paths = dataset_utils.get_files(split_images, 'png', recursive=False)
+        targe_paths = dataset_utils.get_files(split_masks, 'png', recursive=False)
+        assert len(image_paths) == len(targe_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(targe_paths)}'
+        
+        coco_structure = build_coco_structure(input_paths, target_paths, cat_ids, area_threshold)
+
+
 def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_threshold=30):
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
@@ -201,96 +233,6 @@ def luna16_to_coco_structure(data_path, label_type, split_rate=0.7, area_thresho
     return train_converter.create_coco_structure(), valid_converter.create_coco_structure(), test_converter.create_coco_structure()
 
 
-
-def volume_to_coco_structure(cat_ids, volume_generator, seg_root=None):
-    cats = [{'name':name, 'id':id} for name,id in cat_ids.items()]
-    images, annotations = [], []
-    idx = 0
-    
-    for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
-        dataset, pid, subset, scan_idx = infos['dataset'], infos['subset'], infos['pid'], infos['scan_idx']
-        # pred_vol = np.zeros_like(mask_vol)
-        for img_idx in range(vol.shape[0]):
-            if img_idx%10 == 0:
-                print(f'Patient {pid} Scan {scan_idx} slice {img_idx}')
-            img = vol[img_idx]
-            # img = raw_preprocess(img, lung_segment=False, norm=False)
-            images.append(img)
-            
-            mask = mask_vol[img_idx]
-
-            if not np.sum(mask):
-                # print(np.sum(mask))
-                continue
-
-            
-            # image_id = f'{dataset}-{subset}-Case{vol_idx}-{img_idx:03d}'
-            # image = {'id': image_id, 'width':512, 'height':512, 'file_name': f'{os.path.join(data_root, _dir, file_name)}'}
-        
-
-            # mask = mask_preproccess(mask)
-            ys, xs = np.where(mask)
-            x1, x2 = min(xs), max(xs)
-            y1, y2 = min(ys), max(ys)
-            enc =binary_mask_to_rle(mask)
-            seg = {
-                'segmentation':enc, 
-                'bbox': [int(x1), int(y1), int(x2-x1+1), int(y2-y1+1)],
-                'area': int(np.sum(mask)),
-                'image_id': f'{pid}-Scan{scan_idx}-Slice{img_idx:04d}', 
-                'category_id':cat_ids['nodule'], 
-                'iscrowd':0, 
-                'id':idx
-            }
-            annotations.append(seg)
-            idx += 1
-        return {'categories':cats, 'images':images,'annotations':annotations}
-    
-    
-def lidc_to_coco_structure(df, data_root, seg_root=None):
-    cat_ids = {'nodule': 1,
-               'malignant': 2}    
-    cats = [{'name': 'benign', 'id': 1}, 
-            {'name': 'malignant', 'id': 2}]
-    images = []
-
-    annotations=[]
-    for idx, row in tqdm(df.iterrows()):
-        if 'CN' in row.original_image:
-            continue
-        
-        # mask = rle_decode(row.annotation, (row.height, row.width))
-        file_name = f'{row.original_image}.png'
-        _dir = 'LIDC-IDRI-' + row.original_image.split('_')[0]
-        image = {'id': row.original_image, 'width':512, 'height':512, 'file_name': f'{os.path.join(data_root, _dir, file_name)}'}
-        if seg_root:
-            seg_file_name = file_name.replace('NI', 'MA')
-            image['sem_seg_file_name'] = f'{os.path.join(seg_root, _dir, seg_file_name)}'
-
-        images.append(image)
-
-        mask = cv2.imread(image['file_name'].replace('Image', 'Mask').replace('NI', 'MA'))
-        mask = mask[...,0]
-        # mask = np.load(image['file_name'].replace('Image', 'Mask').replace('NI', 'MA'))
-        ys, xs = np.where(mask)
-        x1, x2 = min(xs), max(xs)
-        y1, y2 = min(ys), max(ys)
-        enc =binary_mask_to_rle(mask)
-        category = 'malignant' if row.is_cancer=='True' or row.is_cancer=='Ambiguous'  else 'benign'
-        seg = {
-            'segmentation':enc, 
-            'bbox': [int(x1), int(y1), int(x2-x1+1), int(y2-y1+1)],
-            'area': int(np.sum(mask)),
-            'image_id':row.original_image, 
-            'category_id':cat_ids[category], 
-            'iscrowd':0, 
-            'id':idx
-        }
-        annotations.append(seg)
-        print(idx, row.original_image, category)
-    return {'categories':cats, 'images':images,'annotations':annotations}
-
-
 def luna16_round_to_coco_main():
     DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round\raw'
     annotation_root = os.path.join('Annotations', 'LUNA16-round')
@@ -357,8 +299,35 @@ def asus_malignant_to_coco_main():
         json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
 
 
-if __name__ == '__main__':
+def build_asus_malignant():
+    # TODO: make from config?
+    data_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
+    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'malignant_merge')
+    if not os.path.isdir(annotation_root):
+        os.makedirs(annotation_root)
+
+    cat_ids = {'nodule': 1}
+    area_thrshold = 8
+    train_indices = list(range(0, 17))
+    valid_indices = list(range(17, 19))
+    test_indices = list(range(19, 25))
+    split_indices = {'train': train_indices,
+                     'valid' valid_indices,
+                     'test': test_indices}
+
+    build_asus_nodule_coco(data_path=data_path,
+                           save_path=annotation_root,
+                           cat_ids=cat_ids,
+                           area_threshold=area_threshold,
+                           split_indices=split_indices)
+
+
+def main():
     # luna16_round_to_coco_main()
     # luna16_to_coco_main()
     # asus_benign_to_coco_main()
     asus_malignant_to_coco_main()
+
+
+if __name__ == '__main__':
+    main()
