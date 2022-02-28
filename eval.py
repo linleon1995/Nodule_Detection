@@ -606,7 +606,7 @@ def asus_benign_eval():
         cfg.CASE_INDICES = list(range(17))
     elif cfg.DATA_SPLIT == 'valid':
         # cfg.CASE_INDICES = list(range(25, 27))
-        cfg.CASE_INDICES = list(range(17, 18))
+        cfg.CASE_INDICES = list(range(17, 19))
     elif cfg.DATA_SPLIT == 'test':
         # cfg.CASE_INDICES = list(range(27, 35))
         cfg.CASE_INDICES = list(range(19, 25))
@@ -637,7 +637,7 @@ def nodule_test():
         cfg.CASE_INDICES = list(range(17))
     elif cfg.DATA_SPLIT == 'valid':
         # cfg.CASE_INDICES = list(range(25, 27))
-        cfg.CASE_INDICES = list(range(17, 18))
+        cfg.CASE_INDICES = list(range(17, 19))
     elif cfg.DATA_SPLIT == 'test':
         # cfg.CASE_INDICES = list(range(27, 35))
         cfg.CASE_INDICES = list(range(19, 25))

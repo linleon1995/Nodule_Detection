@@ -1,3 +1,7 @@
+# import sys
+# from pprint import pprint
+# pprint(sys.path)
+
 import pandas as pd
 import numpy as np
 from tqdm.notebook import tqdm
@@ -5,9 +9,8 @@ from tqdm.contrib import tzip
 import json, itertools
 import os
 import cv2
-from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
-from utils.utils import cv2_imshow, raw_preprocess, mask_preprocess, split_individual_mask, merge_near_masks
 
+from utils.utils import cv2_imshow, split_individual_mask, merge_near_masks
 import site_path
 from modules.data import dataset_utils
 
@@ -21,7 +24,7 @@ class coco_structure_converter():
         self.cats =[{'name':name, 'id':id} for name, id in self.cat_ids.items()]
         self.idx = 0
 
-    def sample(self, img_path, mask, image_id):
+    def sample(self, img_path, mask, image_id, category):
         if np.sum(mask):
             image = {'id': image_id, 'width':512, 'height':512, 'file_name': f'{img_path}'}
             self.images.append(image)
@@ -35,7 +38,7 @@ class coco_structure_converter():
                 'bbox': [int(x1), int(y1), int(x2-x1+1), int(y2-y1+1)],
                 'area': int(np.sum(mask)),
                 'image_id': image_id, 
-                'category_id': self.cat_ids['nodule'], 
+                'category_id': self.cat_ids[category], 
                 'iscrowd': 0, 
                 'id':self.idx
             }
@@ -44,7 +47,7 @@ class coco_structure_converter():
 
 
     def create_coco_structure(self):
-        return {'categories':self.cats, 'images': self.images,'annotations': self.annotations}
+        return {'categories':self.cats, 'images': self.images, 'annotations': self.annotations}
 
 
 # From https://www.kaggle.com/stainsby/fast-tested-rle
@@ -103,7 +106,17 @@ def coco_structure(train_df):
     return {'categories':cats, 'images':images,'annotations':annotations}
 
 
-def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
+def build_coco_structure_split(input_paths_split, target_paths_split, cat_ids, area_threshold):
+    coco_data_split = {}
+    for data_split in input_paths_split:
+        assert data_split in ('train', 'valid', 'test')
+        input_paths, target_paths = input_paths_split[data_split], target_paths_split[data_split]
+        coco_data = build_coco_structure(input_paths, target_paths, cat_ids, area_threshold)
+        coco_data_split[data_split] = coco_data
+    return coco_data_split
+
+
+def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold, category):
     coco_converter = coco_structure_converter(cat_ids)
 
     for img_path, mask_path in zip(input_paths, target_paths):
@@ -114,26 +127,61 @@ def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
         if len(splited_mask):
             for i, mask in enumerate(splited_mask, 1):
                 if np.sum(mask) > area_threshold:
-                    coco_converter.sample(img_path, mask, image_id)
+                    coco_converter.sample(img_path, mask, image_id, category)
 
     return coco_converter.create_coco_structure()
 
 
-def build_asus_nodule_coco(data_path, save_path, cat_ids, area_threshold, split_indices):
-    subset_image_path = os.path.join(data_path, 'Image')
-    subset_mask_path = os.path.join(data_path, 'Mask')
-    case_images = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
-    case_masks = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
-
-    for split_name, indices in split_indices.items():
-        split_images, split_masks = np.take(case_images, indices), np.take(case_masks, indices)
+def merge_coco_structure(coco_group):
+    output_coco = coco_group[0]
+    for idx in range(1, len(coco_group)):
+        # TODO: correct categories (if two different cat combine)
+        # output_coco['categories'].update(coco_group[idx]['categories'])
+        output_coco['images'].extend(coco_group[idx]['images'])
+        output_coco['annotations'].extend(coco_group[idx]['annotations'])
+    return output_coco
         
-        image_paths = dataset_utils.get_files(split_images, 'png', recursive=False)
-        targe_paths = dataset_utils.get_files(split_masks, 'png', recursive=False)
-        assert len(image_paths) == len(targe_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(targe_paths)}'
+    
+def build_asus_nodule_coco(convert_data_infos):
+    coco_structures, all_target_paths = {}, {}
+    for data_info in convert_data_infos:
+        data_name = data_info.data_name
+        data_path = data_info.data_path
+        save_path = data_info.save_path
+        split_indices = data_info.split_indices
+        cat_ids = data_info.cat_ids
+        area_threshold = data_info.area_threshold
         
-        coco_structure = build_coco_structure(input_paths, target_paths, cat_ids, area_threshold)
+        subset_image_path = os.path.join(data_path, 'Image')
+        subset_mask_path = os.path.join(data_path, 'Mask')
+        case_images = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
+        case_masks = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+        
+        if not os.path.isdir(os.path.join(save_path, data_name)):
+            os.makedirs(os.path.join(save_path, data_name))
+            
+        for split_name, indices in split_indices.items():
+            split_images, split_masks = np.take(case_images, indices).tolist(), np.take(case_masks, indices).tolist()
 
+            image_paths, target_paths = [], []
+            for split_image, split_mask in zip(split_images, split_masks):
+                image_paths.extend(dataset_utils.get_files(split_image, 'png', recursive=False))
+                target_paths.extend(dataset_utils.get_files(split_mask, 'png', recursive=False))
+                # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
+           
+            coco_structure = build_coco_structure(
+                image_paths, target_paths, cat_ids, area_threshold, category=data_name)
+            
+            if split_name in coco_structures:
+                coco_structures[split_name].append(coco_structure)
+            else:
+                coco_structures[split_name] = [coco_structure]
+                
+    for split_name in coco_structures:
+        merge_coco =   merge_coco_structure(coco_structures[split_name])
+        with open(os.path.join(save_path, f'annotations_{split_name}.json'), 'w', encoding='utf-8') as jsonfile:
+            json.dump(merge_coco, jsonfile, ensure_ascii=True, indent=4)
+                
 
 def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_threshold=30):
     subset_image_path = os.path.join(data_path, 'Image')
@@ -299,35 +347,61 @@ def asus_malignant_to_coco_main():
         json.dump(test_root, jsonfile, ensure_ascii=True, indent=4)
 
 
+# TODO: use dict or nametuple?
+class DatasetConvertInfo():
+    def __init__(self, data_name, data_path, split_indices, area_threshold, cat_ids, save_path):
+        self.data_name = data_name
+        self.data_path = data_path
+        self.split_indices = split_indices
+        self.area_threshold = area_threshold
+        self.cat_ids = cat_ids
+        self.save_path = save_path
+        
+        
 def build_asus_malignant():
+    # General
     # TODO: make from config?
-    data_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
-    annotation_root = os.path.join('Annotations', 'ASUS_Nodule', 'malignant_merge')
-    if not os.path.isdir(annotation_root):
-        os.makedirs(annotation_root)
-
-    cat_ids = {'nodule': 1}
-    area_thrshold = 8
+    save_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\Annotations\test'
+    # cat_ids = {'nodule': 1}
+    cat_ids = {'benign': 1, 'malignant': 2}
+    area_threshold = 8
+    
+    # Benign
+    name = 'benign'
+    benign_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
     train_indices = list(range(0, 17))
     valid_indices = list(range(17, 19))
     test_indices = list(range(19, 25))
     split_indices = {'train': train_indices,
-                     'valid' valid_indices,
+                     'valid': valid_indices,
                      'test': test_indices}
-
-    build_asus_nodule_coco(data_path=data_path,
-                           save_path=annotation_root,
-                           cat_ids=cat_ids,
-                           area_threshold=area_threshold,
-                           split_indices=split_indices)
+    benign_convert_info = DatasetConvertInfo(
+        name, benign_path, split_indices, area_threshold, cat_ids, save_path)
+    
+    # Malignant
+    name = 'malignant'
+    malignant_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
+    train_indices = list(range(0, 34))
+    valid_indices = list(range(34, 36))
+    test_indices = list(range(36, 44))
+    split_indices = {'train': train_indices,
+                     'valid': valid_indices,
+                     'test': test_indices}
+    malignant_convert_info = DatasetConvertInfo(
+        name, malignant_path, split_indices, area_threshold, cat_ids, save_path)
+    
+    convert_infos = [benign_convert_info, malignant_convert_info]
+    build_asus_nodule_coco(convert_infos)
 
 
 def main():
     # luna16_round_to_coco_main()
     # luna16_to_coco_main()
     # asus_benign_to_coco_main()
-    asus_malignant_to_coco_main()
+    # asus_malignant_to_coco_main()
+    build_asus_malignant()
 
 
 if __name__ == '__main__':
     main()
+    pass
