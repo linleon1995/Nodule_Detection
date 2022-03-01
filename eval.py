@@ -56,6 +56,7 @@ from Liwei.FTP1m_test import test
 import cc3d
 
 
+
 def _1_slice_removal(pred_vol, slice_threshold=1):
     pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
     pred_category = np.unique(pred_vol)[1:]
