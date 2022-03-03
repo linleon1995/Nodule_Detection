@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import time
 import pandas as pd
 
+import site_path
 from modules.data import dataset_utils
 from modules.visualize import vis_utils
 
@@ -42,11 +43,11 @@ def build_size_figure(nodule_list):
             if idx == len(size_thresholds)-1:
                 lower_size = size_thresholds[idx]
                 if nodule_size > lower_size:
-                    nodule_info_split_in_size[lowe_size].append(nodule_info)
+                    nodule_info_split_in_size[lower_size].append(nodule_info)
             else:
                 lower_size, upper_size = size_thresholds[idx], size_thresholds[idx+1]
                 if nodule_size > lower_size and nodule_size <= upper_size:
-                    nodule_info_split_in_size[lowe_size].append(nodule_info)
+                    nodule_info_split_in_size[lower_size].append(nodule_info)
 
     # Create figure
     bar_generator = vis_utils.BarGraphGenerator(title='Noudle size',

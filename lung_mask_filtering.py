@@ -7,16 +7,25 @@ from sklearn.cluster import KMeans
 from utils.utils import cv2_imshow
 
 
-def remove_unusual_nodule(pred_vol, lung_mask_vol, threshold=0.019):
+def remove_unusual_nodule_by_ratio(pred_vol_individual, lung_mask_vol, threshold=0.019):
+    pred_vol = np.where(pred_vol_individual>0, 1, 0)
     pred_pxiel_sum = np.sum(pred_vol, axis=(1,2))
     lung_mask_pxiel_sum = np.sum(lung_mask_vol, axis=(1,2))
     ratio = pred_pxiel_sum / lung_mask_pxiel_sum
     mask = np.where(ratio<threshold, 1, 0)
     mask = np.reshape(mask, [mask.size, 1, 1])
-    return pred_vol * mask
+    return pred_vol_individual * mask
 
 
-def get_lung_mask(pred_vol, input_vol=None, lung_mask_path=None):
+def remove_unusual_nodule_by_lung_size(pred_vol_individual, lung_mask_vol, threshold=0.5):
+    lung_mask_pxiel_sum = np.sum(lung_mask_vol, axis=(1,2))
+    ratio = lung_mask_pxiel_sum / np.max(lung_mask_pxiel_sum)
+    mask = np.where(ratio>=threshold, 1, 0)
+    mask = np.reshape(mask, [mask.size, 1, 1])
+    return pred_vol_individual * mask
+
+
+def get_lung_mask(input_vol=None, lung_mask_path=None):
     assert input_vol is not None or lung_mask_path is not None, \
     'Either load preprocess lung mask or calculate from input image'
 

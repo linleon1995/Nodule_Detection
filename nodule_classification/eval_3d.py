@@ -164,10 +164,3 @@ def main(config_reference):
 
 if __name__ == '__main__':
     main(CONFIG_PATH)
-
-    # min_size, max_size, size_step = 0, 20001, 20000//(5-1)
-    # size_threshold = np.arange(min_size, max_size, size_step)
-    # print(size_threshold)
-
-    # data = [{'size': 500, 'score': 0.67}, {'size': 5000, 'score': 0.77}, {'size': 50000, 'score': 0.87}]
-    # build_size_figure(data)

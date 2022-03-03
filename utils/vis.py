@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('TkAgg')
 from matplotlib import pyplot as plt
+from matplotlib import cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from skimage import measure
 import warnings
@@ -18,23 +19,115 @@ import time
 import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
+import cv2
+import cc3d
 from utils.volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
 
     
 
-# def save_mask_in_3d_interface(vol_generator, save_path1, save_path2):
-#     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
-#                                      only_nodule_slices=cfg.ONLY_NODULES)
-#     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
-#         pid, scan_idx = infos['pid'], infos['scan_idx']
-#         mask_vol = np.int32(mask_vol)
-#         if vol_idx > 9:
-#             if np.sum(mask_vol==0) == mask_vol.size:
-#                 print('No mask')
-#                 continue
+def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
+    # pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
+    target_vol = cc3d.connected_components(target_vol, connectivity=26)
 
-#             save_mask_in_3d(mask_vol, save_path1, save_path2)
+    pred_category = np.unique(pred_vol)[1:]
+    zs, ys, xs = np.where(pred_vol)
+    pred_zs = np.unique(zs)
+    zs, ys, xs = np.where(target_vol)
+    target_zs = np.unique(zs)
+    total_zs = np.unique(np.concatenate((pred_zs, target_zs)))
+    
+    # TODO: convert any color map <-- write this as a function
+    color_map = cm.tab20
+    bgr_colors = [np.uint8(255*np.array(color_map(idx))[:3])[::-1] for idx in range(20)]
+    target_colors, pred_colors = bgr_colors[4:5], bgr_colors[:4]+bgr_colors[5:14]+bgr_colors[16:]
+    draw_vol = input_vol.copy()
+    center_shift = 20
+
+    # Find prediction contours
+    total_contours = {}
+    for nodule_id in pred_category:
+        nodule_vol = np.uint8(pred_vol==nodule_id)
+        # nodule_vol = np.tile(nodule_vol[...,np.newaxis], (1,1,1,3))
+        zs, ys, xs = np.where(nodule_vol)
+        total_contours[nodule_id] = {}
+        for z_idx in range(np.min(zs), np.max(zs)+1):
+            pred = nodule_vol[z_idx]
+            contours, hierarchy = cv2.findContours(pred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            total_contours[nodule_id][z_idx] = contours
+
+    # Draw prediction contours
+    for nodule_id in total_contours:
+        contour_pair = total_contours[nodule_id]
+        color = pred_colors[nodule_id%len(pred_colors)].tolist()
+        prob = pred_nodule_info[nodule_id]['Nodule_pred_prob'][1]
+        for slice_idx in contour_pair:
+            contours = contour_pair[slice_idx]
+            draw_img = draw_vol[slice_idx]
+            contour_center = np.int32(np.mean(contours[0], axis=0)[0]) + center_shift
+            # TODO: shifting for any image size
+            contour_center = np.clip(contour_center, 0, 512)
+            draw_img = cv2.putText(draw_img, f'{prob:.4f}', contour_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            for contour_idx in range(len(contours)):
+                draw_img = cv2.drawContours(draw_img, contours, contour_idx, color, 1)
+            draw_vol[slice_idx] = draw_img
+        
+
+    # Find and draw target contours
+    target_vol = np.uint8(target_vol)
+    for z_idx in target_zs:
+        target = target_vol[z_idx]
+        contours, hierarchy = cv2.findContours(target, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        draw_vol[z_idx] = cv2.drawContours(draw_vol[z_idx], contours, -1, target_colors[0].tolist(), 1)
+
+    # for z_idx in total_zs:
+    #     plt.imshow(draw_vol[z_idx])
+    #     plt.show()
+
+    return draw_vol, total_zs
+
+
+# class ObjectVisualizer():
+#     def __init__(self):
+#         self.visulizer = self.get_visualizer()
+
+#     def get_visualizer(self):
+#         return visualizer
+
+#     def visualize(self, input_vol, pred_vol, mask_vol):
+#         pred_category = np.unique(pred_vol)[1:]
+#         zs, ys, xs = np.where(pred_vol)
+#         total_zs = np.unique(zs)
+#         color_map = cm.tab20
+#         colors = [np.uint8(255*np.array(color)[:3]) for color in color_map]
+#         target_colors, pred_colors = colors[:2], colors[2:]
+#         draw_vol = input_vol.copy()
+
+#         total_contours = {}
+#         for label in pred_category:
+#             nodule_vol = pred_vol==label
+#             zs, ys, xs = np.where(nodule_vol)
+#             total_contours[label] = {}
+#             for z_idx in range(np.min(zs), np.max(zs)+1):
+#                 pred = nodule_vol[z_idx]
+#                 _, contours, hierarchy = cv2.findContours(pred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#                 total_contours[label][z_idx] = contours
+
+#         for nodule_id in total_contours:
+#             contour_pair = total_contours[nodule_id]
+#             color = pred_colors[nodule_id]
+#             for slice_idx in contour_pair:
+#                 contours = contour_pair[slice_idx]
+#                 draw_img = draw_vol[slice_idx]
+#                 for contour_idx in range(len(contours)):
+#                     draw_img = cv2.drawContours(draw_img, contours, contour_idx, pred_colors[contour_idx], 3)
+#                     draw_vol[slice_idx] = draw_img
+
+#         for z_idx in total_zs:
+#             plt.imshow(draw_vol[z_idx])
+#             plt.show()
+
+#         # return draw_vol
 
 
 def save_mask_in_3d(volume, save_path1, save_path2):
@@ -132,19 +225,19 @@ def save_mask(img, mask, pred, num_class, save_path, save_name='img', saving_con
         condition = True
         
     if condition:
-        sub_save_path = save_path
-        if not os.path.isdir(sub_save_path):
-            os.makedirs(sub_save_path)
-
+        origin_save_path = os.path.join(save_path, 'origin')
+        if not os.path.isdir(origin_save_path):
+            os.makedirs(origin_save_path)
         fig1, _ = compare_result(img, mask, pred, show_mask_size=True, alpha=0.2, vmin=0, vmax=num_class-1)
-        fig1.savefig(os.path.join(sub_save_path, f'{save_name}.png'))
-        # fig1.tight_layout()
+        fig1.savefig(os.path.join(origin_save_path, f'{save_name}.png'))
         plt.close(fig1)
 
+        enlarge_save_path = os.path.join(save_path, 'enlarge')
+        if not os.path.isdir(enlarge_save_path):
+            os.makedirs(enlarge_save_path)
         fig2, _ = compare_result_enlarge(img, mask, pred, show_mask_size=False, alpha=0.2, vmin=0, vmax=num_class-1)
         if fig2 is not None:
-            fig2.savefig(os.path.join(sub_save_path, f'{save_name}-en.png'))
-            # fig2.tight_layout()
+            fig2.savefig(os.path.join(enlarge_save_path, f'{save_name}-en.png'))
             plt.close(fig2)
 
 
@@ -180,3 +273,4 @@ class visualizer():
     def visulize_sample(self, ):
         self.visualize_segmentation_in_2d()
         self.visualize_segmentation_in_3d()
+

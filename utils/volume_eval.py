@@ -102,6 +102,8 @@ class volumetric_data_eval():
         self.VoxelTP.append(tp)
         self.VoxelFP.append(fp)
         self.VoxelFN.append(fn)
+
+        print(tp, fp, fn)
         return total_nodule_infos
     
     def _2D_evaluation(self, target_vol, pred_vol):

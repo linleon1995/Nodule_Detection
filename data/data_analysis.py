@@ -23,7 +23,7 @@ def build_nodule_metadata(volume):
     return total_nodule_metadata
 
 
-def build_nodule_dist(ax, x, y, s, color, label):
+def build_nodule_distribution(ax, x, y, s, color, label):
     sc = ax.scatter(x,y,s=s, alpha=0.5, label=label)
     ax.set_title('The size and space distribution of lung nodules')
     ax.set_xlabel('row')
@@ -35,7 +35,7 @@ def build_nodule_dist(ax, x, y, s, color, label):
     return ax
 
 
-def single_nodule_dist(ax, volume_list, color, label):
+def single_nodule_distribution(ax, volume_list, color, label):
     size_list = []
     x, y, = [], []
     for volume in volume_list:
@@ -46,19 +46,19 @@ def single_nodule_dist(ax, volume_list, color, label):
             size_list.append(nodule_info['Nodule_size'])
             x.append(np.int32(nodule_info['Noudle_center']['column']))
             y.append(np.int32(nodule_info['Noudle_center']['row']))
-    ax = build_nodule_dist(ax, x, y, size_list, color, label)
+    ax = build_nodule_distribution(ax, x, y, size_list, color, label)
     return ax
 
 
-def multi_nodule_dist(train_volumes, test_volumes):
+def multi_nodule_distribution(train_volumes, test_volumes):
     fig, ax = plt.subplots(1, 1, figsize=(10, 10))
 
     path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw\Image\1B004\1B004_0169.png'
     img = cv2.imread(path)
     ax.imshow(img)
 
-    ax = single_nodule_dist(ax, train_volumes, color='b', label='train')
-    ax = single_nodule_dist(ax, test_volumes, color='orange', label='test')
+    ax = single_nodule_distribution(ax, train_volumes, color='b', label='train')
+    ax = single_nodule_distribution(ax, test_volumes, color='orange', label='test')
 
     fig.show()
     fig.savefig('lung.png')

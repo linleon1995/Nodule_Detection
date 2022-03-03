@@ -66,18 +66,18 @@ class ASUSCropDataset(Dataset):
     def get_seriesuid(self, nodule_type, mode):
         if nodule_type == 'ASUS-B':
             if mode == 'train':
-                seriesuid = [f'1B{i:03d}' for i in range(1, 26)]
+                seriesuid = [f'1B{i:03d}' for i in range(1, 18)]
             elif mode == 'valid':
-                seriesuid = [f'1B{i:03d}' for i in range(26, 28)]
+                seriesuid = [f'1B{i:03d}' for i in range(18, 20)]
             elif mode == 'test':
-                seriesuid = [f'1B{i:03d}' for i in range(28, 36)]
+                seriesuid = [f'1B{i:03d}' for i in range(20, 26)]
         elif nodule_type == 'ASUS-M':
             if mode == 'train':
-                seriesuid = [f'1m{i:04d}' for i in range(1, 41)]
+                seriesuid = [f'1m{i:04d}' for i in range(1, 35)]
             elif mode == 'valid':
-                seriesuid = [f'1m{i:04d}' for i in range(41, 46)]
+                seriesuid = [f'1m{i:04d}' for i in range(35, 37)]
             elif mode == 'test':
-                seriesuid = [f'1m{i:04d}' for i in range(46, 58)]
+                seriesuid = [f'1m{i:04d}' for i in range(37, 45)]
         return seriesuid
 
     def transform(self, volume):
