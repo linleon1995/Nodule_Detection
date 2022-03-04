@@ -7,6 +7,11 @@ from sklearn.cluster import KMeans
 from utils.utils import cv2_imshow
 
 
+class FalsePositiveFilter():
+    def __init__(self):
+        pass
+
+
 def remove_unusual_nodule_by_ratio(pred_vol_individual, lung_mask_vol, threshold=0.019):
     pred_vol = np.where(pred_vol_individual>0, 1, 0)
     pred_pxiel_sum = np.sum(pred_vol, axis=(1,2))

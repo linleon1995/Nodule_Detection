@@ -14,10 +14,12 @@ def get_merge_paths(data_path):
     raw_fullpaths, mask_fullpaths = [], []
     raw_filenames, mask_filenames = [], []
     for path in fullpath_list:
-        if 'raw' in path:
+        root_path, filename = os.path.split(path)
+        dir_name = os.path.split(root_path)[1]
+        if 'raw' in dir_name:
             raw_fullpaths.append(path)
             raw_filenames.append(os.path.split(path)[1])
-        if 'mask' in path:
+        if 'mask' in dir_name:
             mask_fullpaths.append(path)
             mask_filenames.append(os.path.split(path)[1])
    

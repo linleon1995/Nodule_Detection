@@ -44,8 +44,9 @@ from utils.utils import Nodule_data_recording, SubmissionDataFrame, irc2xyz, get
 from utils.vis import save_mask, visualize
 # import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
-from reduce_false_positive import False_Positive_Reducer
-from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size
+from reduce_false_positive import NoduleClassifier
+from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size, FalsePositiveFilter
+from data.data_structure import StudyofLungNodule
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -54,7 +55,7 @@ from modules.data import dataset_utils
 from Liwei.LUNA16_test import util
 from Liwei.FTP1m_test import test
 import cc3d
-
+NODULE_CLS_PROB = 0.75
 
 
 def _1_slice_removal(pred_vol, slice_threshold=1):
@@ -189,6 +190,8 @@ def eval(cfg, volume_generator):
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval(save_path)
     metadata_recorder = Nodule_data_recording()
+    fp_filter = FalsePositiveFilter()
+    nodule_classifier = NoduleClassifier()
 
     for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
@@ -220,7 +223,7 @@ def volume_eval(cfg, volume_generator):
 
     crop_range = {'index': cfg.crop_range[0], 'row': cfg.crop_range[1], 'column': cfg.crop_range[2]}
     if cfg.reduce_false_positive:
-        FP_reducer = False_Positive_Reducer(crop_range, cfg.FP_reducer_checkpoint)
+        FP_reducer = NoduleClassifier(crop_range, cfg.FP_reducer_checkpoint, prob_threshold=NODULE_CLS_PROB)
 
     # submission_recorder = SubmissionDataFrame()
     
@@ -295,7 +298,6 @@ def volume_eval(cfg, volume_generator):
             if cfg.lung_mask_filtering:
                 pred_vol_individual *= lung_mask_vol
 
-        pred_vol = np.where(pred_vol_individual>0, 1, 0)
 
         # TODO: 
         ppp = np.unique(pred_vol_individual)[1:].tolist()
@@ -303,7 +305,9 @@ def volume_eval(cfg, volume_generator):
             if kk not in list(pred_nodule_info.keys()):
                 # pred_nodule_info.pop(lll)
                 pred_vol_individual[pred_vol_individual==kk] = 0
-
+        pred_vol = np.where(pred_vol_individual>0, 1, 0)
+        study = StudyofLungNodule(pid, pred_vol_individual)
+        
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
         # vol_nodule_infos = {'Nodule_pid': pid}.update(vol_nodule_infos)
@@ -666,9 +670,8 @@ def asus_benign_eval():
         cfg.CASE_INDICES = list(range(17, 19))
     elif cfg.DATA_SPLIT == 'test':
         # cfg.CASE_INDICES = list(range(27, 35))
-        # cfg.CASE_INDICES = list(range(20, 25))
         cfg.CASE_INDICES = list(range(19, 25))
-        # cfg.CASE_INDICES = [20, 23]
+        # cfg.CASE_INDICES = [20]
     else:
         cfg.CASE_INDICES = None
 
@@ -730,9 +733,19 @@ def nodule_test():
 
 
 if __name__ == '__main__':
+    # path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_022\1120-NC#run_028-LMF-RUNLS_TH0.4-1SR-maskrcnn-run_022-model_0005999-0.5\ASUS-benign\npy\1B0020.npy'
+    # arr = np.load(path)
+    # arr_c = cc3d.connected_components(arr, connectivity=26)
+    # print(np.unique(arr_c))
+    # zs, ys, xs = np.where(arr_c==1)
+    # zs2, ys2, xs2 = np.where(arr_c==2)
+    # print(np.unique(zs))
+    # print(np.unique(zs2))
+    # print(3)
+
     # nodule_test()
     asus_benign_eval()
-    asus_malignant_eval()
+    # asus_malignant_eval()
     # luna16_eval()
 
     # liwei_asus_malignant_eval()

@@ -4,17 +4,20 @@ CONNECTIVITY = 26
 AREA_THRESHOLD = 20
 
 
-class VolumePostprocessor():
-    def __init__(self, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD, match_threshold=0.5):
+class VolumePostProcessor():
+    def __init__(self, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD):
         self.connectivity = connectivity
         self.area_threshold = area_threshold
-        self.match_threshold = match_threshold
 
     @classmethod
     def postprocess(cls, binary_volume, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD):
-        catrgories_volume = cc3d.connected_components(binary_volume, connectivity=connectivity)
-        total_nodule_metadata = cls.build_nodule_metadata(catrgories_volume)
-        volume_info = {'volume_array': catrgories_volume, 'total_nodule_metadata': total_nodule_metadata}
+        category_volume = cls.connect_components(binary_volume, connectivity=connectivity)
+        category_volume = cls.remove_small_area(category_volume, area_threshold)
+        return category_volume
+
+
+        # total_nodule_metadata = cls.build_nodule_metadata(category_volume)
+        # volume_info = {'volume_array': category_volume, 'total_nodule_metadata': total_nodule_metadata}
         if volume_info['total_nodule_metadata'] is not None:
             if area_threshold > 0:
                 volume_info = cls.remove_small_area(volume_info, area_threshold)
@@ -22,43 +25,60 @@ class VolumePostprocessor():
         return volume_info
 
     @classmethod
-    def remove_small_area(cls, volume_info, area_threshold):
-        volume, total_nodule_metadata = volume_info['volume_array'], volume_info['total_nodule_metadata']
-        keep_indices = list(range(len(total_nodule_metadata)))
-        for idx, nodule_metadata in enumerate(total_nodule_metadata):
-            if nodule_metadata['Nodule_size'] < area_threshold:
-                keep_indices.remove(idx)
-                volume[volume==nodule_metadata['Nodule_id']] = 0
-
-        # Remove smaller nodule metadata
-        total_nodule_metadata = np.take(total_nodule_metadata, keep_indices)
-        volume_info['volume_array'], volume_info['total_nodule_metadata'] = volume, total_nodule_metadata
-        return volume_info
+    def connect_components(cls, array, connectivity):
+        connected_conponents_label = cc3d.connected_components(array, connectivity=connectivity)
+        return connected_conponents_label
 
     @classmethod
-    def convert_label_value(cls, volume_info):
-        volume, total_nodule_metadata = volume_info['volume_array'], volume_info['total_nodule_metadata']
-        new_volume = np.zeros_like(volume)
-        for idx, nodule_metadata in enumerate(total_nodule_metadata, 1):
-            new_volume[volume==nodule_metadata['Nodule_id']] = idx
-            nodule_metadata['Nodule_id'] = idx
-        volume_info['volume_array'], volume_info['total_nodule_metadata'] = volume, total_nodule_metadata
-        return volume_info
+    def remove_small_area(cls, category_volume, area_threshold):
+        # Remove connected area smaller than area_threshold in category_volume
+        category = np.unique(category_volume).tolist()
+        category.remove(0)
+        for label in category:
+            area_mask = category_volume==label
+            area_size = np.sum(area_mask)
+            if area_size < area_threshold:
+                category_volume = category_volume * (1-area_mask)
+        return category_volume
 
-    @staticmethod
-    def build_nodule_metadata(volume):
-        if np.sum(volume) == np.sum(np.zeros_like(volume)):
-            return None
+    # @classmethod
+    # def remove_small_area(cls, volume_info, area_threshold):
+    #     volume, total_nodule_metadata = volume_info['volume_array'], volume_info['total_nodule_metadata']
+    #     keep_indices = list(range(len(total_nodule_metadata)))
+    #     for idx, nodule_metadata in enumerate(total_nodule_metadata):
+    #         if nodule_metadata['Nodule_size'] < area_threshold:
+    #             keep_indices.remove(idx)
+    #             volume[volume==nodule_metadata['Nodule_id']] = 0
 
-        nodule_category = np.unique(volume)
-        nodule_category = np.delete(nodule_category, np.where(nodule_category==0))
-        total_nodule_metadata = []
-        for label in nodule_category:
-            binary_mask = volume==label
-            nodule_size = np.sum(binary_mask)
-            zs, ys, xs = np.where(binary_mask)
-            nodule_metadata = {'Nodule_id': label,
-                               'Nodule_size': nodule_size,
-                               'Nodule_slice': (np.min(zs), np.max(zs))}
-            total_nodule_metadata.append(nodule_metadata)
-        return total_nodule_metadata
+    #     # Remove smaller nodule metadata
+    #     total_nodule_metadata = np.take(total_nodule_metadata, keep_indices)
+    #     volume_info['volume_array'], volume_info['total_nodule_metadata'] = volume, total_nodule_metadata
+    #     return volume_info
+
+    # @classmethod
+    # def convert_label_value(cls, volume_info):
+    #     volume, total_nodule_metadata = volume_info['volume_array'], volume_info['total_nodule_metadata']
+    #     new_volume = np.zeros_like(volume)
+    #     for idx, nodule_metadata in enumerate(total_nodule_metadata, 1):
+    #         new_volume[volume==nodule_metadata['Nodule_id']] = idx
+    #         nodule_metadata['Nodule_id'] = idx
+    #     volume_info['volume_array'], volume_info['total_nodule_metadata'] = volume, total_nodule_metadata
+    #     return volume_info
+
+    # @staticmethod
+    # def build_nodule_metadata(volume):
+    #     if np.sum(volume) == np.sum(np.zeros_like(volume)):
+    #         return None
+
+    #     nodule_category = np.unique(volume)
+    #     nodule_category = np.delete(nodule_category, np.where(nodule_category==0))
+    #     total_nodule_metadata = []
+    #     for label in nodule_category:
+    #         binary_mask = volume==label
+    #         nodule_size = np.sum(binary_mask)
+    #         zs, ys, xs = np.where(binary_mask)
+    #         nodule_metadata = {'Nodule_id': label,
+    #                            'Nodule_size': nodule_size,
+    #                            'Nodule_slice': (np.min(zs), np.max(zs))}
+    #         total_nodule_metadata.append(nodule_metadata)
+    #     return total_nodule_metadata

@@ -9,11 +9,12 @@ from modules.utils import configuration
 import matplotlib.pyplot as plt
 
 # TODO: torch, numpy problem
-class False_Positive_Reducer():
-    def __init__(self, crop_range, checkpint_path, model_depth=50, num_class=2):
+class NoduleClassifier():
+    def __init__(self, crop_range, checkpint_path, model_depth=50, num_class=2, prob_threshold=0.5):
         self.crop_range = crop_range
         self.device = configuration.get_device()
         self.classifier = self.build_classifier(checkpint_path, model_depth, num_class)
+        self.prob_threshold = prob_threshold
 
     def nodule_classify(self, raw_volume, pred_volume, target_volume):
         pred_volume, pred_volume_individual, pred_nodules = self.reduce_false_positive(raw_volume, pred_volume)
@@ -48,11 +49,10 @@ class False_Positive_Reducer():
         return pred_volume, pred_volume_individual, pred_nodules
 
     def inference(self, input_volume):
-        s = 0.75
         logits = self.classifier(input_volume)
         prob = torch.nn.functional.softmax(logits, dim=1)
         # pred = torch.argmax(prob)
-        if prob[0,1] > s:
+        if prob[0,1] > self.prob_threshold:
             pred = 1
         else:
             pred = 0
