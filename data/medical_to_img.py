@@ -69,14 +69,15 @@ def volumetric_data_preprocess_KC(data_split, save_path, volume_generator):
                 make_dir(os.path.join(nodule_save_path, split, subset, pid, 'Mask'))
                 cv2.imwrite(os.path.join(nodule_save_path, split, subset, pid, 'Image', f'{pid}_{img_idx:04d}.png'), img)
                 cv2.imwrite(os.path.join(nodule_save_path, split, subset, pid,  'Mask', f'{pid}_{img_idx:04d}.png'), mask)
-
-    print('Preprocess complete!')
+    print('Complete converting process of mhd to image (KC)!')
 
 
 def volumetric_data_preprocess(save_path, volume_generator):
+    fig, ax = plt.subplots(1, 1)
     for vol_idx, (_, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx, subset = infos['pid'], infos['scan_idx'], infos['subset']
         print(f'Patient {pid} Scan {vol_idx}')
+
         # Create saving directry
         save_sub_dir = os.path.join(save_path, subset) if subset else save_path
         if not os.path.isdir(os.path.join(save_sub_dir, 'Image', pid)):
@@ -91,7 +92,8 @@ def volumetric_data_preprocess(save_path, volume_generator):
             mask = mask_vol[img_idx]
             if np.sum(mask):
                 mask_show = np.where(mask>0, 255, 0)
-                fig, ax = plt.subplots(1, 1)
+                
+                fig.clf()
                 ax.imshow(img, 'gray')
                 ax.imshow(mask_show, alpha=0.2)
                 fig.savefig(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'))
@@ -99,56 +101,56 @@ def volumetric_data_preprocess(save_path, volume_generator):
 
             cv2.imwrite(os.path.join(save_sub_dir, 'Image', pid, f'{pid}_{img_idx:04d}.png'), img)
             cv2.imwrite(os.path.join(save_sub_dir, 'Mask', pid, f'{pid}_{img_idx:04d}.png'), mask)
-    print('Preprocess complete!')
+    print('Complete converting process of mhd to image!')
             
 
-def luna16_volume_preprocess():
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-    # volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.luna16_volume_generator.Build_DLP_luna16_volume_generator)
-    reoder_image_data_KC_request(dataset_name='LUNA16', 
-                               data_path=src, 
-                               save_path=dst.replace('raw', 'LUNA16_preprocess2'), 
-                               vol_generator_func=volume_generator.luna16_volume_generator.Build_DLP_luna16_volume_generator)
+# def luna16_volume_preprocess():
+#     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
+#     # volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.luna16_volume_generator.Build_DLP_luna16_volume_generator)
+#     reoder_image_data_KC_request(dataset_name='LUNA16', 
+#                                data_path=src, 
+#                                save_path=dst.replace('raw', 'LUNA16_preprocess2'), 
+#                                vol_generator_func=volume_generator.luna16_volume_generator.Build_DLP_luna16_volume_generator)
 
 
-def luna16_volume_preprocess_round():
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round\raw'
-    # volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.luna16_volume_generator.Build_Round_luna16_volume_generator)
-    reoder_image_data_KC_request(dataset_name='LUNA16', 
-                               data_path=src, 
-                               save_path=dst.replace('raw', 'LUNA16_preprocess'), 
-                               vol_generator_func=volume_generator.luna16_volume_generator.Build_Round_luna16_volume_generator)
+# def luna16_volume_preprocess_round():
+#     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round\raw'
+#     # volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.luna16_volume_generator.Build_Round_luna16_volume_generator)
+#     reoder_image_data_KC_request(dataset_name='LUNA16', 
+#                                data_path=src, 
+#                                save_path=dst.replace('raw', 'LUNA16_preprocess'), 
+#                                vol_generator_func=volume_generator.luna16_volume_generator.Build_Round_luna16_volume_generator)
 
 
-def asus_benign_volume_preprocess():
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
-    volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.asus_nodule_volume_generator)
-    # reoder_image_data_KC_request(dataset_name='ASUS-Benign', 
-    #                               data_path=src, 
-    #                               save_path=dst.replace('raw', 'ASUS_benign_preprocess2'), 
-    #                               vol_generator_func=volume_generator.asus_nodule_volume_generator)
+# def asus_benign_volume_preprocess():
+#     src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
+#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
+#     volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.asus_nodule_volume_generator)
+#     # reoder_image_data_KC_request(dataset_name='ASUS-Benign', 
+#     #                               data_path=src, 
+#     #                               save_path=dst.replace('raw', 'ASUS_benign_preprocess2'), 
+#     #                               vol_generator_func=volume_generator.asus_nodule_volume_generator)
 
 
-def asus_malignant_volume_preprocess():
-    src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
-    dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
-    volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.asus_nodule_volume_generator)
-    # reoder_image_data_KC_request(dataset_name='ASUS-Malignant', 
-    #                               data_path=src, 
-    #                               save_path=dst.replace('raw', 'ASUS_malignant_preprocess2'), 
-    #                               vol_generator_func=volume_generator.asus_nodule_volume_generator)
+# def asus_malignant_volume_preprocess():
+#     src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
+#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
+#     volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.asus_nodule_volume_generator)
+#     # reoder_image_data_KC_request(dataset_name='ASUS-Malignant', 
+#     #                               data_path=src, 
+#     #                               save_path=dst.replace('raw', 'ASUS_malignant_preprocess2'), 
+#     #                               vol_generator_func=volume_generator.asus_nodule_volume_generator)
 
 
-def main():
-    # luna16_volume_preprocess()
-    # luna16_volume_preprocess_round()
-    asus_benign_volume_preprocess()
-    asus_malignant_volume_preprocess()
+# def main():
+#     # luna16_volume_preprocess()
+#     # luna16_volume_preprocess_round()
+#     asus_benign_volume_preprocess()
+#     asus_malignant_volume_preprocess()
 
 
-if __name__ == '__main__':
-    main()
-    pass
+# if __name__ == '__main__':
+#     main()
+#     pass

@@ -24,7 +24,7 @@ def build_nodule_metadata(volume):
 
 
 def build_nodule_distribution(ax, x, y, s, color, label):
-    sc = ax.scatter(x,y,s=s, alpha=0.5, label=label)
+    sc = ax.scatter(x, y, s=s, alpha=0.5, color=color, label=label)
     ax.set_title('The size and space distribution of lung nodules')
     ax.set_xlabel('row')
     ax.set_ylabel('column')

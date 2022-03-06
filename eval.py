@@ -41,7 +41,7 @@ from tqdm import tqdm
 from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
 from utils.volume_eval import volumetric_data_eval
 from utils.utils import Nodule_data_recording, SubmissionDataFrame, irc2xyz, get_nodule_center
-from utils.vis import save_mask, visualize
+from utils.vis import save_mask, visualize, save_mask_in_3d, save_mask_in_3d_2
 # import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import NoduleClassifier
@@ -238,7 +238,18 @@ def volume_eval(cfg, volume_generator):
         mask_vol = np.int32(mask_vol)
         pred_vol = np.zeros_like(mask_vol)
         
-        image_save_path = os.path.join(save_path, 'images', pid)
+        origin_save_path = os.path.join(save_path, 'images', pid, 'origin')
+        if not os.path.isdir(origin_save_path):
+            os.makedirs(origin_save_path)
+
+        enlarge_save_path = os.path.join(save_path, 'images', pid, 'enlarge')
+        if not os.path.isdir(enlarge_save_path):
+            os.makedirs(enlarge_save_path)
+
+        _3d_save_path = os.path.join(save_path, 'images', pid, '3d')
+        if not os.path.isdir(_3d_save_path):
+            os.makedirs(_3d_save_path)
+
         # TODO: use decorator to write a breaking condition
         if cfg.MAX_TEST_CASES is not None:
             if vol_idx >= cfg.MAX_TEST_CASES:
@@ -306,7 +317,12 @@ def volume_eval(cfg, volume_generator):
                 # pred_nodule_info.pop(lll)
                 pred_vol_individual[pred_vol_individual==kk] = 0
         pred_vol = np.where(pred_vol_individual>0, 1, 0)
-        study = StudyofLungNodule(pid, pred_vol_individual)
+
+        # study = StudyofLungNodule(pid, pred_vol_individual, raw_volume=raw_vol)
+        # for study_nodule_id in study.nodule_instances:
+        #     for study_nodule in study.nodule_instances[study_nodule_id]:
+        #         size, hu = 
+        #     sc = ax.scatter(x, y, alpha=0.5, color=color, label=label)
         
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
@@ -314,21 +330,35 @@ def volume_eval(cfg, volume_generator):
 
         # TODO: check behavior: save_image_condition
         if save_image_condition(vol_idx):
-            for j, (img, mask, pred) in enumerate(zip(vol, mask_vol, pred_vol)):
-                time_recording.set_start_time('Save result in image.')
-                save_mask(img, mask, pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{j:03d}')
-                time_recording.set_end_time('Save result in image.')
+            # for j, (img, mask, pred) in enumerate(zip(vol, mask_vol, pred_vol)):
+            #     time_recording.set_start_time('Save result in image.')
+            #     save_mask(img, mask, pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{j:03d}')
+            #     time_recording.set_end_time('Save result in image.')
             
             npy_save_path = os.path.join(save_path, 'npy')
             if not os.path.isdir(npy_save_path):
                 os.makedirs(npy_save_path)
             np.save(os.path.join(npy_save_path, f'{pid}.npy'), np.uint8(pred_vol))
 
-            vis_vol, vis_indices = visualize(vol, pred_vol_individual, mask_vol, pred_nodule_info)
+            vis_vol, vis_indices, vis_crops = visualize(vol, pred_vol_individual, mask_vol, pred_nodule_info)
             for vis_idx in vis_indices:
                 # plt.savefig(vis_vol[vis_idx])
-                cv2.imwrite(os.path.join(image_save_path, f'vis-{pid}-{vis_idx}.png'), vis_vol[vis_idx])
+                cv2.imwrite(os.path.join(origin_save_path, f'vis-{pid}-{vis_idx}.png'), vis_vol[vis_idx])
+                for crop_idx, vis_crop in enumerate(vis_crops[vis_idx]):
+                    cv2.imwrite(os.path.join(enlarge_save_path, f'vis-{pid}-{vis_idx}-crop{crop_idx:03d}.png'), vis_crop)
 
+            temp = np.where(mask_vol+pred_vol>0, 1, 0)
+            zs_c, ys_c, xs_c = np.where(temp)
+            crop_range = {'z': (np.min(zs_c), np.max(zs_c)), 'y': (np.min(ys_c), np.max(ys_c)), 'x': (np.min(xs_c), np.max(xs_c))}
+            save_mask_in_3d_2(mask_vol, 
+                            save_path1=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
+                            save_path2=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'), 
+                            crop_range=crop_range)
+            save_mask_in_3d_2(pred_vol,
+                            save_path1=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
+                            save_path2=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'),
+                            crop_range=crop_range)
+                            
         for nodule_infos in vol_nodule_infos:
             # if nodule_infos['Nodule_prob']:
                 # submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
@@ -341,12 +371,7 @@ def volume_eval(cfg, volume_generator):
         # save_sample_submission(vol_nodule_infos)
         # if pid == pid_list[-1]:
         #     break
-        # save_mask_in_3d(mask_vol, 
-        #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
-        #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'))
-        # save_mask_in_3d(pred_vol, 
-        #                 save_path1=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
-        #                 save_path2=os.path.join(case_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'))
+        
     
     print(cfg.DATASET_NAME, os.path.split(cfg.OUTPUT_DIR)[1], cfg.DATA_SPLIT, os.path.split(cfg.MODEL.WEIGHTS)[1], 
           cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST)
@@ -478,43 +503,43 @@ def CalculateFROC(submission_filename, save_path):
     
 
 def select_model(cfg):
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_003'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_004'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_006'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_010'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_016'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_017'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_018'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_019'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_020'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_021'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_022'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_023'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_024'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_026'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_032'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_033'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_034'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_035'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_036'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_037'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_040'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_041'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_044'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_045'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_046'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_048'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_049'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_051'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_053'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_052'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_055'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_056'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_057'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_058'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_059'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_060'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_061'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_003'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_004'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_006'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_010'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_016'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_017'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_018'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_019'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_020'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_021'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_022'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_023'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_024'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_026'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_032'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_033'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_034'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_035'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_036'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_037'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_040'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_041'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_044'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_045'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_046'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_048'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_049'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_051'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_053'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_052'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_055'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_056'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_057'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_058'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_059'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_060'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_061'
     cfg.OUTPUT_DIR = checkpoint_path
 
     cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
@@ -558,21 +583,21 @@ def common_config():
     # False Positive reduction
     cfg.reduce_false_positive = True
     cfg.crop_range = [48, 48, 48]
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_001\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_004\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_010\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_016\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_011\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_001\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_010\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_016\ckpt_best.pth'
 
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_019\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_020\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_021\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_022\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_027\ckpt_best.pth'
-    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_028\ckpt_best.pth'
-    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_033\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_019\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_020\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_021\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_022\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_023\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_023\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_027\ckpt_best.pth'
+    cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_028\ckpt_best.pth'
+    # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_033\ckpt_best.pth'
 
     cfg.lung_mask_filtering = True
     cfg.remove_1_slice = True
@@ -648,7 +673,7 @@ def asus_malignant_eval():
     else:
         cfg.CASE_INDICES = None
 
-    volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+    volume_generator = asus_nodule_volume_generator('ASUS-Malignant', cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     volume_eval(cfg, volume_generator=volume_generator)
     return cfg
@@ -675,7 +700,7 @@ def asus_benign_eval():
     else:
         cfg.CASE_INDICES = None
 
-    volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
+    volume_generator = asus_nodule_volume_generator('ASUS-Benign', cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     volume_eval(cfg, volume_generator=volume_generator)
     return cfg
@@ -733,7 +758,7 @@ def nodule_test():
 
 
 if __name__ == '__main__':
-    # path = rf'C:\Users\test\Desktop\Leon\Projects\detectron2\output\run_022\1120-NC#run_028-LMF-RUNLS_TH0.4-1SR-maskrcnn-run_022-model_0005999-0.5\ASUS-benign\npy\1B0020.npy'
+    # path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_022\1120-NC#run_028-LMF-RUNLS_TH0.4-1SR-maskrcnn-run_022-model_0005999-0.5\ASUS-benign\npy\1B0020.npy'
     # arr = np.load(path)
     # arr_c = cc3d.connected_components(arr, connectivity=26)
     # print(np.unique(arr_c))
@@ -745,7 +770,7 @@ if __name__ == '__main__':
 
     # nodule_test()
     asus_benign_eval()
-    # asus_malignant_eval()
+    asus_malignant_eval()
     # luna16_eval()
 
     # liwei_asus_malignant_eval()

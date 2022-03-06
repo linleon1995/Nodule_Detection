@@ -23,8 +23,26 @@ import cv2
 import cc3d
 from utils.volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
-
+CROP_HEIGHT, CROP_WIDTH = 128, 128
     
+
+def crop_img(image, crop_parameters, keep_size=True):
+    if not isinstance(crop_parameters, list):
+        crop_parameters = [crop_parameters]
+    
+    height, width = image.shape[:2]
+    crop_images = []
+    for crop_parameter in crop_parameters:
+        crop_center, crop_height, crop_width = crop_parameter['center'], crop_parameter['height'], crop_parameter['width']
+        y_start, y_end = np.clip(crop_center['y']-crop_height//2, 0, height-1), np.clip(crop_center['y']+crop_height//2, 0, height-1)
+        x_start, x_end = np.clip(crop_center['x']-crop_width//2, 0, width-1), np.clip(crop_center['x']+crop_width//2, 0, width-1)
+
+        crop_image = image[y_start:y_end, x_start:x_end]
+        if keep_size:
+            crop_image = cv2.resize(crop_image, dsize=(width, height))
+        crop_images.append(crop_image)
+    return crop_images
+        
 
 def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
     # pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
@@ -67,11 +85,14 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
             contour_center = np.int32(np.mean(contours[0], axis=0)[0]) + center_shift
             # TODO: shifting for any image size
             contour_center = np.clip(contour_center, 0, 512)
-            draw_img = cv2.putText(draw_img, f'{prob:.4f}', contour_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+
             for contour_idx in range(len(contours)):
                 draw_img = cv2.drawContours(draw_img, contours, contour_idx, color, 1)
+            
+            # probability text
+            draw_img = cv2.putText(draw_img, f'{prob:.4f}', contour_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
             draw_vol[slice_idx] = draw_img
-        
+
 
     # Find and draw target contours
     target_vol = np.uint8(target_vol)
@@ -80,11 +101,23 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
         contours, hierarchy = cv2.findContours(target, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         draw_vol[z_idx] = cv2.drawContours(draw_vol[z_idx], contours, -1, target_colors[0].tolist(), 1)
 
-    # for z_idx in total_zs:
-    #     plt.imshow(draw_vol[z_idx])
-    #     plt.show()
+    crop_draw_imgs = {}
+    candidate_vol = cc3d.connected_components(np.where(pred_vol+target_vol>0, 1, 0), connectivity=26)
+    for z_idx in total_zs:
+        candidate_slice = candidate_vol[z_idx]
+        category = np.unique(candidate_slice).tolist()
+        category.remove(0)
+        for ccl_id in category:
+            ys, xs = np.where(candidate_slice==ccl_id)
+            center = {'y': np.int16(np.mean(ys)), 'x': np.int16(np.mean(xs))}
+            # TODO: parameters
+            crop_parameter = {'center': center, 'height': CROP_HEIGHT, 'width': CROP_WIDTH}
+            crops = crop_img(draw_vol[z_idx], crop_parameter)
+        crop_draw_imgs[z_idx] = crops
+        # plt.imshow(draw_vol[z_idx])
+        # plt.show()
 
-    return draw_vol, total_zs
+    return draw_vol, total_zs, crop_draw_imgs
 
 
 # class ObjectVisualizer():
@@ -130,13 +163,32 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
 #         # return draw_vol
 
 
-def save_mask_in_3d(volume, save_path1, save_path2):
+def save_mask_in_3d_2(volume, save_path1, save_path2, crop_range=None):
+    
+    if np.sum(volume==0) == volume.size:
+        print('No mask')
+    else:
+        plot_volume_in_mesh(volume, 0, save_path1)
+        volume, _ = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=30)
+        if crop_range is not None:
+            volume = volume[crop_range['z'][0]:crop_range['z'][1], crop_range['y'][0]:crop_range['y'][1], crop_range['x'][0]:crop_range['x'][1]]
+
+        volume_list = [np.int32(volume==label) for label in np.unique(volume)[1:]]
+        plot_volume_in_mesh(volume_list, 0, save_path2)
+
+
+def save_mask_in_3d(volume, save_path1, save_path2, enlarge=True):
+    if enlarge:
+        zs, ys, xs = np.where(volume)
+        crop_range = {'z': (np.min(zs), np.max(zs)), 'y': (np.min(ys), np.max(ys)), 'x': (np.min(xs), np.max(xs))}
+        volume = volume[crop_range['z'][0]:crop_range['z'][1], crop_range['y'][0]:crop_range['y'][1], crop_range['x'][0]:crop_range['x'][1]]
+
     if np.sum(volume==0) == volume.size:
         print('No mask')
     else:
         plot_volume_in_mesh(volume, 0, save_path1)
         volume = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=30)
-        print(np.unique(volume))
+        # print(np.unique(volume))
         volume_list = [np.int32(volume==label) for label in np.unique(volume)[1:]]
         plot_volume_in_mesh(volume_list, 0, save_path2)
 
@@ -170,15 +222,7 @@ def plot_volume_in_mesh(volume_geroup, threshold=-300, save_path=None):
         volume_geroup = [volume_geroup]
 
     # TODO: fix limited colors
-    # from itertools import combinations
- 
-    # # Get all combinations of [1, 2, 3]
-    # # and length 2
-    # comb = combinations([1, 2, 3], 2)
-    
-    # # Print the obtained combinations
-    # for i in list(comb):
-    #     print (i)
+    # TODO: change color map
     colors = [[0.5, 0.5, 1], [0.5, 1, 0.5], [1, 0.5, 0.5], [0.5, 1, 1], [1, 1, 0.5], [1, 0.5, 1],
               [0.1, 0.7, 1], [0.7, 1, 0.1], [1, 0.7, 0.1], [0.1, 0.7, 0.7], [0.7, 0.7, 0.1], [0.7, 0.1, 0.7]]
 
@@ -188,7 +232,7 @@ def plot_volume_in_mesh(volume_geroup, threshold=-300, save_path=None):
         p = vol.transpose(2,1,0)
         verts, faces, normals, values = measure.marching_cubes_lewiner(p, threshold)
         mesh = Poly3DCollection(verts[faces], alpha=0.3)
-        face_color = colors[vol_idx]
+        face_color = colors[vol_idx%len(colors)]
         # face_color = np.random.rand(3)
         mesh.set_facecolor(face_color)
         ax.add_collection3d(mesh)

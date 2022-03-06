@@ -2,6 +2,7 @@
 # from pprint import pprint
 # pprint(sys.path)
 
+from asyncio import sslproto
 import pandas as pd
 import numpy as np
 from tqdm.notebook import tqdm
@@ -142,44 +143,38 @@ def merge_coco_structure(coco_group):
     return output_coco
         
     
-def build_asus_nodule_coco(convert_data_infos):
-    coco_structures, all_target_paths = {}, {}
-    for data_info in convert_data_infos:
-        data_name = data_info.data_name
-        data_path = data_info.data_path
-        save_path = data_info.save_path
-        split_indices = data_info.split_indices
-        cat_ids = data_info.cat_ids
-        area_threshold = data_info.area_threshold
+def build_asus_nodule_coco(data_name, data_path, save_path, split_indices, cat_ids, area_threshold, category):
+    coco_structures = {}
+    subset_image_path = os.path.join(data_path, 'Image')
+    subset_mask_path = os.path.join(data_path, 'Mask')
+    case_images = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
+    case_masks = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+    
+    # if not os.path.isdir(os.path.join(save_path, data_name)):
+    #     os.makedirs(os.path.join(save_path, data_name))
         
-        subset_image_path = os.path.join(data_path, 'Image')
-        subset_mask_path = os.path.join(data_path, 'Mask')
-        case_images = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
-        case_masks = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
-        
-        if not os.path.isdir(os.path.join(save_path, data_name)):
-            os.makedirs(os.path.join(save_path, data_name))
-            
-        for split_name, indices in split_indices.items():
-            split_images, split_masks = np.take(case_images, indices).tolist(), np.take(case_masks, indices).tolist()
+    for split_name, indices in split_indices.items():
+        split_images, split_masks = np.take(case_images, indices).tolist(), np.take(case_masks, indices).tolist()
 
-            image_paths, target_paths = [], []
-            for split_image, split_mask in zip(split_images, split_masks):
-                image_paths.extend(dataset_utils.get_files(split_image, 'png', recursive=False))
-                target_paths.extend(dataset_utils.get_files(split_mask, 'png', recursive=False))
-                # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
-           
-            coco_structure = build_coco_structure(
-                image_paths, target_paths, cat_ids, area_threshold, category=data_name)
-            
-            if split_name in coco_structures:
-                coco_structures[split_name].append(coco_structure)
-            else:
-                coco_structures[split_name] = [coco_structure]
+        image_paths, target_paths = [], []
+        for split_image, split_mask in zip(split_images, split_masks):
+            image_paths.extend(dataset_utils.get_files(split_image, 'png', recursive=False))
+            target_paths.extend(dataset_utils.get_files(split_mask, 'png', recursive=False))
+            # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
+        
+        coco_structure = build_coco_structure(
+            image_paths, target_paths, cat_ids, area_threshold, category=category)
+        
+        if split_name in coco_structures:
+            coco_structures[split_name].append(coco_structure)
+        else:
+            coco_structures[split_name] = [coco_structure]
                 
     for split_name in coco_structures:
-        merge_coco =   merge_coco_structure(coco_structures[split_name])
-        with open(os.path.join(save_path, f'annotations_{split_name}.json'), 'w', encoding='utf-8') as jsonfile:
+        merge_coco = merge_coco_structure(coco_structures[split_name])
+        save_name = os.path.join(save_path, f'annotations_{split_name}.json')
+        with open(save_name, 'w', encoding='utf-8') as jsonfile:
+            print(f'Saving coco in {save_name}')
             json.dump(merge_coco, jsonfile, ensure_ascii=True, indent=4)
                 
 

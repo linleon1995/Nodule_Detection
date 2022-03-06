@@ -72,7 +72,7 @@ def merge_asus_data(data_path, save_dir, filekey='case'):
         merge_ct = sum(repeat_ct)
         # assert np.sum(merge_ct>1) == 0
         if np.sum(merge_ct>1) > 0:
-            print('error', case_raw_dir)
+            print('Warning: overlapping among nodules', case_raw_dir)
         merge_ct = np.where(merge_ct>0, 1, 0)
         merge_ct = np.uint8(merge_ct)
 
@@ -82,7 +82,7 @@ def merge_asus_data(data_path, save_dir, filekey='case'):
         image = sitk.ReadImage(raw_path)
         ct_scan = sitk.GetArrayFromImage(itkimage)
         sitk.WriteImage(image, outputImageFileName)
-        
+    print('Merging process complete!\n')
 
 if __name__ == '__main__':
     DATA_PATH_B = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'

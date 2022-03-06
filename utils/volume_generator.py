@@ -19,12 +19,14 @@ raw_cache = getCache('part2segment')
 logging.basicConfig(level=logging.INFO)
 
 from modules.data import dataset_utils
+
+# TODO: bad assigning way
 LUNA16_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-ASUS_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules'
+ASUS_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule'
 
 
 def get_data_by_pid_asus(pid, nodule_type):
-    raw_and_mask = dataset_utils.get_files(os.path.join(ASUS_RAW_DATA_PATH, nodule_type, pid), 
+    raw_and_mask = dataset_utils.get_files(os.path.join(ASUS_RAW_DATA_PATH, nodule_type, 'merge', pid), 
                                            recursive=False, get_dirs=True)
     for _dir in raw_and_mask:
         if 'raw' in _dir:
@@ -47,8 +49,8 @@ def get_data_by_pid_asus(pid, nodule_type):
     return raw_vol, vol, mask_vol, origin, spacing, direction    
 
 
-def asus_nodule_volume_generator(data_path, subset_indices=None, case_indices=None, only_nodule_slices=False):
-    nodule_type = os.path.split(data_path)[1]
+def asus_nodule_volume_generator(nodule_type, data_path, subset_indices=None, case_indices=None, only_nodule_slices=False):
+    # nodule_type = os.path.split(data_path)[1]
     case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
     if case_indices:
         case_list = np.take(case_list, case_indices)
