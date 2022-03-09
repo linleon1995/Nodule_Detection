@@ -180,15 +180,15 @@ def save_mask_in_3d_2(volume, save_path1, save_path2, crop_range=None):
 def save_mask_in_3d(volume, save_path1, save_path2, enlarge=True):
     if enlarge:
         zs, ys, xs = np.where(volume)
-        crop_range = {'z': (np.min(zs), np.max(zs)), 'y': (np.min(ys), np.max(ys)), 'x': (np.min(xs), np.max(xs))}
-        volume = volume[crop_range['z'][0]:crop_range['z'][1], crop_range['y'][0]:crop_range['y'][1], crop_range['x'][0]:crop_range['x'][1]]
+        volume = volume[np.min(zs):np.max(zs), 
+                        np.min(ys):np.max(ys), 
+                        np.min(xs):np.max(xs)]
 
     if np.sum(volume==0) == volume.size:
         print('No mask')
     else:
         plot_volume_in_mesh(volume, 0, save_path1)
-        volume = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=30)
-        # print(np.unique(volume))
+        volume = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=0)
         volume_list = [np.int32(volume==label) for label in np.unique(volume)[1:]]
         plot_volume_in_mesh(volume_list, 0, save_path2)
 

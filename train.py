@@ -50,9 +50,8 @@ class ValidationLoss(HookBase):
                                                  **loss_dict_reduced)
 
 
-def main():
+def main(using_dataset):
     cfg = common_config()
-    using_dataset = ['ASUS-Benign'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
     cfg = dataset_config(cfg, using_dataset)
 
     train_dataset = tuple([f'{dataset_name}-train' for dataset_name in using_dataset])
@@ -64,15 +63,6 @@ def main():
 
     # metadata = MetadataCatalog.get("my_dataset_train")
 
-    # dataset_dicts = DatasetCatalog.get("my_dataset_train")
-    # for image_idx, d in enumerate(random.sample(dataset_dicts, 3)):
-    # # for image_idx, d in enumerate(dataset_dicts[:87]):
-    # # for image_idx, d in enumerate(dataset_dicts):
-    #     img = cv2.imread(d["file_name"])
-    #     visualizer = Visualizer(img, metadata=metadata, scale=1.0)
-    #     out = visualizer.draw_dataset_dict(d)
-    #     cv2_imshow(out.get_image(), os.path.join(cfg.OUTPUT_DIR, f'input_samples_{image_idx:03d}.png'))
-
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg) 
     val_loss = ValidationLoss(cfg)  
@@ -82,5 +72,7 @@ def main():
     trainer.resume_or_load(resume=False)
     trainer.train()
 
+
 if __name__ == '__main__':
-    main()
+    using_dataset = ['ASUS-Benign', 'ASUS-Malignant'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
+    main(using_dataset)

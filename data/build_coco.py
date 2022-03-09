@@ -143,7 +143,7 @@ def merge_coco_structure(coco_group):
     return output_coco
         
     
-def build_asus_nodule_coco(data_name, data_path, save_path, split_indices, cat_ids, area_threshold, category):
+def build_asus_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold, category):
     coco_structures = {}
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
@@ -154,7 +154,10 @@ def build_asus_nodule_coco(data_name, data_path, save_path, split_indices, cat_i
     #     os.makedirs(os.path.join(save_path, data_name))
         
     for split_name, indices in split_indices.items():
-        split_images, split_masks = np.take(case_images, indices).tolist(), np.take(case_masks, indices).tolist()
+        indices_group = []
+        for index in indices:
+            indices_group.extend(index)
+        split_images, split_masks = np.take(case_images, indices_group).tolist(), np.take(case_masks, indices_group).tolist()
 
         image_paths, target_paths = [], []
         for split_image, split_mask in zip(split_images, split_masks):

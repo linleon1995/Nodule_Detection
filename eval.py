@@ -46,7 +46,7 @@ from utils.vis import save_mask, visualize, save_mask_in_3d, save_mask_in_3d_2
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import NoduleClassifier
 from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size, FalsePositiveFilter
-from data.data_structure import StudyofLungNodule
+from data.data_structure import LungNoduleStudy
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -202,19 +202,16 @@ def eval(cfg, volume_generator):
 
 
 def volume_eval(cfg, volume_generator):
-    # TODO: Add trial number to divide different trial (csv will replace)
     # TODO: predictor, volume, generator,... should be input into this function rather define in the function
     # TODO: Select a better Data interface or implement both (JSON, volume loading)
     # TODO: save_image_condition
-    save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
+    save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME, cfg.DATA_SPLIT)
     if not os.path.isdir(save_path):
         os.makedirs(save_path)
     save_image_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
     total_pid = []
     cls_eval = []
 
-    time_recording = time_record()
-    time_recording.set_start_time('Total')
     # predictor = liwei_eval.liwei_predictor
     predictor = BatchPredictor(cfg)
     vol_metric = volumetric_data_eval(save_path, match_threshold=cfg.MATCHING_THRESHOLD)
@@ -225,13 +222,6 @@ def volume_eval(cfg, volume_generator):
     if cfg.reduce_false_positive:
         FP_reducer = NoduleClassifier(crop_range, cfg.FP_reducer_checkpoint, prob_threshold=NODULE_CLS_PROB)
 
-    # submission_recorder = SubmissionDataFrame()
-    
-    # volume_generator = vol_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
-    #                                  only_nodule_slices=cfg.ONLY_NODULES)
-
-    # xx = luna16_volume_generator(cfg.RAW_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES)
-    # total_pid = xx.pid_list
     for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         total_pid.append(pid)
@@ -239,16 +229,11 @@ def volume_eval(cfg, volume_generator):
         pred_vol = np.zeros_like(mask_vol)
         
         origin_save_path = os.path.join(save_path, 'images', pid, 'origin')
-        if not os.path.isdir(origin_save_path):
-            os.makedirs(origin_save_path)
-
         enlarge_save_path = os.path.join(save_path, 'images', pid, 'enlarge')
-        if not os.path.isdir(enlarge_save_path):
-            os.makedirs(enlarge_save_path)
-
         _3d_save_path = os.path.join(save_path, 'images', pid, '3d')
-        if not os.path.isdir(_3d_save_path):
-            os.makedirs(_3d_save_path)
+        for path in [origin_save_path, enlarge_save_path, _3d_save_path]:
+            if not os.path.isdir(path):
+                os.makedirs(path)
 
         # TODO: use decorator to write a breaking condition
         if cfg.MAX_TEST_CASES is not None:
@@ -260,10 +245,8 @@ def volume_eval(cfg, volume_generator):
                 print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {batch_start_index}')
             start, end = batch_start_index, min(vol.shape[0], batch_start_index+cfg.TEST_BATCH_SIZE)
             img = vol[start:end]
-            time_recording.set_start_time('Inference')
             img_list = np.split(img, img.shape[0], axis=0)
             outputs = predictor(img_list) 
-            time_recording.set_end_time('Inference')
 
             for j, output in enumerate(outputs):
                 pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
@@ -274,7 +257,6 @@ def volume_eval(cfg, volume_generator):
                 img_idx = batch_start_index + j
                 pred_vol[img_idx] = pred
 
-        time_recording.set_start_time('Nodule Evaluation')
 
         # pred_volume_individual, _ = volumetric_data_eval.volume_preprocess(pred_vol, connectivity=26, area_threshold=20)
         if cfg.reduce_false_positive:
@@ -318,11 +300,11 @@ def volume_eval(cfg, volume_generator):
                 pred_vol_individual[pred_vol_individual==kk] = 0
         pred_vol = np.where(pred_vol_individual>0, 1, 0)
 
-        # study = StudyofLungNodule(pid, pred_vol_individual, raw_volume=raw_vol)
-        # for study_nodule_id in study.nodule_instances:
-        #     for study_nodule in study.nodule_instances[study_nodule_id]:
-        #         size, hu = 
-        #     sc = ax.scatter(x, y, alpha=0.5, color=color, label=label)
+        study = LungNoduleStudy(pid, pred_vol_individual, raw_volume=raw_vol)
+        for study_nodule_id in study.nodule_instances:
+            for study_nodule in study.nodule_instances[study_nodule_id]:
+                size, hu = 
+            sc = ax.scatter(x, y, alpha=0.5, color=color, label=label)
         
         vol_nodule_infos = vol_metric.calculate(mask_vol, pred_vol, infos)
         # TODO: Not clean, is dict order correctly? (Pid has to be the first place)
@@ -331,9 +313,7 @@ def volume_eval(cfg, volume_generator):
         # TODO: check behavior: save_image_condition
         if save_image_condition(vol_idx):
             # for j, (img, mask, pred) in enumerate(zip(vol, mask_vol, pred_vol)):
-            #     time_recording.set_start_time('Save result in image.')
             #     save_mask(img, mask, pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{j:03d}')
-            #     time_recording.set_end_time('Save result in image.')
             
             npy_save_path = os.path.join(save_path, 'npy')
             if not os.path.isdir(npy_save_path):
@@ -350,14 +330,17 @@ def volume_eval(cfg, volume_generator):
             temp = np.where(mask_vol+pred_vol>0, 1, 0)
             zs_c, ys_c, xs_c = np.where(temp)
             crop_range = {'z': (np.min(zs_c), np.max(zs_c)), 'y': (np.min(ys_c), np.max(ys_c)), 'x': (np.min(xs_c), np.max(xs_c))}
-            save_mask_in_3d_2(mask_vol, 
-                            save_path1=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
-                            save_path2=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'), 
-                            crop_range=crop_range)
-            save_mask_in_3d_2(pred_vol,
-                            save_path1=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
-                            save_path2=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'),
-                            crop_range=crop_range)
+            if crop_range['z'][1]-crop_range['z'][0] > 2 and \
+               crop_range['y'][1]-crop_range['y'][0] > 2 and \
+               crop_range['x'][1]-crop_range['x'][0] > 2:
+                save_mask_in_3d_2(mask_vol, 
+                                  save_path1=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-raw-mask.png'),
+                                  save_path2=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-preprocess-mask.png'), 
+                                  crop_range=crop_range)
+                save_mask_in_3d_2(pred_vol,
+                                  save_path1=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-raw-pred.png'),
+                                  save_path2=os.path.join(_3d_save_path, f'{pid}-{img_idx:03d}-preprocess-pred.png'),
+                                  crop_range=crop_range)
                             
         for nodule_infos in vol_nodule_infos:
             # if nodule_infos['Nodule_prob']:
@@ -366,7 +349,6 @@ def volume_eval(cfg, volume_generator):
             nodule_infos.pop('Center_xyz', None)
             nodule_infos.pop('Nodule_prob', None)
         metadata_recorder.write_row(vol_nodule_infos, pid)
-        time_recording.set_end_time('Nodule Evaluation')
 
         # save_sample_submission(vol_nodule_infos)
         # if pid == pid_list[-1]:
@@ -393,8 +375,6 @@ def volume_eval(cfg, volume_generator):
     # with open(os.path.join(save_path, 'evaluation.txt'), 'a+') as fw:
     #     fw.write()
 
-    # time_recording.set_end_time('Total')
-    # time_recording.show_recording_time()
     
 
 def froc(cfg, volume_generator):
@@ -517,6 +497,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_024'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_026'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_027'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_032'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_034'
@@ -658,7 +639,7 @@ def asus_malignant_eval():
     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'test'
+    cfg.DATA_SPLIT = 'valid'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
@@ -684,7 +665,7 @@ def asus_benign_eval():
     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
     cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'test'
+    cfg.DATA_SPLIT = 'valid'
 
     cfg.SUBSET_INDICES = None
     if cfg.DATA_SPLIT == 'train':
