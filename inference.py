@@ -4,6 +4,23 @@ import numpy as np
 from utils.utils import mask_preprocess
 
 
+def model_inference(vol, batch_size, predictor):
+    pred_vol = np.zeros_like(vol)
+    for batch_start_index in range(0, vol.shape[0], batch_size):
+        start, end = batch_start_index, min(vol.shape[0], batch_start_index+batch_size)
+        img = vol[start:end]
+        img_list = np.split(img, img.shape[0], axis=0)
+        outputs = predictor(img_list) 
+
+        for j, output in enumerate(outputs):
+            pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+            pred = np.sum(pred, axis=0)
+            pred = mask_preprocess(pred)
+            img_idx = batch_start_index + j
+            pred_vol[img_idx] = pred
+    return pred_vol
+
+            
 class Detectron2Inferencer():
     def __init__(self, cfg):
         self.model = BatchPredictor(cfg)

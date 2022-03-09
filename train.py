@@ -24,6 +24,7 @@ import detectron2.utils.comm as comm
 import torch
 
 import site_path
+from modules.utils import configuration
 from utils.utils import cv2_imshow
 from config import common_config, dataset_config
 
@@ -50,20 +51,7 @@ class ValidationLoss(HookBase):
                                                  **loss_dict_reduced)
 
 
-def main(using_dataset):
-    cfg = common_config()
-    cfg = dataset_config(cfg, using_dataset)
-
-    train_dataset = tuple([f'{dataset_name}-train' for dataset_name in using_dataset])
-    valid_dataset = tuple([f'{dataset_name}-valid' for dataset_name in using_dataset])
-
-    cfg.DATASETS.TRAIN = train_dataset
-    cfg.DATASETS.VAL = valid_dataset
-    cfg.DATASETS.TEST = ()
-
-    # metadata = MetadataCatalog.get("my_dataset_train")
-
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+def model_train(cfg):
     trainer = DefaultTrainer(cfg) 
     val_loss = ValidationLoss(cfg)  
     trainer.register_hooks([val_loss])
@@ -73,6 +61,29 @@ def main(using_dataset):
     trainer.train()
 
 
+def main():
+    train_cfg = configuration.load_config(f'config_file/train.yml', dict_as_member=True)
+
+    using_dataset = train_cfg.DATA.NAMES
+    cfg.NUM_FOLD = train_cfg.NUM_FOLD
+    # TODO: combine common, dataset to one function
+    cfg = common_config()
+    cfg = dataset_config(cfg, using_dataset)
+    
+    output_dir = cfg.OUTPUT_DIR
+    for fold in range(cfg.NUM_FOLD):
+        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.NUM_FOLD}-{fold}' for dataset_name in using_dataset])
+        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.NUM_FOLD}-{fold}' for dataset_name in using_dataset])
+
+        cfg.DATASETS.TRAIN = train_dataset
+        cfg.DATASETS.VAL = valid_dataset
+        cfg.DATASETS.TEST = ()
+        
+        cfg.OUTPUT_DIR = os.path.join(output_dir, str(fold))
+        if not os.path.isdir(cfg.OUTPUT_DIR):
+            os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+
+        model_train(cfg)
+
 if __name__ == '__main__':
-    using_dataset = ['ASUS-Benign', 'ASUS-Malignant'] # 'LUNA16', 'ASUS-Benign', 'ASUS-Malignant'
-    main(using_dataset)
+    main()

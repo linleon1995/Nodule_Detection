@@ -6,10 +6,22 @@ from skimage import measure, morphology
 from sklearn.cluster import KMeans
 from utils.utils import cv2_imshow
 
-
-class FalsePositiveFilter():
+# TODO: metaclass: register post-processing function
+class FalsePositiveReducer():
     def __init__(self):
         pass
+
+def _1_slice_removal(pred_vol, slice_threshold=1):
+    # pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
+    pred_category = np.unique(pred_vol)[1:]
+    total_nodule_infos = []
+    for label in pred_category:
+        binary_mask = pred_vol==label
+        zs, ys, xs = np.where(binary_mask)
+        if np.unique(zs).size <= slice_threshold:
+            pred_vol[pred_vol==label] = 0
+    # pred_vol = np.where(pred_vol>0, 1, 0)
+    return pred_vol
 
 
 def remove_unusual_nodule_by_ratio(pred_vol_individual, lung_mask_vol, threshold=0.019):
