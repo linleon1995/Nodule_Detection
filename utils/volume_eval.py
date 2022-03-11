@@ -4,21 +4,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cc3d
 from utils import utils
+import time
+
+# TODO: delte these two globals
 CONNECTIVITY = 26
 AREA_THRESHOLD = 20
 
 
 
 class volumetric_data_eval2():
-    def __init__(self, save_path, match_threshold=0.5, max_nodule_num=1):
+    def __init__(self, model_name, save_path, dataset_name, match_threshold=0.5, max_nodule_num=1):
+        self.model_name = model_name
+        self.save_path = save_path
+        self.dataset_name = dataset_name
         self.match_threshold = match_threshold
         self.max_nodule_num = max_nodule_num
         self.PixelTP, self.PixelFP, self.PixelFN = [], [] ,[]
         self.VoxelTP, self.VoxelFP, self.VoxelFN = [], [] ,[]
-        self.save_path = save_path
+        self.num_nodule = 0
+        self.num_case = 0
         self.eval_file = open(os.path.join(self.save_path, 'evaluation.txt'), 'w+')
 
     def calculate(self, target_study, pred_study):
+        self.num_case += 1
+        self.num_nodule += len(target_study.nodule_instances)
         assert np.shape(target_study.category_volume) == np.shape(pred_study.category_volume)
         self._3D_evaluation(target_study, pred_study)
         self._2D_evaluation(target_study, pred_study)
@@ -137,6 +146,15 @@ class volumetric_data_eval2():
         self.Slice_F1 = 2*np.sum(self.PixelTP) / (2*np.sum(self.PixelTP) + np.sum(self.PixelFP) + np.sum(self.PixelFN))
 
         if show_evaluation:
+            t = time.localtime()
+            result = time.strftime("%m/%d/%Y, %H:%M:%S", t)
+            self.write_and_print(f'Time: {result}')
+            self.write_and_print(f'Model: {self.model_name}')
+            self.write_and_print(f'Testing Dataset: {self.dataset_name}')
+            self.write_and_print(f'Testing Case: {self.num_case}')
+            self.write_and_print(f'Testing Nodule: {self.num_nodule}')
+            self.write_and_print(f'Matching Threshold: {self.match_threshold}')
+            self.write_and_print('')
             self.write_and_print(f'VoxelTP/Target: {np.sum(self.VoxelTP)}/{np.sum(self.P)}')
             self.write_and_print(f'VoxelTP/Prediction: {np.sum(self.VoxelTP)}/{np.sum(self.VoxelTP)+np.sum(self.VoxelFP)}')
             self.write_and_print(f'Voxel Precision: {self.Volume_Precisiion:.4f}')

@@ -64,7 +64,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class ScatterVisualizer():
-    def __init__(self, scatter_size=100, cmap=plt.cm.jet):
+    def __init__(self, scatter_size=100, cmap=plt.cm.jet, title=''):
         self.fig, self.ax = plt.subplots(1, 1)
         self.scatter_size = scatter_size
         self.cmap = cmap
@@ -77,12 +77,13 @@ class ScatterVisualizer():
         for nodule_id in nodule_instances:
             nodule = nodule_instances[nodule_id]
             self.nodule_sizes.append(nodule.nodule_size)
-            self.nodule_hu.append(nodule.hu)
+            # TODO: nodule.hu+100
+            self.nodule_hu.append(nodule.hu+100)
             self.scores.append(nodule.nodule_score['DSC'])
     
-    def show_scatter(self, save_path=None):
+    def show_scatter(self, title='', xlabel='', ylabel='', save_path=None):
         self.fig, self.ax = plot_scatter(self.fig, self.ax, x=self.nodule_sizes, y=self.nodule_hu, scores=self.scores, size=self.scatter_size, cmap=self.cmap, quant_steps=10, 
-                               tiitle='Pred nodule visualization', xlabel='size (pixels)', ylabel='mean HU')
+                               tiitle=title, xlabel=xlabel, ylabel=ylabel)
 
         if save_path is not None:
             self.fig.savefig(save_path)
