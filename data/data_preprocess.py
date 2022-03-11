@@ -10,7 +10,7 @@ import site_path
 from modules.utils import configuration
 # import warnings
 # warnings.simplefilter(action='ignore', category=FutureWarning)
-from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
+from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 
 DATASET_NAME = ['Benign', 'Malignant'] # Benign, Malignant, LUNA16, LUNA16-Round
 # BENIGN_TRAIN_SPLIT = list(range(17))      

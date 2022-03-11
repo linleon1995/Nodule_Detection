@@ -27,6 +27,8 @@ import site_path
 from modules.utils import configuration
 from utils.utils import cv2_imshow
 from config import common_config, dataset_config
+from model import build_model
+from utils.trainer import Trainer
 
 class ValidationLoss(HookBase):
     def __init__(self, cfg):
@@ -51,7 +53,7 @@ class ValidationLoss(HookBase):
                                                  **loss_dict_reduced)
 
 
-def model_train(cfg):
+def detectron2_model_train(cfg):
     trainer = DefaultTrainer(cfg) 
     val_loss = ValidationLoss(cfg)  
     trainer.register_hooks([val_loss])
@@ -61,19 +63,27 @@ def model_train(cfg):
     trainer.train()
 
 
+def train(cfg):
+    model = build_model(model_name=cfg.MODEL_NAME, slice_shift=cfg.SLICE_SHIFT, n_class=cfg.N_CLASS, pretrained=cfg.isPretrained)
+    trainer = Trainer(model)
+
+
 def main():
+    # train_cfg = build_train_config()
+
+
+
     train_cfg = configuration.load_config(f'config_file/train.yml', dict_as_member=True)
 
-    using_dataset = train_cfg.DATA.NAMES
     # TODO: combine common, dataset to one function
     cfg = common_config()
     cfg.CV_FOLD = train_cfg.CV_FOLD
-    cfg = dataset_config(cfg, using_dataset)
+    cfg = dataset_config(cfg, train_cfg.DATA.NAMES)
     
     output_dir = cfg.OUTPUT_DIR
     for fold in range(cfg.CV_FOLD):
-        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}' for dataset_name in using_dataset])
-        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}' for dataset_name in using_dataset])
+        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES])
+        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES])
 
         cfg.DATASETS.TRAIN = train_dataset
         cfg.DATASETS.VAL = valid_dataset
@@ -83,7 +93,7 @@ def main():
         if not os.path.isdir(cfg.OUTPUT_DIR):
             os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
-        model_train(cfg)
+        detectron2_model_train(cfg)
 
 
 if __name__ == '__main__':

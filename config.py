@@ -85,8 +85,6 @@ def common_config():
 
 
 def dataset_config(cfg, using_dataset):
-    cfg.USING_DATASET = ''
-
     for fold in range(cfg.CV_FOLD):
         for dataset_name in using_dataset:
             config_name = f'ASUS-{dataset_name}'
@@ -103,8 +101,26 @@ def dataset_config(cfg, using_dataset):
     return cfg
 
 
-def get_train_config():
-    pass
+def build_custom_config():
+    custom_cfg = configuration.load_config(f'config_file/train.yml', dict_as_member=True)
+    return custom_cfg
+
+
+def build_train_config():
+    train_cfg = build_custom_config()
+    
+    if train_cfg.MODEL.NAME in ['2D-Mask-RCNN']:
+        cfg = common_config()
+        cfg.CV_FOLD = train_cfg.CV_FOLD
+        cfg = dataset_config(cfg, train_cfg.DATA.NAMES)
+
+        # det2_config = build_det2_config()
+        # train_cfg = merge_config()
+    elif train_cfg.MODEL.NAME in ['2D-FCN', '3D-UNet', '2D-UNet']:
+        pass
+    else:
+        raise ValueError(f'Undefined Model {train_cfg.MODEL.NAME}')
+    return train_cfg
 
 
 def build_test_config():

@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib as mpl
 import argparse
 
-from utils import volume_generator
+from data import volume_generator
 import config
 
 # from data.luna16_crop_preprocess import LUNA16_CropRange_Builder

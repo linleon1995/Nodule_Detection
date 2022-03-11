@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from torch import positive
-from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, get_data_by_pid_asus
+from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, get_data_by_pid_asus
 from utils.utils import get_nodule_center, irc2xyz, DataFrameTool
 import cc3d
 

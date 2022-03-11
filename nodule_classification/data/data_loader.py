@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 from scipy import ndimage
 import random
-from utils.volume_generator import luna16_volume_generator
+from data.volume_generator import luna16_volume_generator
 from modules.data import dataset_utils
 
 
