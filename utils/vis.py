@@ -23,8 +23,104 @@ import cv2
 import cc3d
 from utils.volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
-CROP_HEIGHT, CROP_WIDTH = 128, 128
     
+# def plot_scatter2():
+#     import numpy as np
+#     import matplotlib as mpl
+#     import matplotlib.pylab as plt
+
+#     fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # setup the plot
+
+#     x = np.random.rand(20)  # define the data
+#     y = np.random.rand(20)  # define the data
+#     tag = np.random.randint(0, 20, 20)
+#     tag[10:12] = 0  # make sure there are some 0 values to show up as grey
+
+#     cmap = plt.cm.jet  # define the colormap
+#     # extract all colors from the .jet map
+#     cmaplist = [cmap(i) for i in range(cmap.N)]
+#     # force the first color entry to be grey
+#     cmaplist[0] = (.5, .5, .5, 1.0)
+
+#     # create the new map
+#     cmap = mpl.colors.LinearSegmentedColormap.from_list(
+#         'Custom cmap', cmaplist, cmap.N)
+
+#     # define the bins and normalize
+#     bounds = np.linspace(0, 20, 21)
+#     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+
+#     # make the scatter
+#     scat = ax.scatter(x, y, c=tag, s=np.random.randint(100, 500, 20),
+#                     cmap=cmap, norm=norm)
+
+#     # create a second axes for the colorbar
+#     ax2 = fig.add_axes([0.95, 0.1, 0.03, 0.8])
+#     cb = plt.colorbar.ColorbarBase(ax2, cmap=cmap, norm=norm,
+#         spacing='proportional', ticks=bounds, boundaries=bounds, format='%1i')
+
+#     ax.set_title('Well defined discrete colors')
+#     ax2.set_ylabel('Very custom cbar [-]', size=12)
+
+
+class ScatterVisualizer():
+    def __init__(self, scatter_size=100, cmap=plt.cm.jet):
+        self.fig, self.ax = plt.subplots(1, 1)
+        self.scatter_size = scatter_size
+        self.cmap = cmap
+        self.nodule_sizes = []
+        self.nodule_hu = []
+        self.scores = []
+
+    def record(self, study):
+        nodule_instances = study.nodule_instances
+        for nodule_id in nodule_instances:
+            nodule = nodule_instances[nodule_id]
+            self.nodule_sizes.append(nodule.nodule_size)
+            self.nodule_hu.append(nodule.hu)
+            self.scores.append(nodule.nodule_score['DSC'])
+    
+    def show_scatter(self, save_path=None):
+        self.fig, self.ax = plot_scatter(self.fig, self.ax, x=self.nodule_sizes, y=self.nodule_hu, scores=self.scores, size=self.scatter_size, cmap=self.cmap, quant_steps=10, 
+                               tiitle='Pred nodule visualization', xlabel='size (pixels)', ylabel='mean HU')
+
+        if save_path is not None:
+            self.fig.savefig(save_path)
+
+
+def plot_scatter(fig, ax, x, y, scores, size, cmap, quant_steps=10, tiitle='', xlabel='', ylabel='', alpha=0.5):
+    # TODO: fix the color bar from 0 to 1
+    if not isinstance(size, list):
+        size = len(x)*[size]
+
+    cmap = plt.get_cmap(cmap.name, quant_steps+1)
+
+    sc = ax.scatter(x, y, c=scores, s=size, cmap=cmap, alpha=alpha)
+    fig.colorbar(sc, ax=ax)
+    
+    ax.set_title(tiitle)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    ax.set_yscale('log')
+    return fig, ax
+
+def get_color_from_cmap(cmap, output_format='rgb', keep_transparent=False, output_uint8=True):
+    # TODO: number of color --> 20 in below should be changed
+    # TODO: continuous color?
+    # TODO: color filter? --> filter out color not obvious?
+    if keep_transparent:
+        select_idx = 4
+    else:
+        select_idx = 3
+
+    convert_func = lambda value: np.uint8(255*value) if output_uint8 else value
+    if output_format == 'rgb':
+        colors = [convert_func(np.array(cmap(idx))[:select_idx]) for idx in range(cmap.N)]
+    elif output_format == 'bgr':
+        colors = [convert_func(np.array(cmap(idx))[:select_idx])[::-1] for idx in range(cmap.N)]
+    return colors
+
 
 def crop_img(image, crop_parameters, keep_size=True):
     if not isinstance(crop_parameters, list):
@@ -43,8 +139,10 @@ def crop_img(image, crop_parameters, keep_size=True):
         crop_images.append(crop_image)
     return crop_images
         
-
-def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
+# class SegVisualizer():
+#     def __init__():
+        
+def visualize(input_vol, pred_vol, target_vol, pred_nodule_info, enlarge_crop_size=(128, 128)):
     # pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
     target_vol = cc3d.connected_components(target_vol, connectivity=26)
 
@@ -54,10 +152,9 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
     zs, ys, xs = np.where(target_vol)
     target_zs = np.unique(zs)
     total_zs = np.unique(np.concatenate((pred_zs, target_zs)))
+    depth, height, width = pred_vol.shape
     
-    # TODO: convert any color map <-- write this as a function
-    color_map = cm.tab20
-    bgr_colors = [np.uint8(255*np.array(color_map(idx))[:3])[::-1] for idx in range(20)]
+    bgr_colors = get_color_from_cmap(cmap=cm.tab20, output_format='bgr', keep_transparent=False)
     target_colors, pred_colors = bgr_colors[4:5], bgr_colors[:4]+bgr_colors[5:14]+bgr_colors[16:]
     draw_vol = input_vol.copy()
     center_shift = 20
@@ -83,8 +180,7 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
             contours = contour_pair[slice_idx]
             draw_img = draw_vol[slice_idx]
             contour_center = np.int32(np.mean(contours[0], axis=0)[0]) + center_shift
-            # TODO: shifting for any image size
-            contour_center = np.clip(contour_center, 0, 512)
+            contour_center = np.clip(contour_center, 0, min(height, width))
 
             for contour_idx in range(len(contours)):
                 draw_img = cv2.drawContours(draw_img, contours, contour_idx, color, 1)
@@ -92,7 +188,6 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
             # probability text
             draw_img = cv2.putText(draw_img, f'{prob:.4f}', contour_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
             draw_vol[slice_idx] = draw_img
-
 
     # Find and draw target contours
     target_vol = np.uint8(target_vol)
@@ -110,87 +205,47 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info):
         for ccl_id in category:
             ys, xs = np.where(candidate_slice==ccl_id)
             center = {'y': np.int16(np.mean(ys)), 'x': np.int16(np.mean(xs))}
-            # TODO: parameters
-            crop_parameter = {'center': center, 'height': CROP_HEIGHT, 'width': CROP_WIDTH}
+            crop_parameter = {'center': center, 'height': enlarge_crop_size[0], 'width': enlarge_crop_size[1]}
             crops = crop_img(draw_vol[z_idx], crop_parameter)
         crop_draw_imgs[z_idx] = crops
-        # plt.imshow(draw_vol[z_idx])
-        # plt.show()
 
     return draw_vol, total_zs, crop_draw_imgs
 
 
-# class ObjectVisualizer():
-#     def __init__(self):
-#         self.visulizer = self.get_visualizer()
-
-#     def get_visualizer(self):
-#         return visualizer
-
-#     def visualize(self, input_vol, pred_vol, mask_vol):
-#         pred_category = np.unique(pred_vol)[1:]
-#         zs, ys, xs = np.where(pred_vol)
-#         total_zs = np.unique(zs)
-#         color_map = cm.tab20
-#         colors = [np.uint8(255*np.array(color)[:3]) for color in color_map]
-#         target_colors, pred_colors = colors[:2], colors[2:]
-#         draw_vol = input_vol.copy()
-
-#         total_contours = {}
-#         for label in pred_category:
-#             nodule_vol = pred_vol==label
-#             zs, ys, xs = np.where(nodule_vol)
-#             total_contours[label] = {}
-#             for z_idx in range(np.min(zs), np.max(zs)+1):
-#                 pred = nodule_vol[z_idx]
-#                 _, contours, hierarchy = cv2.findContours(pred, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-#                 total_contours[label][z_idx] = contours
-
-#         for nodule_id in total_contours:
-#             contour_pair = total_contours[nodule_id]
-#             color = pred_colors[nodule_id]
-#             for slice_idx in contour_pair:
-#                 contours = contour_pair[slice_idx]
-#                 draw_img = draw_vol[slice_idx]
-#                 for contour_idx in range(len(contours)):
-#                     draw_img = cv2.drawContours(draw_img, contours, contour_idx, pred_colors[contour_idx], 3)
-#                     draw_vol[slice_idx] = draw_img
-
-#         for z_idx in total_zs:
-#             plt.imshow(draw_vol[z_idx])
-#             plt.show()
-
-#         # return draw_vol
-
-
-def save_mask_in_3d_2(volume, save_path1, save_path2, crop_range=None):
-    
-    if np.sum(volume==0) == volume.size:
-        print('No mask')
+def save_mask_in_3d(volume, save_path1, save_path2, enlarge=True, crop_range=None):
+    # TODO: pass if cropped volume smaller than 2x2x2
+    if crop_range is not None:
+        z_slice = np.arange(crop_range['z'][0], crop_range['z'][1])
+        y_slice = np.arange(crop_range['y'][0], crop_range['y'][1])
+        x_slice = np.arange(crop_range['x'][0], crop_range['x'][1])
     else:
-        plot_volume_in_mesh(volume, 0, save_path1)
-        volume, _ = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=30)
-        if crop_range is not None:
-            volume = volume[crop_range['z'][0]:crop_range['z'][1], crop_range['y'][0]:crop_range['y'][1], crop_range['x'][0]:crop_range['x'][1]]
+        if enlarge:
+            zs, ys, xs = np.where(volume)
+            z_slice = np.arange(np.min(zs), np.max(zs))
+            y_slice = np.arange(np.min(ys), np.max(ys))
+            x_slice = np.arange(np.min(xs), np.max(xs))
+        else:
+            z, y, x = volume.shape
+            z_slice = np.arange(z)
+            y_slice = np.arange(y)
+            x_slice = np.arange(x)
 
-        volume_list = [np.int32(volume==label) for label in np.unique(volume)[1:]]
-        plot_volume_in_mesh(volume_list, 0, save_path2)
-
-
-def save_mask_in_3d(volume, save_path1, save_path2, enlarge=True):
-    if enlarge:
-        zs, ys, xs = np.where(volume)
-        volume = volume[np.min(zs):np.max(zs), 
-                        np.min(ys):np.max(ys), 
-                        np.min(xs):np.max(xs)]
+    # TODO: better way to do the slicing
+    # slice_indices = np.meshgrid(y_slice, z_slice, x_slice)
+    # volume = volume[slice_indices]
+    crop_volume = volume.copy()
+    crop_volume = crop_volume[z_slice]
+    crop_volume = crop_volume[:, y_slice]
+    crop_volume = crop_volume[...,x_slice]
 
     if np.sum(volume==0) == volume.size:
         print('No mask')
     else:
-        plot_volume_in_mesh(volume, 0, save_path1)
-        volume = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=0)
-        volume_list = [np.int32(volume==label) for label in np.unique(volume)[1:]]
+        # volume = volumetric_data_eval.volume_preprocess(volume, connectivity=26, area_threshold=0)
+        volume_list = [np.int32(crop_volume==label) for label in np.unique(crop_volume)[1:]]
         plot_volume_in_mesh(volume_list, 0, save_path2)
+        binary_volume = np.where(volume>0, 1, 0)
+        plot_volume_in_mesh(binary_volume, 0, save_path1)
 
 
 def show_mask_in_2d(cfg, vol_generator):
@@ -221,10 +276,9 @@ def plot_volume_in_mesh(volume_geroup, threshold=-300, save_path=None):
     if not isinstance(volume_geroup, list):
         volume_geroup = [volume_geroup]
 
-    # TODO: fix limited colors
-    # TODO: change color map
-    colors = [[0.5, 0.5, 1], [0.5, 1, 0.5], [1, 0.5, 0.5], [0.5, 1, 1], [1, 1, 0.5], [1, 0.5, 1],
-              [0.1, 0.7, 1], [0.7, 1, 0.1], [1, 0.7, 0.1], [0.1, 0.7, 0.7], [0.7, 0.7, 0.1], [0.7, 0.1, 0.7]]
+    # colors = [[0.5, 0.5, 1], [0.5, 1, 0.5], [1, 0.5, 0.5], [0.5, 1, 1], [1, 1, 0.5], [1, 0.5, 1],
+    #           [0.1, 0.7, 1], [0.7, 1, 0.1], [1, 0.7, 0.1], [0.1, 0.7, 0.7], [0.7, 0.7, 0.1], [0.7, 0.1, 0.7]]
+    colors = get_color_from_cmap(cmap=cm.tab20, output_format='bgr', keep_transparent=False, output_uint8=False)
 
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(111, projection='3d')
@@ -233,7 +287,6 @@ def plot_volume_in_mesh(volume_geroup, threshold=-300, save_path=None):
         verts, faces, normals, values = measure.marching_cubes_lewiner(p, threshold)
         mesh = Poly3DCollection(verts[faces], alpha=0.3)
         face_color = colors[vol_idx%len(colors)]
-        # face_color = np.random.rand(3)
         mesh.set_facecolor(face_color)
         ax.add_collection3d(mesh)
 

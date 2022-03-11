@@ -5,7 +5,7 @@ from utils.utils import mask_preprocess
 
 
 def model_inference(vol, batch_size, predictor):
-    pred_vol = np.zeros_like(vol)
+    pred_vol = np.zeros_like(vol[...,0])
     for batch_start_index in range(0, vol.shape[0], batch_size):
         start, end = batch_start_index, min(vol.shape[0], batch_start_index+batch_size)
         img = vol[start:end]

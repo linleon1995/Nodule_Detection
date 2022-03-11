@@ -65,15 +65,15 @@ def main():
     train_cfg = configuration.load_config(f'config_file/train.yml', dict_as_member=True)
 
     using_dataset = train_cfg.DATA.NAMES
-    cfg.NUM_FOLD = train_cfg.NUM_FOLD
     # TODO: combine common, dataset to one function
     cfg = common_config()
+    cfg.CV_FOLD = train_cfg.CV_FOLD
     cfg = dataset_config(cfg, using_dataset)
     
     output_dir = cfg.OUTPUT_DIR
-    for fold in range(cfg.NUM_FOLD):
-        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.NUM_FOLD}-{fold}' for dataset_name in using_dataset])
-        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.NUM_FOLD}-{fold}' for dataset_name in using_dataset])
+    for fold in range(cfg.CV_FOLD):
+        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}' for dataset_name in using_dataset])
+        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}' for dataset_name in using_dataset])
 
         cfg.DATASETS.TRAIN = train_dataset
         cfg.DATASETS.VAL = valid_dataset

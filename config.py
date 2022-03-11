@@ -87,19 +87,19 @@ def common_config():
 def dataset_config(cfg, using_dataset):
     cfg.USING_DATASET = ''
 
-    for fold in range(cfg.NUM_FOLD):
+    for fold in range(cfg.CV_FOLD):
         for dataset_name in using_dataset:
             config_name = f'ASUS-{dataset_name}'
             data_cfg = configuration.load_config(f'data/config/{dataset_name}.yml', dict_as_member=True)
             data_root = data_cfg.PATH.DATA_ROOT
             task_name = data_cfg.TASK_NAME
 
-            train_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.NUM_FOLD}', str(fold), "annotations_train.json")
-            valid_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.NUM_FOLD}', str(fold), "annotations_test.json")
+            train_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.CV_FOLD}', str(fold), "annotations_train.json")
+            valid_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.CV_FOLD}', str(fold), "annotations_test.json")
             
             # Prepare the dataset
-            register_coco_instances(f"{dataset_name}-train-cv{cfg.NUM_FOLD}-{fold}", {}, train_json, data_root)
-            register_coco_instances(f"{dataset_name}-valid-cv{cfg.NUM_FOLD}-{fold}", {}, valid_json, data_root)
+            register_coco_instances(f"{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}", {}, train_json, data_root)
+            register_coco_instances(f"{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}", {}, valid_json, data_root)
     return cfg
 
 

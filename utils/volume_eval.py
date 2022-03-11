@@ -10,9 +10,7 @@ AREA_THRESHOLD = 20
 
 
 class volumetric_data_eval2():
-    def __init__(self, save_path, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD, match_threshold=0.5, max_nodule_num=1):
-        self.connectivity = connectivity
-        self.area_threshold = area_threshold
+    def __init__(self, save_path, match_threshold=0.5, max_nodule_num=1):
         self.match_threshold = match_threshold
         self.max_nodule_num = max_nodule_num
         self.PixelTP, self.PixelFP, self.PixelFN = [], [] ,[]
@@ -23,11 +21,11 @@ class volumetric_data_eval2():
     def calculate(self, target_study, pred_study):
         assert np.shape(target_study.category_volume) == np.shape(pred_study.category_volume)
         self._3D_evaluation(target_study, pred_study)
-        self._2D_evaluation(target_study.category_volume, pred_study.category_volume)
+        self._2D_evaluation(target_study, pred_study)
     
     def _3D_evaluation(self, target_study, pred_study):
-        target_nodules = target_study.nodule_instances()
-        pred_nodules = pred_study.nodule_instances()
+        target_nodules = target_study.nodule_instances
+        pred_nodules = pred_study.nodule_instances
 
         tp, fp, fn = 0, 0, 0
         for target_nodule_id in target_nodules:
@@ -59,10 +57,10 @@ class volumetric_data_eval2():
             else:
                 fn += 1
 
-        target_study.add_score('Volume IoU', NoduleIoU)
-        target_study.add_score('Volume DSC', NoduleIoU)
-        target_study.add_score('Nodule IoU', NoduleIoU)
-        target_study.add_score('Nodule DSC', NoduleIoU)
+        # target_study.add_score('Volume IoU', NoduleIoU)
+        # target_study.add_score('Volume DSC', NoduleIoU)
+        # target_study.add_score('Nodule IoU', NoduleIoU)
+        # target_study.add_score('Nodule DSC', NoduleDSC)
         target_study.add_score('Nodule TP', tp)
         target_study.add_score('Nodule FP', fp)
         target_study.add_score('Nodule FN', fn)
@@ -72,31 +70,38 @@ class volumetric_data_eval2():
         self.VoxelFN.append(fn)
         print(tp, fp, fn)
 
-    def _2D_evaluation(self, target_vol, pred_vol):
-        binary_target_vol = np.where(target_vol>0, 1, 0)
-        binary_pred_vol = np.where(pred_vol>0, 1, 0)
+    def _2D_evaluation(self, target_study, pred_study):
+        binary_target_vol = target_study.get_binary_volume()
+        binary_pred_vol = pred_study.get_binary_volume()
         tp = np.sum(np.logical_and(binary_target_vol, binary_pred_vol))
         fp = np.sum(np.logical_and(np.logical_xor(binary_target_vol, binary_pred_vol), binary_pred_vol))
         fn = np.sum(np.logical_and(np.logical_xor(binary_target_vol, binary_pred_vol), binary_target_vol))
+
+        iou = self.BinaryIoU(binary_target_vol, binary_pred_vol)
+        dsc = self.BinaryDSC(binary_target_vol, binary_pred_vol)
+
+        pred_study.add_score('Voxel IoU', iou)
+        pred_study.add_score('Voxel DSC', dsc)
+
         self.PixelTP.append(tp)
         self.PixelFP.append(fp)
         self.PixelFN.append(fn)
 
-    @classmethod
-    def get_submission(cls, target_vol, pred_vol, vol_infos, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD):
-        target_vol, target_metadata = cls.volume_preprocess(target_vol, connectivity, area_threshold)
-        pred_vol, pred_metadata = cls.volume_preprocess(pred_vol, connectivity, area_threshold)
-        pred_category = np.unique(pred_vol)[1:]
-        total_nodule_infos = []
-        for label in pred_category:
-            pred_nodule = np.where(pred_vol==label, 1, 0)
-            target_nodule = np.logical_or(target_vol>0, pred_nodule)*target_vol
-            nodule_dsc = cls.BinaryDSC(target_nodule, pred_nodule)
-            pred_center_irc = utils.get_nodule_center(pred_nodule)
-            pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
-            nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_dsc}
-            total_nodule_infos.append(nodule_infos)
-        return total_nodule_infos
+    # @classmethod
+    # def get_submission(cls, target_vol, pred_vol, vol_infos, connectivity=CONNECTIVITY, area_threshold=AREA_THRESHOLD):
+    #     target_vol, target_metadata = cls.volume_preprocess(target_vol, connectivity, area_threshold)
+    #     pred_vol, pred_metadata = cls.volume_preprocess(pred_vol, connectivity, area_threshold)
+    #     pred_category = np.unique(pred_vol)[1:]
+    #     total_nodule_infos = []
+    #     for label in pred_category:
+    #         pred_nodule = np.where(pred_vol==label, 1, 0)
+    #         target_nodule = np.logical_or(target_vol>0, pred_nodule)*target_vol
+    #         nodule_dsc = cls.BinaryDSC(target_nodule, pred_nodule)
+    #         pred_center_irc = utils.get_nodule_center(pred_nodule)
+    #         pred_center_xyz = utils.irc2xyz(pred_center_irc, vol_infos['origin'], vol_infos['spacing'], vol_infos['direction'])
+    #         nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_dsc}
+    #         total_nodule_infos.append(nodule_infos)
+    #     return total_nodule_infos
 
     @staticmethod
     def BinaryIoU(target, pred):
@@ -132,18 +137,13 @@ class volumetric_data_eval2():
         self.Slice_F1 = 2*np.sum(self.PixelTP) / (2*np.sum(self.PixelTP) + np.sum(self.PixelFP) + np.sum(self.PixelFN))
 
         if show_evaluation:
-            self.write_and_print(f'Area Threshold: {self.area_threshold}')
-            self.write_and_print(f'VoxelTP / Target: {np.sum(self.VoxelTP)} / {np.sum(self.P)}')
-            self.write_and_print(f'VoxelFN / Target: {np.sum(self.VoxelFN)} / {np.sum(self.P)}')
-            self.write_and_print(f'VoxelTP / Prediction: {np.sum(self.VoxelTP)} / {np.sum(self.VoxelTP)+np.sum(self.VoxelFP)}')
-            self.write_and_print(f'VoxelFP / Prediction: {np.sum(self.VoxelFP)} / {np.sum(self.VoxelTP)+np.sum(self.VoxelFP)}')
+            self.write_and_print(f'VoxelTP/Target: {np.sum(self.VoxelTP)}/{np.sum(self.P)}')
+            self.write_and_print(f'VoxelTP/Prediction: {np.sum(self.VoxelTP)}/{np.sum(self.VoxelTP)+np.sum(self.VoxelFP)}')
             self.write_and_print(f'Voxel Precision: {self.Volume_Precisiion:.4f}')
             self.write_and_print(f'Voxel Recall: {self.Volume_Recall:.4f}')
             self.write_and_print('')
-            self.write_and_print(f'PixelTP / Target: {np.sum(self.PixelTP)} / {np.sum(self.PixelTP)+np.sum(self.PixelFN)}')
-            self.write_and_print(f'PixelFN / Target: {np.sum(self.PixelFN)} / {np.sum(self.PixelTP)+np.sum(self.PixelFN)}')
-            self.write_and_print(f'PixelTP / Prediction: {np.sum(self.PixelTP)} / {np.sum(self.PixelTP)+np.sum(self.PixelFP)}')
-            self.write_and_print(f'PixelFP / Prediction: {np.sum(self.PixelFP)} / {np.sum(self.PixelTP)+np.sum(self.PixelFP)}')
+            self.write_and_print(f'PixelTP/Target: {np.sum(self.PixelTP)}/{np.sum(self.PixelTP)+np.sum(self.PixelFN)}')
+            self.write_and_print(f'PixelTP/Prediction: {np.sum(self.PixelTP)}/{np.sum(self.PixelTP)+np.sum(self.PixelFP)}')
             self.write_and_print(f'Pixel Precision: {self.Slice_Precision:.4f}')
             self.write_and_print(f'Pixel Recall: {self.Slice_Recall:.4f}')
             self.write_and_print(f'Pixel F1: {self.Slice_F1:.4f}')

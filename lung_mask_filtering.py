@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import cv2
 
 from medpy.filter.smoothing import anisotropic_diffusion
 from scipy.ndimage import median_filter
@@ -6,11 +8,46 @@ from skimage import measure, morphology
 from sklearn.cluster import KMeans
 from utils.utils import cv2_imshow
 
+from modules.data import dataset_utils
+
+
 # TODO: metaclass: register post-processing function
 class FalsePositiveReducer():
-    def __init__(self):
-        pass
+    def __init__(self, _1SR, RUNLS, LMF, slice_threshold=1, lung_size_threshold=0.4):
+        self._1SR = _1SR
+        self.RUNLS = RUNLS
+        self.LMF = LMF
+        self.slice_threshold = slice_threshold
+        self.lung_size_threshold = lung_size_threshold
+    
+    def __call__(self, pred_vol_individual, raw_vol, lung_mask_path, pid):
+        if self._1SR:
+            pred_vol_individual = _1_slice_removal(pred_vol_individual, self.slice_threshold)
 
+        if self.LMF or self.RUNLS:
+            lung_mask_case_path = os.path.join(lung_mask_path, pid)
+            if not os.path.isdir(lung_mask_case_path):
+                os.makedirs(lung_mask_case_path)
+                lung_mask_vol = get_lung_mask(raw_vol[...,0])
+                for lung_mask_idx, lung_mask in enumerate(lung_mask_vol):
+                    cv2.imwrite(os.path.join(lung_mask_case_path, f'{pid}-{lung_mask_idx:03d}.png'), 255*lung_mask)
+            else:
+                lung_mask_files = dataset_utils.get_files(lung_mask_case_path, 'png')
+                lung_mask_vol = np.zeros_like(pred_vol_individual)
+                for lung_mask_idx, lung_mask in enumerate(lung_mask_files): 
+                    lung_mask_vol[lung_mask_idx] = cv2.imread(lung_mask)[...,0]
+                lung_mask_vol = lung_mask_vol / 255
+                lung_mask_vol = np.int32(lung_mask_vol)
+
+            if self.RUNLS:
+                pred_vol_individual = remove_unusual_nodule_by_lung_size(pred_vol_individual, lung_mask_vol, threshold=self.lung_size_threshold)
+                
+            if self.LMF:
+                pred_vol_individual *= lung_mask_vol
+            
+            return pred_vol_individual
+
+                
 def _1_slice_removal(pred_vol, slice_threshold=1):
     # pred_vol = cc3d.connected_components(pred_vol, connectivity=26)
     pred_category = np.unique(pred_vol)[1:]

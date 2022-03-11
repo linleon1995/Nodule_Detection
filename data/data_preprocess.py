@@ -100,12 +100,14 @@ DATASET_NAME = ['Benign', 'Malignant'] # Benign, Malignant, LUNA16, LUNA16-Round
 
 
 def get_cv_split(num_fold, num_sample, shuffle=False):
+    assert num_fold > 0 and num_sample > 0, 'The fold number and sample number should both bigger than 0'
+    assert num_sample > num_fold, 'The fold number should not bigger than sample number'
     num_sample_in_fold = num_sample // num_fold
     remain = num_sample - num_fold * num_sample_in_fold
-    base_num = [num_sample_in_fold+remain  if i >= remain-1 else num_sample_in_fold for i in range(num_fold)]
+    base_num = [num_sample_in_fold+1  if i <= remain-1 else num_sample_in_fold for i in range(num_fold)]
     sample_indices = list(range(num_sample))
     if shuffle:
-        sample_indices = np.shuffle(sample_indices)
+        np.random.shuffle(sample_indices)
 
     indices = []
     acc_num = 0
@@ -122,6 +124,7 @@ def get_cv_split(num_fold, num_sample, shuffle=False):
             train_indices.extend(indices[train_slice])
         cv_split[fold] = {'train': train_indices, 'test': indices[test_slice]}
     return cv_split
+
 
 # def get_data_cv_split():
 #     cv_split = {}
@@ -193,6 +196,7 @@ def data_preprocess(dataset_names):
             area_threshold = dataset_parameter['area_threshold']
             category = dataset_parameter['category']
             num_fold = dataset_parameter['num_fold']
+            shuffle = False
             kc_image_path = image_path.replace('image', 'kc_image')
 
             for path in [merge_path, image_path, kc_image_path]:
@@ -214,10 +218,10 @@ def data_preprocess(dataset_names):
             
             # Build up coco-structure
             num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
-            cv_split_indices = get_cv_split(num_fold, num_case)
+            cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
                 
             for fold in cv_split_indices:
-                coco_split_path = os.path.join(coco_path, str(fold))
+                coco_split_path = os.path.join(coco_path, f'cv-{num_fold}', str(fold))
                 if not os.path.isdir(coco_split_path):
                     os.makedirs(coco_split_path)
 

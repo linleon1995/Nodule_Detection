@@ -22,19 +22,16 @@ from modules.data import dataset_utils
 
 # TODO: bad assigning way
 LUNA16_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-ASUS_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule'
 
 
-def get_data_by_pid_asus(pid, nodule_type):
-    raw_and_mask = dataset_utils.get_files(os.path.join(ASUS_RAW_DATA_PATH, nodule_type, 'merge', pid), 
-                                           recursive=False, get_dirs=True)
+def get_data_by_pid_asus(data_path, pid):
+    raw_and_mask = dataset_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
     for _dir in raw_and_mask:
         if 'raw' in _dir:
             raw_dir = _dir
         elif 'mask' in _dir:
             mask_dir = _dir
 
-    # raw_dir = os.path.join(ASUS_RAW_DATA_PATH, nodule_type, pid)
     vol_raw_path = dataset_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
     vol, origin, spacing, direction = dataset_utils.load_itk(vol_raw_path)
     raw_vol = vol.copy()
@@ -42,18 +39,25 @@ def get_data_by_pid_asus(pid, nodule_type):
     vol = np.clip(vol, -1000, 1000)
     vol = raw_preprocess(vol, output_dtype=np.uint8)
 
-    # mask_dir = os.path.join(ASUS_RAW_DATA_PATH, nodule_type, pid, f'{pid} mask mhd')
     vol_mask_path = dataset_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
     mask_vol, _, _, _ = dataset_utils.load_itk(vol_mask_path)
     mask_vol = mask_preprocess(mask_vol)        
     return raw_vol, vol, mask_vol, origin, spacing, direction    
 
 
-def asus_nodule_volume_generator(nodule_type, data_path, subset_indices=None, case_indices=None, only_nodule_slices=False):
+def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
     # nodule_type = os.path.split(data_path)[1]
     case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
-    if case_indices:
-        case_list = np.take(case_list, case_indices)
+    if case_pids is not None:
+        sub_case_list = []
+        for case_dir in case_list:
+            if os.path.split(case_dir)[1] in case_pids:
+                sub_case_list.append(case_dir)
+        case_list = sub_case_list
+    else:
+        if case_indices is not None:
+            case_list = np.take(case_list, case_indices)
+
     print(f'Generating {len(case_list)} cases...')
     for case_dir in case_list:
         raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
@@ -61,7 +65,7 @@ def asus_nodule_volume_generator(nodule_type, data_path, subset_indices=None, ca
            
         pid = os.path.split(case_dir)[1]
         scan_idx = int(pid[2:])
-        raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(pid, nodule_type)
+        raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path, pid)
 
         # TODO: what is scan_idx
         infos = {'pid': pid, 'scan_idx': scan_idx, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}

@@ -110,6 +110,7 @@ class SubmissionDataFrame(DataFrameTool):
         super().__init__(column_name)
 
 
+
 # TODO: Inherit from DataFrameTool
 class Nodule_data_recording():
     def __init__(self):

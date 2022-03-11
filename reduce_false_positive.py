@@ -9,6 +9,7 @@ from modules.utils import configuration
 import matplotlib.pyplot as plt
 
 # TODO: torch, numpy problem
+# TODO: class design
 class NoduleClassifier():
     def __init__(self, crop_range, checkpint_path, model_depth=50, num_class=2, prob_threshold=0.5):
         self.crop_range = crop_range
@@ -16,21 +17,19 @@ class NoduleClassifier():
         self.classifier = self.build_classifier(checkpint_path, model_depth, num_class)
         self.prob_threshold = prob_threshold
 
-    def nodule_classify(self, raw_volume, pred_volume, target_volume):
-        pred_volume, pred_volume_individual, pred_nodules = self.reduce_false_positive(raw_volume, pred_volume)
+    def nodule_classify(self, raw_volume, pred_volume_category, target_volume):
+        pred_volume_category, pred_nodules = self.reduce_false_positive(raw_volume, pred_volume_category)
         for nodule_id in pred_nodules:
             crop_target_volume = LUNA16_CropRange_Builder.crop_volume(target_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
             target_class = np.where(np.sum(crop_target_volume)>0, 1, 0)
             pred_class = pred_nodules[nodule_id]['Nodule_pred_class']
             result = self.eval(target_class, pred_class)
             pred_nodules[nodule_id]['eval'] = result
-        # print(np.unique(pred_volume_individual))
-        return pred_volume, pred_volume_individual, pred_nodules
+        # print(np.unique(pred_volume_category))
+        return pred_volume_category, pred_nodules
 
-    def reduce_false_positive(self, raw_volume, pred_volume):
-        pred_volume_individual, _ = volumetric_data_eval.volume_preprocess(pred_volume, connectivity=26, area_threshold=20)
-        # pred_volume_individual = pred_volume.copy()
-        pred_nodules = self.get_nodule_center(pred_volume_individual)
+    def reduce_false_positive(self, raw_volume, pred_volume_category):
+        pred_nodules = self.get_nodule_center(pred_volume_category)
         for nodule_id in list(pred_nodules):
             crop_raw_volume = LUNA16_CropRange_Builder.crop_volume(raw_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
             crop_raw_volume = np.swapaxes(np.expand_dims(crop_raw_volume, (0, 1)), 1, 5)[...,0]
@@ -39,14 +38,12 @@ class NoduleClassifier():
             pred_class, pred_prob = self.inference(crop_raw_volume)
             # pred_class = pred_class.item()
             if pred_class == 0:
-                pred_volume_individual[pred_volume_individual==pred_nodules[nodule_id]] = 0
+                pred_volume_category[pred_volume_category==nodule_id] = 0
                 pred_nodules.pop(nodule_id)
             else:
                 pred_nodules[nodule_id]['Nodule_pred_class'] = pred_class
                 pred_nodules[nodule_id]['Nodule_pred_prob'] = pred_prob.cpu().detach().numpy()[0]
-        pred_volume = np.where(pred_volume_individual>0, 1, 0)
-        # print(np.unique(pred_volume_individual))
-        return pred_volume, pred_volume_individual, pred_nodules
+        return pred_volume_category, pred_nodules
 
     def inference(self, input_volume):
         logits = self.classifier(input_volume)
