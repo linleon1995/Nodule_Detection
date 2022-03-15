@@ -21,6 +21,7 @@ class volumetric_data_eval2():
         self.max_nodule_num = max_nodule_num
         self.PixelTP, self.PixelFP, self.PixelFN = [], [] ,[]
         self.VoxelTP, self.VoxelFP, self.VoxelFN = [], [] ,[]
+        self.DoubleDetections = []
         self.num_nodule = 0
         self.num_case = 0
         self.eval_file = open(os.path.join(self.save_path, 'evaluation.txt'), 'w+')
@@ -35,49 +36,76 @@ class volumetric_data_eval2():
     def _3D_evaluation(self, target_study, pred_study):
         target_nodules = target_study.nodule_instances
         pred_nodules = pred_study.nodule_instances
-
+        pred_nodules2 = list(pred_nodules.keys())
         tp, fp, fn = 0, 0, 0
+        doubleCandidatesIgnored = 0
+
         for target_nodule_id in target_nodules:
             target_nodule = target_nodules[target_nodule_id]
-            NoduleIoU, NoduleDSC = [], []
-            match_candidates = []
+            # NoduleIoU, NoduleDSC = [], []
+            nodule_matches, nodule_match_scores = [], []
+            found = False
+            target_nodule.set_score('IoU', 0.0)
+            target_nodule.set_score('DSC', 0.0)
             for pred_nodule_id in pred_nodules:
                 pred_nodule = pred_nodules[pred_nodule_id]
                 iou = self.BinaryIoU(target_nodule.nodule_volume, pred_nodule.nodule_volume)
                 dsc = self.BinaryDSC(target_nodule.nodule_volume, pred_nodule.nodule_volume)
 
-                pred_nodule.add_score('IoU', iou)
-                pred_nodule.add_score('DSC', dsc)
+                def set_best_score(nodule, score_name, score):
+                    score_in_nodule = nodule.get_score(score_name)
+                    if score_in_nodule is not None:
+                        if score > score_in_nodule:
+                            nodule.set_score(score_name, score)
+                    else:
+                        nodule.set_score(score_name, score)
 
-                if iou == 0:
-                    fp += 1
-                else:
-                    match_candidates.append(pred_nodule)
+                set_best_score(pred_nodule, 'IoU', iou)
+                set_best_score(pred_nodule, 'DSC', dsc)
+                set_best_score(target_nodule, 'IoU', iou)
+                set_best_score(target_nodule, 'DSC', dsc)
 
-            # TODO: input matching function
-            merge_nodule = sum([candidate.nodule_volume for candidate in match_candidates])
-            merge_nodule = np.where(merge_nodule>0, 1, 0)
-            NoduleIoU = self.BinaryIoU(target_nodule.nodule_volume, merge_nodule)
-            NoduleDSC = self.BinaryDSC(target_nodule.nodule_volume, merge_nodule)
-            target_nodule.add_score('IoU', NoduleIoU)
-            target_nodule.add_score('DSC', NoduleDSC)
-            if NoduleIoU >= self.match_threshold:
+                if dsc > self.match_threshold:
+                    found = True
+                    nodule_matches.append(pred_nodule_id)
+                    nodule_match_scores.append(dsc)
+                    if pred_nodule_id in pred_nodules2:
+                        pred_nodules2.remove(pred_nodule_id)
+                    else:
+                        print(f'This is strange: CAD mark {pred_nodule_id} detected two nodules! Check for overlapping nodule annotations, SeriesUID: {target_study.study_id}, nodule Annot ID: {target_nodule_id}')
+                # if iou == 0:
+                #     fp += 1
+                # else:
+                #     match_candidates.append(pred_nodule)
+            if len(nodule_matches) > 1: # double detection
+                doubleCandidatesIgnored += (len(nodule_matches) - 1)
+
+            if found:
                 tp += 1
             else:
                 fn += 1
 
-        # target_study.add_score('Volume IoU', NoduleIoU)
-        # target_study.add_score('Volume DSC', NoduleIoU)
-        # target_study.add_score('Nodule IoU', NoduleIoU)
-        # target_study.add_score('Nodule DSC', NoduleDSC)
-        target_study.add_score('Nodule TP', tp)
-        target_study.add_score('Nodule FP', fp)
-        target_study.add_score('Nodule FN', fn)
+            # merge_nodule = sum([candidate.nodule_volume for candidate in match_candidates])
+            # merge_nodule = np.where(merge_nodule>0, 1, 0)
+            # NoduleIoU = self.BinaryIoU(target_nodule.nodule_volume, merge_nodule)
+            # NoduleDSC = self.BinaryDSC(target_nodule.nodule_volume, merge_nodule)
+            # target_nodule.set_score('IoU', max(nodule_match_scores))
+            # target_nodule.set_score('DSC', max(nodule_match_scores))
+            # if NoduleIoU >= self.match_threshold:
+            #     tp += 1
+            # else:
+            #     fn += 1
+
+        fp = len(pred_nodules2)
+        target_study.set_score('Nodule TP', tp)
+        target_study.set_score('Nodule FP', fp)
+        target_study.set_score('Nodule FN', fn)
 
         self.VoxelTP.append(tp)
         self.VoxelFP.append(fp)
         self.VoxelFN.append(fn)
-        print(tp, fp, fn)
+        self.DoubleDetections.append(doubleCandidatesIgnored)
+        print(f'{target_study.study_id}: TP: {tp} FP: {fp} FN: {fn} Double Detected: {doubleCandidatesIgnored}')
 
     def _2D_evaluation(self, target_study, pred_study):
         binary_target_vol = target_study.get_binary_volume()
@@ -89,8 +117,8 @@ class volumetric_data_eval2():
         iou = self.BinaryIoU(binary_target_vol, binary_pred_vol)
         dsc = self.BinaryDSC(binary_target_vol, binary_pred_vol)
 
-        pred_study.add_score('Voxel IoU', iou)
-        pred_study.add_score('Voxel DSC', dsc)
+        pred_study.set_score('Voxel IoU', iou)
+        pred_study.set_score('Voxel DSC', dsc)
 
         self.PixelTP.append(tp)
         self.PixelFP.append(fp)
@@ -159,6 +187,7 @@ class volumetric_data_eval2():
             self.write_and_print(f'VoxelTP/Prediction: {np.sum(self.VoxelTP)}/{np.sum(self.VoxelTP)+np.sum(self.VoxelFP)}')
             self.write_and_print(f'Voxel Precision: {self.Volume_Precisiion:.4f}')
             self.write_and_print(f'Voxel Recall: {self.Volume_Recall:.4f}')
+            self.write_and_print(f'Double Detection: {sum(self.DoubleDetections)}')
             self.write_and_print('')
             self.write_and_print(f'PixelTP/Target: {np.sum(self.PixelTP)}/{np.sum(self.PixelTP)+np.sum(self.PixelFN)}')
             self.write_and_print(f'PixelTP/Prediction: {np.sum(self.PixelTP)}/{np.sum(self.PixelTP)+np.sum(self.PixelFP)}')

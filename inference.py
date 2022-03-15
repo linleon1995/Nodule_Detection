@@ -4,7 +4,9 @@ import numpy as np
 from utils.utils import mask_preprocess
 
 
-def model_inference(vol, batch_size, predictor):
+# TODO: general
+# TODO: pred_vol = np.zeros_like(vol[...,0]) --> X
+def d2_model_inference(vol, batch_size, predictor):
     pred_vol = np.zeros_like(vol[...,0])
     for batch_start_index in range(0, vol.shape[0], batch_size):
         start, end = batch_start_index, min(vol.shape[0], batch_start_index+batch_size)
@@ -21,6 +23,29 @@ def model_inference(vol, batch_size, predictor):
     return pred_vol
 
             
+
+def pytorch_model_inference(vol, batch_size, predictor):
+    pred_vol = np.zeros_like(vol[...,0])
+    for batch_start_index in range(0, vol.shape[0], batch_size):
+        start, end = batch_start_index, min(vol.shape[0], batch_start_index+batch_size)
+        imgs = vol[start:end]
+        outputs = predictor(imgs) 
+        pred_vol[start:end] = outputs
+    return pred_vol
+
+
+
+def inference_func(model_name):
+    if model_name == '2D-Mask-RCNN':
+        return d2_model_inference
+    else:
+        return pytorch_model_inference
+
+
+def model_inference(model_name, vol, batch_size, predictor):
+    inferencer = inference_func(model_name)
+    return inferencer(vol, batch_size, predictor)
+    
 class Detectron2Inferencer():
     def __init__(self, cfg):
         self.model = BatchPredictor(cfg)

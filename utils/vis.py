@@ -176,7 +176,8 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info, enlarge_crop_si
     for nodule_id in total_contours:
         contour_pair = total_contours[nodule_id]
         color = pred_colors[nodule_id%len(pred_colors)].tolist()
-        prob = pred_nodule_info[nodule_id]['Nodule_pred_prob'][1]
+        if pred_nodule_info is not None:
+            prob = pred_nodule_info[nodule_id]['Nodule_pred_prob'][1]
         for slice_idx in contour_pair:
             contours = contour_pair[slice_idx]
             draw_img = draw_vol[slice_idx]
@@ -187,7 +188,8 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info, enlarge_crop_si
                 draw_img = cv2.drawContours(draw_img, contours, contour_idx, color, 1)
             
             # probability text
-            draw_img = cv2.putText(draw_img, f'{prob:.4f}', contour_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            if pred_nodule_info is not None:
+                draw_img = cv2.putText(draw_img, f'{prob:.4f}', contour_center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
             draw_vol[slice_idx] = draw_img
 
     # Find and draw target contours

@@ -29,7 +29,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
 
-    cfg.SOLVER.IMS_PER_BATCH = 2
+    cfg.SOLVER.IMS_PER_BATCH = 4
     cfg.SOLVER.BASE_LR = 0.00005  
     cfg.SOLVER.MAX_ITER = 6000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate

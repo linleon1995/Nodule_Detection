@@ -40,7 +40,6 @@ import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
 import json
-from utils.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
 from utils.volume_eval import volumetric_data_eval, volumetric_data_eval2
 from utils.utils import Nodule_data_recording, DataFrameTool, SubmissionDataFrame, irc2xyz, get_nodule_center
 from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
@@ -48,6 +47,7 @@ from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, Scatt
 from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import NoduleClassifier
 from data.data_postprocess import VolumePostProcessor
+from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
 from inference import model_inference
 from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size, _1_slice_removal, FalsePositiveReducer
 from data.data_structure import LungNoduleStudy
@@ -191,7 +191,7 @@ def eval(cfg, volume_generator):
     lung_mask_path = os.path.join(cfg.DATA_PATH, 'Lung_Mask_show')
 
     predictor = BatchPredictor(cfg)
-    vol_metric = volumetric_data_eval2(dataset_name=cfg.MODEL_NAME, save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
+    vol_metric = volumetric_data_eval2(model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
     # metadata_recorder = DataFrameTool()
     post_processer = VolumePostProcessor(cfg.connectivity, cfg.area_threshold)
     # scatter_visualizer = ScatterVisualizer()
@@ -222,7 +222,8 @@ def eval(cfg, volume_generator):
         
         # Model Inference
         print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
-        pred_vol = model_inference(vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
+        # pred_vol = d2_model_inference(vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
+        pred_vol = model_inference(cfg.MODEL_NAME, vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
 
         # Data post-processing
         pred_vol_category = post_processer(pred_vol)
@@ -235,16 +236,17 @@ def eval(cfg, volume_generator):
         # Nodule classification
         if cfg.nodule_cls:
             pred_vol_category, pred_nodule_info = nodule_classifier.nodule_classify(vol, pred_vol_category, mask_vol)
-
+        else:
+            pred_nodule_info = None
         # Evaluation
         target_study = LungNoduleStudy(pid, target_vol_individual, raw_volume=raw_vol)
         pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
         vol_metric.calculate(target_study, pred_study)
 
-        print('test')
+        # print('test')
         # TODO: single function
         # # Visualize
-        if save_vis_condition:
+        if save_vis_condition(vol_idx):
             origin_save_path = os.path.join(save_path, 'images', pid, 'origin')
             enlarge_save_path = os.path.join(save_path, 'images', pid, 'enlarge')
             _3d_save_path = os.path.join(save_path, 'images', pid, '3d')
@@ -366,7 +368,7 @@ def select_model(cfg):
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_003'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_004'
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_005'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_006'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_006'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_010'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_016'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_017'
@@ -485,7 +487,7 @@ def common_config():
     dir_name.insert(0, f'NC#{FPR_model_code}') if cfg.nodule_cls else dir_name
     dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 100
+    cfg.MAX_SAVE_IMAGE_CASES = 1
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
@@ -552,13 +554,21 @@ def main():
     model_weight = cfg.MODEL.WEIGHTS
     save_path = cfg.SAVE_PATH
     cfg.MODEL_NAME = model_name
+    # TODO: move to config
+    scatter_size = 50
+    assign_fold = 1
+    if assign_fold is not None:
+        fold_indices = list(range(test_cfg.CV_FOLD))
+    else:
+        assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
+        fold_indices = [assign_fold]
 
-    benign_target_scatter_vis = ScatterVisualizer(scatter_size=50)
-    benign_pred_scatter_vis = ScatterVisualizer(scatter_size=50)
-    malignant_target_scatter_vis = ScatterVisualizer(scatter_size=50)
-    malignant_pred_scatter_vis = ScatterVisualizer(scatter_size=50)
+    benign_target_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
+    benign_pred_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
+    malignant_target_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
+    malignant_pred_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
 
-    for fold in range(4,test_cfg.CV_FOLD):
+    for fold in fold_indices:
         for dataset_name in dataset_names:
             coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.CV_FOLD}', str(fold))
             with open(os.path.join(coco_path, f'annotations_{test_cfg.DATA.SPLIT}.json'), newline='') as jsonfile:

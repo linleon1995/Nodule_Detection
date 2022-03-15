@@ -38,9 +38,14 @@ class LungNoduleStudy():
     def get_binary_volume(self):
         return np.where(self.category_volume>0, 1, 0)
     
-    def add_score(self, score_name, score):
+    def set_score(self, score_name, score):
         self.study_evals[score_name] = score
 
+    def get_score(self, score_name):
+        if score_name in self.nodule_score:
+            return self.nodule_score[score_name]
+        else:
+            return None
 
 class Nodule():
     def __init__(self, study_id, id, nodule_volume, hu=None):
@@ -69,5 +74,11 @@ class Nodule():
         }
         return nodule_range, nodule_center
 
-    def add_score(self, score_name, score):
+    def set_score(self, score_name, score):
         self.nodule_score[score_name] = score
+
+    def get_score(self, score_name):
+        if score_name in self.nodule_score:
+            return self.nodule_score[score_name]
+        else:
+            return None

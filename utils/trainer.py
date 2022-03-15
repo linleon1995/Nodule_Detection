@@ -26,7 +26,7 @@ class Trainer(object):
         self.train_epoch = train_epoch
         self.batch_size = batch_size
         # TODO: remove all config
-        # TODO: better way to warp or combine parameters
+        # TODO: better way to warp or combine
         # self.config = config
         self.criterion = criterion
         self.optimizer = optimizer
