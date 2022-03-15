@@ -1,5 +1,6 @@
 from detectron2.engine import DefaultPredictor
 import torch
+import torch.nn as nn
 import numpy as np
 from utils.utils import mask_preprocess
 
@@ -24,15 +25,30 @@ def d2_model_inference(vol, batch_size, predictor):
 
             
 
-def pytorch_model_inference(vol, batch_size, predictor):
-    pred_vol = np.zeros_like(vol[...,0])
-    for batch_start_index in range(0, vol.shape[0], batch_size):
-        start, end = batch_start_index, min(vol.shape[0], batch_start_index+batch_size)
-        imgs = vol[start:end]
-        outputs = predictor(imgs) 
-        pred_vol[start:end] = outputs
-    return pred_vol
+# def pytorch_model_inference(vol, batch_size, predictor):
+#     pred_vol = np.zeros_like(vol[...,0])
+#     for batch_start_index in range(0, vol.shape[0], batch_size):
+#         start, end = batch_start_index, min(vol.shape[0], batch_start_index+batch_size)
+#         imgs = vol[start:end]
+#         outputs = predictor(imgs) 
+#         pred_vol[start:end] = outputs
+#     return pred_vol
 
+
+def pytorch_model_inference(vol, predictor, dataloader):
+    # pred_vol = np.zeros_like(vol[...,0])
+    for idx, sample in enumerate(dataloader):
+        sample = sample.to(torch.device('cuda:0'))
+        sample = sample.to(torch.float)
+        pred = predictor(sample[...,0])['out']
+        pred = nn.Softmax(dim=1)(pred)
+        pred = torch.argmax(pred, dim=1)
+        if idx == 0:
+            pred_vol = pred
+        else:
+            pred_vol = torch.cat([pred_vol, pred], 0)
+    pred_vol = pred_vol.cpu().detach().numpy()
+    return pred_vol
 
 
 def inference_func(model_name):
@@ -45,7 +61,7 @@ def inference_func(model_name):
 def model_inference(model_name, vol, batch_size, predictor):
     inferencer = inference_func(model_name)
     return inferencer(vol, batch_size, predictor)
-    
+
 class Detectron2Inferencer():
     def __init__(self, cfg):
         self.model = BatchPredictor(cfg)

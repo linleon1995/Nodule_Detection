@@ -42,8 +42,8 @@ class LungNoduleStudy():
         self.study_evals[score_name] = score
 
     def get_score(self, score_name):
-        if score_name in self.nodule_score:
-            return self.nodule_score[score_name]
+        if score_name in self.study_evals:
+            return self.study_evals[score_name]
         else:
             return None
 

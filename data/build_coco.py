@@ -11,7 +11,7 @@ import json, itertools
 import os
 import cv2
 
-from data_utils import cv2_imshow, split_individual_mask, merge_near_masks
+from data.data_utils import cv2_imshow, split_individual_mask, merge_near_masks
 import site_path
 from modules.data import dataset_utils
 

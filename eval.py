@@ -14,6 +14,7 @@ import random
 import numpy as np
 import matplotlib as mpl
 import argparse
+from torch.utils.data import Dataset, DataLoader
 
 from data import volume_generator
 import config
@@ -40,7 +41,7 @@ import pylidc as pl
 import pandas as pd
 from tqdm import tqdm
 import json
-from utils.volume_eval import volumetric_data_eval, volumetric_data_eval2
+from utils.volume_eval import volumetric_data_eval
 from utils.utils import Nodule_data_recording, DataFrameTool, SubmissionDataFrame, irc2xyz, get_nodule_center
 from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
 # import liwei_eval
@@ -48,9 +49,11 @@ from evaluationScript import noduleCADEvaluationLUNA16
 from reduce_false_positive import NoduleClassifier
 from data.data_postprocess import VolumePostProcessor
 from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
-from inference import model_inference
+from inference import model_inference, d2_model_inference, pytorch_model_inference
 from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size, _1_slice_removal, FalsePositiveReducer
 from data.data_structure import LungNoduleStudy
+from data.dataloader import SimpleNoduleDataset
+from model import build_model
 logging.basicConfig(level=logging.INFO)
 
 import site_path
@@ -190,20 +193,21 @@ def eval(cfg, volume_generator):
     target_studys, pred_studys = [], []
     lung_mask_path = os.path.join(cfg.DATA_PATH, 'Lung_Mask_show')
 
-    predictor = BatchPredictor(cfg)
-    vol_metric = volumetric_data_eval2(model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
+    # predictor = BatchPredictor(cfg)
+    predictor = build_model(model_name=cfg.MODEL_NAME, slice_shift=3, n_class=2, pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS, model_key='model_state_dict')
+
+    vol_metric = volumetric_data_eval(model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
     # metadata_recorder = DataFrameTool()
     post_processer = VolumePostProcessor(cfg.connectivity, cfg.area_threshold)
-    # scatter_visualizer = ScatterVisualizer()
     # nodule_visualizer = Visualizer()
     
     fp_reduce_condition = (cfg.remove_1_slice or cfg.remove_unusual_nodule_by_lung_size or cfg.lung_mask_filtering)
     if fp_reduce_condition:
         fp_reducer = FalsePositiveReducer(_1SR=cfg.remove_1_slice, 
-                                        RUNLS=cfg.remove_unusual_nodule_by_lung_size, 
-                                        LMF=cfg.lung_mask_filtering, 
-                                        slice_threshold=cfg.pred_slice_threshold,
-                                        lung_size_threshold=cfg.lung_size_threshold)
+                                          RUNLS=cfg.remove_unusual_nodule_by_lung_size, 
+                                          LMF=cfg.lung_mask_filtering, 
+                                          slice_threshold=cfg.pred_slice_threshold,
+                                          lung_size_threshold=cfg.lung_size_threshold)
 
     if cfg.nodule_cls:
         crop_range = {'index': cfg.crop_range[0], 'row': cfg.crop_range[1], 'column': cfg.crop_range[2]}
@@ -222,12 +226,18 @@ def eval(cfg, volume_generator):
         
         # Model Inference
         print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
+        
+        dataset = SimpleNoduleDataset(vol, slice_shift=3)
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
         # pred_vol = d2_model_inference(vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
-        pred_vol = model_inference(cfg.MODEL_NAME, vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
+        pred_vol = pytorch_model_inference(vol, predictor, dataloader)
+        # pred_vol = model_inference(cfg.MODEL_NAME, vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
 
         # Data post-processing
+        # TODO: the target volume should reduce small area but 1 pixel remain in 1m0037 
         pred_vol_category = post_processer(pred_vol)
-        target_vol_individual = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
+        # target_vol_individual = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
+        target_vol_individual = post_processer(mask_vol)
 
         # False positive reducing
         if fp_reduce_condition:
@@ -276,19 +286,17 @@ def eval(cfg, volume_generator):
                crop_range['y'][1]-crop_range['y'][0] > 2 and \
                crop_range['x'][1]-crop_range['x'][0] > 2:
                 save_mask_in_3d(target_vol_individual, 
-                                  save_path1=os.path.join(_3d_save_path, f'{pid}-raw-mask.png'),
-                                  save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-mask.png'), 
-                                  crop_range=crop_range)
+                                save_path1=os.path.join(_3d_save_path, f'{pid}-raw-mask.png'),
+                                save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-mask.png'), 
+                                crop_range=crop_range)
                 save_mask_in_3d(pred_vol_category,
-                                  save_path1=os.path.join(_3d_save_path, f'{pid}-raw-pred.png'),
-                                  save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-pred.png'),
-                                  crop_range=crop_range)
-            target_studys.append(target_study)
-            pred_studys.append(pred_study)
-            # scatter_visualizer.record(pred_study)
+                                save_path1=os.path.join(_3d_save_path, f'{pid}-raw-pred.png'),
+                                save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-pred.png'),
+                                crop_range=crop_range)
+        target_studys.append(target_study)
+        pred_studys.append(pred_study)
         #     nodule_visualizer()
 
-    # scatter_visualizer.show_scatter(save_path=os.path.join(save_path, 'images', f'scatter-fold{cfg.FOLD}.png'))
     _ = vol_metric.evaluation(show_evaluation=True)
     return target_studys, pred_studys
 
@@ -376,7 +384,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_019'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_020'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_021'
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_022'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_022'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_024'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_026'
@@ -556,21 +564,27 @@ def main():
     cfg.MODEL_NAME = model_name
     # TODO: move to config
     scatter_size = 50
-    assign_fold = 1
+    assign_fold = 4
     if assign_fold is not None:
-        fold_indices = list(range(test_cfg.CV_FOLD))
-    else:
         assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
         fold_indices = [assign_fold]
+    else:
+        fold_indices = list(range(test_cfg.CV_FOLD))
 
     benign_target_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
     benign_pred_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
     malignant_target_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
     malignant_pred_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
+    benign_rcorder = DataFrameTool(
+        column_name=['study_id', 'type', 'nodule_id', 'avg_hu', 'size', 'index', 'row', 'column', 'DSC', 'IoU', 'Best_Slice_IoU', 'tp', 'fp', 'fn'])
+    malignant_rcorder = DataFrameTool(
+        column_name=['study_id', 'type', 'nodule_id', 'avg_hu', 'size', 'index', 'row', 'column', 'DSC', 'IoU', 'Best_Slice_IoU', 'tp', 'fp', 'fn'])
+
 
     for fold in fold_indices:
         for dataset_name in dataset_names:
-            coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.CV_FOLD}', str(fold))
+            # coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.CV_FOLD}', str(fold))
+            coco_path = os.path.join(rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Annotations\ASUS_Nodule', dataset_name)
             with open(os.path.join(coco_path, f'annotations_{test_cfg.DATA.SPLIT}.json'), newline='') as jsonfile:
                 annotation = json.load(jsonfile)
             case_pids = []
@@ -583,8 +597,15 @@ def main():
             cfg.DATA_PATH = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'image')
             cfg.DATASET_NAME = dataset_name
             cfg.FOLD = fold
-            cfg.MODEL.WEIGHTS = os.path.join(os.path.split(model_weight)[0], str(cfg.FOLD), os.path.split(model_weight)[1])
-            cfg.SAVE_PATH = os.path.join(os.path.split(save_path)[0], str(cfg.FOLD), os.path.split(save_path)[1])
+            
+            # cfg.MODEL.WEIGHTS = os.path.join(os.path.split(model_weight)[0], str(cfg.FOLD), os.path.split(model_weight)[1])
+            # cfg.MODEL.WEIGHTS = os.path.join(os.path.split(model_weight)[0], os.path.split(model_weight)[1])
+            cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Liwei\FTP1m_test\model\FCN_all_best.pt'
+
+            # cfg.SAVE_PATH = os.path.join(os.path.split(save_path)[0], str(cfg.FOLD), os.path.split(save_path)[1])
+            # cfg.SAVE_PATH = os.path.join(os.path.split(save_path)[0], os.path.split(save_path)[1])
+            cfg.SAVE_PATH = os.path.join(os.path.split(cfg.MODEL.WEIGHTS)[0])
+
             volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
                                                             case_pids=case_pids)
             target_studys, pred_studys = eval(cfg, volume_generator=volume_generator)
@@ -593,9 +614,41 @@ def main():
                 if dataset_name == 'ASUS-Benign':
                     benign_target_scatter_vis.record(target_study)
                     benign_pred_scatter_vis.record(pred_study)
+                    
                 elif dataset_name == 'ASUS-Malignant':
                     malignant_target_scatter_vis.record(target_study)
                     malignant_pred_scatter_vis.record(pred_study)
+
+                for target_nodule_id in target_study.nodule_instances:
+                    target_nodule = target_study.nodule_instances[target_nodule_id]
+                    if dataset_name == 'ASUS-Benign':
+                        benign_data = [target_study.study_id, 'target', target_nodule.id, target_nodule.hu, target_nodule.nodule_size, 
+                                       target_nodule.nodule_center['index'], target_nodule.nodule_center['row'], target_nodule.nodule_center['column'], 
+                                       target_nodule.nodule_score['IoU'], target_nodule.nodule_score['DSC'], 0,
+                                       target_study.get_score('NoduleTP'), target_study.get_score('NoduleFP'), target_study.get_score('NoduleFN')]
+                        benign_rcorder.write_row(benign_data)
+                    elif dataset_name == 'ASUS-Malignant':
+                        malignant_data = [target_study.study_id, 'target', target_nodule.id, target_nodule.hu, target_nodule.nodule_size, 
+                                          target_nodule.nodule_center['index'], target_nodule.nodule_center['row'], target_nodule.nodule_center['column'], 
+                                          target_nodule.nodule_score['IoU'], target_nodule.nodule_score['DSC'], 0,
+                                          target_study.get_score('NoduleTP'), target_study.get_score('NoduleFP'), target_study.get_score('NoduleFN')]
+                        malignant_rcorder.write_row(malignant_data)
+
+                for pred_nodule_id in pred_study.nodule_instances:
+                    pred_nodule = pred_study.nodule_instances[pred_nodule_id]
+                    if dataset_name == 'ASUS-Benign':
+                        benign_data = [pred_study.study_id, 'pred', pred_nodule.id, pred_nodule.hu, pred_nodule.nodule_size, 
+                                       pred_nodule.nodule_center['index'], pred_nodule.nodule_center['row'], pred_nodule.nodule_center['column'], 
+                                       pred_nodule.nodule_score['IoU'], pred_nodule.nodule_score['DSC'], 0, 
+                                       pred_study.get_score('NoduleTP'), pred_study.get_score('NoduleFP'), pred_study.get_score('NoduleFN')]
+                        benign_rcorder.write_row(benign_data)
+                    elif dataset_name == 'ASUS-Malignant':
+                        malignant_data = [pred_study.study_id, 'pred', pred_nodule.id, pred_nodule.hu, pred_nodule.nodule_size, 
+                                          pred_nodule.nodule_center['index'], pred_nodule.nodule_center['row'], pred_nodule.nodule_center['column'], 
+                                          pred_nodule.nodule_score['IoU'], pred_nodule.nodule_score['DSC'], 0, 
+                                          pred_study.get_score('NoduleTP'), pred_study.get_score('NoduleFP'), pred_study.get_score('NoduleFN')]
+                        malignant_rcorder.write_row(malignant_data)
+
 
     benign_target_scatter_vis.show_scatter(save_path=os.path.join(cfg.OUTPUT_DIR, 'benign_target_nodule.png'), 
                                            title='Benign target nodule', xlabel='size (pixels)', ylabel='meanHU')
@@ -605,7 +658,10 @@ def main():
                                               title='Malignant target nodule', xlabel='size (pixels)', ylabel='meanHU')
     malignant_pred_scatter_vis.show_scatter(save_path=os.path.join(cfg.OUTPUT_DIR, 'malignant_pred_nodule.png'), 
                                             title='Malignant predict nodule', xlabel='size (pixels)', ylabel='meanHU')
-
+    
+    # TODO: file rename
+    benign_rcorder.save_data_frame(save_path=os.path.join(cfg.OUTPUT_DIR, 'benign.csv'))
+    malignant_rcorder.save_data_frame(save_path=os.path.join(cfg.OUTPUT_DIR, 'malignant.csv'))
     
 if __name__ == '__main__':
     main()
