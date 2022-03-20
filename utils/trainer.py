@@ -28,9 +28,7 @@ class Trainer(object):
         self.n_class = n_class
         self.train_epoch = train_epoch
         self.batch_size = batch_size
-        # TODO: remove all config
         # TODO: better way to warp or combine
-        # self.config = config
         self.criterion = criterion
         self.optimizer = optimizer
         self.train_dataloader = train_dataloader
@@ -51,6 +49,9 @@ class Trainer(object):
         if USE_CUDA:
             self.model.cuda()
         self.max_acc = 0
+        train_samples = len(self.train_dataloader.dataset)
+        display_step = self.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
+        display_step = 20
 
     def fit(self):
         for self.epoch in range(1, self.train_epoch + 1):
@@ -89,10 +90,7 @@ class Trainer(object):
             if self.USE_TENSORBOARD:
                 self.train_writer.add_scalar('Loss/step', loss, i)
 
-            # display_step = train_utils.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
-            # TODO: display_step = 10
-            display_step = 20
-            if i%display_step == 0:
+            if i%self.display_step == 0:
                 self.logger.info('Step {}  Step loss {}'.format(i, loss))
         self.iterations = i
         if self.USE_TENSORBOARD:
@@ -111,6 +109,7 @@ class Trainer(object):
             # TODO
             input_var = input_var.float()
             labels = labels.long()
+
 
             input_var, labels = input_var.to(self.device), labels.to(self.device)
             outputs = self.model(input_var)['out']
@@ -138,16 +137,6 @@ class Trainer(object):
             labels = labels.cpu().detach().numpy()
             prediction = prediction.cpu().detach().numpy()
 
-            # import matplotlib.pyplot as plt
-            # x = np.sum(labels)
-            # if x > 0:
-            #     print(x)
-            #     fig1, ax1 = plt.subplots(1,1)
-            #     ax1.imshow(labels[0])
-            #     fig1.savefig('label.png')
-            #     fig2, ax2 = plt.subplots(1,1)
-            #     ax2.imshow(prediction[0])
-            #     fig2.savefig('prediction.png')
 
             evals = self.eval_tool(labels, prediction)
 
@@ -179,6 +168,12 @@ class Trainer(object):
             checkpoint_name = 'ckpt_best_{:04d}.pth'.format(self.epoch)
             torch.save(checkpoint, os.path.join(self.checkpoint_path, checkpoint_name))
 
+
+    def calculate_display_step(self, num_sample, batch_size, display_times=5):
+        num_steps = max(num_sample//batch_size, 1)
+        display_steps = max(num_steps//(num_steps//display_times), 1)
+        # display_steps = max(num_steps//display_times//display_times*display_times, 1)
+        return display_steps
 
 
 if __name__ == '__main__':
