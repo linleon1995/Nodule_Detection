@@ -26,9 +26,12 @@ import torch
 import site_path
 from modules.utils import configuration
 from utils.utils import cv2_imshow
-from config import common_config, dataset_config
+from config import build_d2_config, d2_register_coco, build_train_config
 from model import build_model
 from utils.trainer import Trainer
+from utils import train_utils
+from data import data_utils
+from data import dataloader
 
 class ValidationLoss(HookBase):
     def __init__(self, cfg):
@@ -53,37 +56,23 @@ class ValidationLoss(HookBase):
                                                  **loss_dict_reduced)
 
 
-def detectron2_model_train(cfg):
-    trainer = DefaultTrainer(cfg) 
-    val_loss = ValidationLoss(cfg)  
-    trainer.register_hooks([val_loss])
-    # swap the order of PeriodicWriter and ValidationLoss
-    trainer._hooks = trainer._hooks[:-2] + trainer._hooks[-2:][::-1]
-    trainer.resume_or_load(resume=False)
-    trainer.train()
+def d2_model_train(train_cfg):
+    cfg = train_cfg['d2']
+    d2_register_coco(cfg, train_cfg.DATA.NAMES.keys())
 
+    assign_fold = 4
+    if assign_fold is not None:
+        assert assign_fold < train_cfg.CV_FOLD, 'Assign fold out of range'
+        fold_indices = [assign_fold]
+    else:
+        fold_indices = list(range(train_cfg.CV_FOLD))
 
-def train(cfg):
-    model = build_model(model_name=cfg.MODEL_NAME, slice_shift=cfg.SLICE_SHIFT, n_class=cfg.N_CLASS, pretrained=cfg.isPretrained)
-    trainer = Trainer(model)
-
-
-def main():
-    # train_cfg = build_train_config()
-
-
-
-    train_cfg = configuration.load_config(f'config_file/train.yml', dict_as_member=True)
-
-    # TODO: combine common, dataset to one function
-    cfg = common_config()
-    cfg.CV_FOLD = train_cfg.CV_FOLD
-    cfg = dataset_config(cfg, train_cfg.DATA.NAMES)
+    
     
     output_dir = cfg.OUTPUT_DIR
-    for fold in range(cfg.CV_FOLD):
-        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES])
-        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES])
+    for fold in fold_indices:
+        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
+        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
 
         cfg.DATASETS.TRAIN = train_dataset
         cfg.DATASETS.VAL = valid_dataset
@@ -93,7 +82,75 @@ def main():
         if not os.path.isdir(cfg.OUTPUT_DIR):
             os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 
-        detectron2_model_train(cfg)
+        trainer = DefaultTrainer(cfg) 
+        val_loss = ValidationLoss(cfg)  
+        trainer.register_hooks([val_loss])
+        # swap the order of PeriodicWriter and ValidationLoss
+        trainer._hooks = trainer._hooks[:-2] + trainer._hooks[-2:][::-1]
+        trainer.resume_or_load(resume=False)
+        trainer.train()
+    
+
+def pytorch_model_train(cfg):
+    # TODO: restore checkpoint path
+    checkpoint_root = os.path.join(cfg.TRAIN.PROJECT_PATH, 'checkpoints')
+    checkpoint_path = train_utils.create_training_path(checkpoint_root)
+    # TODO: dict as member?
+    cfg['TRAIN']['CHECKPOINT_PATH'] = checkpoint_path
+
+    model = build_model(model_name=cfg.MODEL.NAME, slice_shift=cfg.DATA.SLICE_SHIFT, n_class=cfg.DATA.N_CLASS, pretrained=True)
+    # TODO: change this
+    model = model.model
+
+    train_cases = data_utils.get_pids_from_coco(
+        [os.path.join(cfg.DATA.NAMES[dataset_name]['COCO_PATH'], f'annotations_train.json') for dataset_name in cfg.DATA.NAMES])
+    valid_cases = data_utils.get_pids_from_coco(
+        [os.path.join(cfg.DATA.NAMES[dataset_name]['COCO_PATH'], f'annotations_test.json') for dataset_name in cfg.DATA.NAMES])
+
+    # TODO:
+    input_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\input',
+                   rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\shift\3\input']
+    target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\target',
+                    rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\shift\3\target']
+
+    train_dataloader, valid_dataloader = dataloader.build_dataloader(input_roots, target_roots, train_cases, valid_cases, cfg.DATA.BATCH_SIZE)
+    loss = train_utils.create_criterion(cfg.TRAIN.LOSS, n_class=cfg.DATA.N_CLASS)
+    optimizer = train_utils.create_optimizer(lr=cfg.TRAIN.LR, optimizer_config=cfg.TRAIN.OPTIMIZER, model=model)
+
+    # Logger
+    logger = train_utils.get_logger('train')
+    logger.info('Start Training!!')
+    logger.info(f'Training epoch: {cfg.TRAIN.EPOCH} Batch size: {cfg.DATA.BATCH_SIZE} Training Samples: {len(train_dataloader.dataset)}')
+    train_utils.config_logging(os.path.join(cfg.TRAIN.CHECKPOINT_PATH, 'logging.txt'), cfg, access_mode='w+')
+    activation = train_utils.create_activation('softmax')
+
+    trainer = Trainer(model,
+                      criterion=loss,
+                      optimizer=optimizer,
+                      train_dataloader=train_dataloader,
+                      valid_dataloader=valid_dataloader,
+                      logger=logger,
+                      device=configuration.get_device(),
+                      n_class=cfg.DATA.N_CLASS,
+                      checkpoint_path=cfg.TRAIN.CHECKPOINT_PATH,
+                      train_epoch=cfg.TRAIN.EPOCH,
+                      batch_size=cfg.DATA.BATCH_SIZE,
+                      activation_func=activation,
+                    #   history=None)
+                      history=rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei\best.pt')
+    trainer.fit()
+
+
+def main():
+    config_path = f'config_file/train.yml'
+    train_cfg = build_train_config(config_path)
+
+    if train_cfg.MODEL.NAME in ['2D-Mask-RCNN']:
+        d2_model_train(train_cfg)
+    else:
+        pytorch_model_train(train_cfg)
+
+
 
 
 if __name__ == '__main__':

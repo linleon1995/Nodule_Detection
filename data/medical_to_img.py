@@ -11,34 +11,9 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from tqdm import tqdm
 import site_path
-from modules.data import dataset_utils
 
 
-# def get_data_split(dataset_name, subset, scan_idx):
-#     if dataset_name in ['LUNA16', 'LUNA16-Round']:
-#         if subset in ['subset8', 'subset9']:
-#             split = 'test'
-#         elif subset == 'subset7':
-#             split = 'valid'
-#         else:
-#             split = 'train'
-#     elif dataset_name == 'ASUS-Benign':
-#         if scan_idx in list(range(17)):
-#             split = 'train'
-#         elif scan_idx in list(range(17, 19)):
-#             split = 'valid'
-#         elif scan_idx in list(range(19, 25)):
-#             split = 'test'
-#     elif dataset_name == 'ASUS-Malignant':
-#         if scan_idx in list(range(34)):
-#             split = 'train'
-#         elif scan_idx in list(range(34, 36)):
-#             split = 'valid'
-#         elif scan_idx in list(range(36, 54)):
-#             split = 'test'
-#     return split
-
-
+        
 def volumetric_data_preprocess_KC(data_split, save_path, volume_generator):
     make_dir = lambda path: os.makedirs(path) if not os.path.isdir(path) else None
 
@@ -103,54 +78,3 @@ def volumetric_data_preprocess(save_path, volume_generator):
             cv2.imwrite(os.path.join(save_sub_dir, 'Mask', pid, f'{pid}_{img_idx:04d}.png'), mask)
     print('Complete converting process of mhd to image!')
             
-
-# def luna16_volume_preprocess():
-#     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw'
-#     # volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.luna16_volume_generator.Build_DLP_luna16_volume_generator)
-#     reoder_image_data_KC_request(dataset_name='LUNA16', 
-#                                data_path=src, 
-#                                save_path=dst.replace('raw', 'LUNA16_preprocess2'), 
-#                                vol_generator_func=volume_generator.luna16_volume_generator.Build_DLP_luna16_volume_generator)
-
-
-# def luna16_volume_preprocess_round():
-#     src = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess-round\raw'
-#     # volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.luna16_volume_generator.Build_Round_luna16_volume_generator)
-#     reoder_image_data_KC_request(dataset_name='LUNA16', 
-#                                data_path=src, 
-#                                save_path=dst.replace('raw', 'LUNA16_preprocess'), 
-#                                vol_generator_func=volume_generator.luna16_volume_generator.Build_Round_luna16_volume_generator)
-
-
-# def asus_benign_volume_preprocess():
-#     src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
-#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
-#     volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.asus_nodule_volume_generator)
-#     # reoder_image_data_KC_request(dataset_name='ASUS-Benign', 
-#     #                               data_path=src, 
-#     #                               save_path=dst.replace('raw', 'ASUS_benign_preprocess2'), 
-#     #                               vol_generator_func=volume_generator.asus_nodule_volume_generator)
-
-
-# def asus_malignant_volume_preprocess():
-#     src = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
-#     dst = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
-#     volumetric_data_preprocess(data_path=src, save_path=dst, vol_generator_func=volume_generator.asus_nodule_volume_generator)
-#     # reoder_image_data_KC_request(dataset_name='ASUS-Malignant', 
-#     #                               data_path=src, 
-#     #                               save_path=dst.replace('raw', 'ASUS_malignant_preprocess2'), 
-#     #                               vol_generator_func=volume_generator.asus_nodule_volume_generator)
-
-
-# def main():
-#     # luna16_volume_preprocess()
-#     # luna16_volume_preprocess_round()
-#     asus_benign_volume_preprocess()
-#     asus_malignant_volume_preprocess()
-
-
-# if __name__ == '__main__':
-#     main()
-#     pass

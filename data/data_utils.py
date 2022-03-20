@@ -2,8 +2,47 @@ import numpy as np
 import os
 import logging
 import cv2
+import json
 import cc3d
 
+
+
+def get_pids_from_coco(coco_paths):
+    if not isinstance(coco_paths, list):
+        coco_paths = [coco_paths]
+    total_case_pids = []
+    for coco_path in coco_paths:
+        with open(coco_path, newline='') as jsonfile:
+            annotation = json.load(jsonfile)
+        
+        case_pids = []
+        for image in annotation['images']:
+            case_pid = image['id'].split('_')[0]
+            if case_pid not in case_pids:
+                case_pids.append(case_pid)
+
+        total_case_pids.extend(case_pids)
+    return total_case_pids
+
+
+def get_shift_index(cur_index, index_shift, boundary=None):
+    start, end = cur_index-index_shift, cur_index+index_shift
+
+    if boundary is not None:
+        boundary_length = boundary[1] - boundary[0]
+        sequence_length = 2*index_shift+1
+        assert sequence_length < boundary_length
+        assert boundary[1] > boundary[0]
+        assert (cur_index>=0 and index_shift>=0 and boundary[0]>=0 and boundary[1]>=0)
+        assert cur_index >= boundary[0]  or cur_index <= boundary[1]
+        if start < boundary[0]:
+            start, end = boundary[0], boundary[0]+sequence_length-1
+        elif end > boundary[1]:
+            start, end = boundary[1]-sequence_length+1, boundary[1]
+
+    indices = np.arange(start, end+1)
+    # print(cur_index, index_shift, boundary, indices)
+    return indices
 
 
 def get_files(path, keys=[], return_fullpath=True, sort=True, sorting_key=None, recursive=True, get_dirs=False, ignore_suffix=False):
