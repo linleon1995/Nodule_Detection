@@ -64,7 +64,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class ScatterVisualizer():
-    def __init__(self, scatter_size=100, cmap=plt.cm.jet, title=''):
+    def __init__(self, scatter_size=50, cmap=plt.cm.jet, title=''):
         self.fig, self.ax = plt.subplots(1, 1)
         self.scatter_size = scatter_size
         self.cmap = cmap
@@ -300,7 +300,7 @@ def plot_volume_in_mesh(volume_geroup, threshold=-300, save_path=None):
         plt.savefig(save_path)
     else:
         plt.show()
-
+    plt.close(fig)
 
 def plot_3d(image, threshold=-300): 
     p = image.transpose(2,1,0)

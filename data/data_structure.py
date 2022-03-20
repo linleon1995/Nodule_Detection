@@ -27,7 +27,7 @@ class LungNoduleStudy():
     def build_nodule_instance(self):
         nodule_mapping = {}
         for id in self.nodule_ids:
-            nodule_volume = np.where(self.category_volume==id, 1, 0)
+            nodule_volume = np.uint8(np.where(self.category_volume==id, 1, 0))
             if self.raw_volume is not None:
                 hu = np.mean(nodule_volume*self.raw_volume[...,0])
             else:
@@ -49,19 +49,17 @@ class LungNoduleStudy():
 
 class Nodule():
     def __init__(self, study_id, id, nodule_volume, hu=None):
-        # TODO: Can self.nodule_volume cause memory problem if there are so many?
+        # TODO: Potnetially memory problem caused by large number nodule. Consider nodule_volume recording.
         self.study_id = study_id
         self.id = id
-        self.nodule_volume = nodule_volume
         self.hu = hu
         self.nodule_score = {}
+        self.nodule_volume = nodule_volume
+        self.nodule_size = np.sum(nodule_volume)
+        self.nodule_range, self.nodule_center = self.get_nodule_position(nodule_volume)
 
-        self.nodule_size = np.sum(self.nodule_volume)
-        self.nodule_exist_pixels = np.where(self.nodule_volume)
-        self.nodule_range, self.nodule_center = self.get_nodule_position()
-
-    def get_nodule_position(self):
-        zs, ys, xs = self.nodule_exist_pixels
+    def get_nodule_position(self, nodule_volume):
+        zs, ys, xs = np.where(nodule_volume)
         nodule_range = {
             'index': {'min': np.min(zs), 'max': np.max(zs)},
             'row': {'min': np.min(ys), 'max': np.max(ys)},

@@ -4,6 +4,8 @@ import numpy as np
 from tensorboardX import SummaryWriter
 import sys
 
+from modules.utils import metrics
+
 
 class Trainer(object):
     def __init__(self,
@@ -15,6 +17,7 @@ class Trainer(object):
                  logger,
                  device,
                  n_class,
+                 checkpoint_path,
                  train_epoch=10,
                  batch_size=1,
                  activation_func=None,
@@ -41,7 +44,7 @@ class Trainer(object):
             self.load_model_from_checkpoint(self.history)
         self.activation_func = activation_func
         self.USE_TENSORBOARD = USE_TENSORBOARD
-        self.checkpoint_path = self.config.CHECKPOINT_PATH
+        self.checkpoint_path = checkpoint_path
         if self.USE_TENSORBOARD:
             self.train_writer = SummaryWriter(log_dir=os.path.join(self.checkpoint_path, 'train'))
             self.valid_writer = SummaryWriter(log_dir=os.path.join(self.checkpoint_path, 'valid'))
@@ -50,7 +53,7 @@ class Trainer(object):
         self.max_acc = 0
 
     def fit(self):
-        for self.epoch in range(1, self.config.TRAIN.EPOCH + 1):
+        for self.epoch in range(1, self.train_epoch + 1):
             self.train()
             with torch.no_grad():
                 self.validate()
@@ -68,10 +71,13 @@ class Trainer(object):
         total_train_loss = 0.0
         for i, data in enumerate(self.train_dataloader, self.iterations + 1):
             input_var, target_var = data['input'], data['target']
+            # TODO
+            input_var = input_var.float()
             target_var = target_var.long()
             input_var, target_var = input_var.to(self.device), target_var.to(self.device)
 
-            batch_output = self.model(input_var)
+            # TODO: what is aux in model?
+            batch_output = self.model(input_var)['out']
             
             self.optimizer.zero_grad()
             loss = self.criterion(batch_output, target_var)
@@ -83,7 +89,7 @@ class Trainer(object):
             if self.USE_TENSORBOARD:
                 self.train_writer.add_scalar('Loss/step', loss, i)
 
-            display_step = train_utils.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
+            # display_step = train_utils.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
             # TODO: display_step = 10
             display_step = 20
             if i%display_step == 0:
@@ -102,10 +108,12 @@ class Trainer(object):
             test_n_iter += 1
 
             input_var, labels = data['input'], data['target']
+            # TODO
+            input_var = input_var.float()
             labels = labels.long()
 
             input_var, labels = input_var.to(self.device), labels.to(self.device)
-            outputs = self.model(input_var)
+            outputs = self.model(input_var)['out']
 
             loss = self.criterion(outputs, labels)
 
@@ -116,17 +124,31 @@ class Trainer(object):
             # prob = torch.nn.functional.softmax(outputs, dim=1)
             # prob = torch.sigmoid(outputs)
             if self.activation_func:
-                if self.config.MODEL.ACTIVATION == 'softmax':
+                activation_name = 'softmax'
+                if activation_name == 'softmax':
                     prob = self.activation_func(outputs, dim=1)
                 else:
                     prob = self.activation_func(outputs)
             else:
                 prob = outputs
             prediction = torch.argmax(prob, dim=1)
-            labels = labels[:,0]
+            # TODO:
+            labels = labels[:,1]
 
             labels = labels.cpu().detach().numpy()
             prediction = prediction.cpu().detach().numpy()
+
+            # import matplotlib.pyplot as plt
+            # x = np.sum(labels)
+            # if x > 0:
+            #     print(x)
+            #     fig1, ax1 = plt.subplots(1,1)
+            #     ax1.imshow(labels[0])
+            #     fig1.savefig('label.png')
+            #     fig2, ax2 = plt.subplots(1,1)
+            #     ax2.imshow(prediction[0])
+            #     fig2.savefig('prediction.png')
+
             evals = self.eval_tool(labels, prediction)
 
         self.avg_test_acc = metrics.accuracy(
@@ -134,9 +156,9 @@ class Trainer(object):
         self.valid_writer.add_scalar('Accuracy/epoch', self.avg_test_acc, self.epoch)
         self.valid_writer.add_scalar('Loss/epoch', total_test_loss/valid_samples, self.epoch)
 
-    def load_model_from_checkpoint(self, ckpt):
+    def load_model_from_checkpoint(self, ckpt, model_state_key='model_state_dict'):
         state_key = torch.load(ckpt, map_location=self.device)
-        self.model.load_state_dict(state_key['net'])
+        self.model.load_state_dict(state_key[model_state_key])
         self.model = self.model.to(self.device)
 
     def save_model(self):
@@ -151,7 +173,8 @@ class Trainer(object):
             checkpoint_name = 'ckpt_best.pth'
             torch.save(checkpoint, os.path.join(self.checkpoint_path, checkpoint_name))
 
-        if self.epoch%self.config.TRAIN.CHECKPOINT_SAVING_STEPS == 0:
+        # if self.epoch%self.config.TRAIN.CHECKPOINT_SAVING_STEPS == 0:
+        if self.epoch%20 == 0:
             self.logger.info(f"Saving model with testing accuracy {self.avg_test_acc:.3f} in epoch {self.epoch} ")
             checkpoint_name = 'ckpt_best_{:04d}.pth'.format(self.epoch)
             torch.save(checkpoint, os.path.join(self.checkpoint_path, checkpoint_name))

@@ -13,7 +13,9 @@ from modules.utils import configuration
 #     model = model.to(device)
 #     return model
 
+# TODO: raise if input undefined model
 
+# TODO: merge pretrained and checkpoint path
 def build_model(model_name, slice_shift, n_class, pretrained=True, checkpoint_path=None, model_key='net'):
     in_planes = 2*slice_shift + 1
     segmnetation_model = SegModel(

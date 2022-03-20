@@ -3,33 +3,88 @@ from torch.utils.data import Dataset, DataLoader
 import json
 import cv2
 import numpy as np
+import os
 
 from data.volume_generator import ASUSNoduleVolumeGenerator, luna16_volume_generator, asus_nodule_volume_generator
 from data.build_coco import rle_decode
+from data.data_utils import get_files, get_shift_index
 
 
-def build_nodule_dataloader():
-    pass
+class GeneralDataset():
+    def __init__(self, input_path_list, target_path_list, input_load_func, target_load_func, data_transformer=None):
+        # TODO: random seed?
+        # TODO: shape,  type check
+        # TODO: data preprocess?
+        # TODO: no label case
+        # TODO: input and target in the same file
+        # This is a general Pytorch dataset which should can be use in any place.
+        # If the loading function and tansformer are implemented properly, the dataset should work.
+        self.input_load_func = input_load_func
+        self.target_load_func = target_load_func
+        self.input_path_list = input_path_list
+        self.target_path_list = target_path_list
+        self.data_transformer = data_transformer
+        # if shuffle:
+        #     indices = np.arange(len(self.input_path_list))
+        #     np.random.shuffle(indices)
+        #     self.input_path_list = np.take(self.input_path_list, indices)
+        #     self.target_path_list = np.take(self.target_path_list, indices)
+    
+    def __len__(self):
+        return len(self.input_path_list)
+
+    def __getitem__(self, idx):
+        input_data, target = self.input_load_func(self.input_path_list[idx]), self.target_load_func(self.target_path_list[idx])
+        # if np.sum(target) > 0:
+        # TODO:
+        target = target[np.newaxis]
+        target = np.concatenate([1-target, target], axis=0)
+        if self.data_transformer is not None:
+            input_data, target, self.data_transformer(input_data, target)
+        return {'input': input_data, 'target': target}
 
 
-def get_shift_index(cur_index, index_shift, boundary=None):
-    start, end = cur_index-index_shift, cur_index+index_shift
 
-    if boundary is not None:
-        boundary_length = boundary[1] - boundary[0]
-        sequence_length = 2*index_shift+1
-        assert sequence_length < boundary_length
-        assert boundary[1] > boundary[0]
-        assert (cur_index>=0 and index_shift>=0 and boundary[0]>=0 and boundary[1]>=0)
-        assert cur_index >= boundary[0]  or cur_index <= boundary[1]
-        if start < boundary[0]:
-            start, end = boundary[0], boundary[0]+sequence_length-1
-        elif end > boundary[1]:
-            start, end = boundary[1]-sequence_length, boundary[1]-1
+def build_dataloader(input_roots, target_roots, train_cases, valid_cases, train_batch_size, pin_memory=True, num_workers=0):
+    input_load_func = target_load_func = np.load
 
-    indices = np.arange(start, end+1)
-    # print(cur_index, index_shift, boundary, indices)
-    return indices
+    train_input_dirs = []
+    for input_root in input_roots:
+        train_input_dirs.extend(get_files(input_root, keys=train_cases, get_dirs=True, recursive=False))
+    train_input_samples = []
+    for data_dir in train_input_dirs:
+        train_input_samples.extend(get_files(data_dir, keys='npy'))
+
+    valid_input_dirs = []
+    for input_root in input_roots:
+        valid_input_dirs.extend(get_files(input_root, keys=valid_cases, get_dirs=True, recursive=False))
+    valid_input_samples = []
+    for data_dir in valid_input_dirs:
+        valid_input_samples.extend(get_files(data_dir, keys='npy'))
+
+    train_target_dirs = []
+    for input_root in target_roots:
+        train_target_dirs.extend(get_files(input_root, keys=train_cases, get_dirs=True, recursive=False))
+    train_target_samples = []
+    for data_dir in train_target_dirs:
+        train_target_samples.extend(get_files(data_dir, keys='npy'))
+
+    valid_target_dirs = []
+    for input_root in target_roots:
+        valid_target_dirs.extend(get_files(input_root, keys=valid_cases, get_dirs=True, recursive=False))
+    valid_target_samples = []
+    for data_dir in valid_target_dirs:
+        valid_target_samples.extend(get_files(data_dir, keys='npy'))
+
+    # train_input_samples, train_target_samples = train_input_samples[:300], train_target_samples[:300]
+    valid_input_samples, valid_target_samples = valid_input_samples[:300], valid_target_samples[:300]
+    train_dataset = GeneralDataset(train_input_samples, train_target_samples, input_load_func, target_load_func)
+    valid_dataset = GeneralDataset(valid_input_samples, valid_target_samples, input_load_func, target_load_func)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True, pin_memory=pin_memory, num_workers=num_workers)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=1, shuffle=False, pin_memory=pin_memory, num_workers=num_workers)
+    return train_dataloader, valid_dataloader
+
 
 
 class SimpleNoduleDataset():

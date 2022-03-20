@@ -53,12 +53,12 @@ from inference import model_inference, d2_model_inference, pytorch_model_inferen
 from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size, _1_slice_removal, FalsePositiveReducer
 from data.data_structure import LungNoduleStudy
 from data.dataloader import SimpleNoduleDataset
+from data.data_utils import get_pids_from_coco
 from model import build_model
 logging.basicConfig(level=logging.INFO)
 
 import site_path
 from modules.utils import configuration
-from modules.data import dataset_utils
 
 from Liwei.LUNA16_test import util
 from Liwei.FTP1m_test import test
@@ -194,7 +194,9 @@ def eval(cfg, volume_generator):
     lung_mask_path = os.path.join(cfg.DATA_PATH, 'Lung_Mask_show')
 
     # predictor = BatchPredictor(cfg)
-    predictor = build_model(model_name=cfg.MODEL_NAME, slice_shift=3, n_class=2, pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS, model_key='model_state_dict')
+    # TODO:
+    predictor = build_model(model_name=cfg.MODEL_NAME, slice_shift=3, n_class=2, pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS, model_key='net')
+    # predictor = build_model(model_name=cfg.MODEL_NAME, slice_shift=3, n_class=2, pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS, model_key='model_state_dict')
 
     vol_metric = volumetric_data_eval(model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
     # metadata_recorder = DataFrameTool()
@@ -229,8 +231,8 @@ def eval(cfg, volume_generator):
         
         dataset = SimpleNoduleDataset(vol, slice_shift=3)
         dataloader = DataLoader(dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
-        # pred_vol = d2_model_inference(vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
         pred_vol = pytorch_model_inference(vol, predictor, dataloader)
+        # pred_vol = d2_model_inference(vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
         # pred_vol = model_inference(cfg.MODEL_NAME, vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
 
         # Data post-processing
@@ -377,6 +379,7 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_004'
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_005'
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_006'
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_007'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_010'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_016'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_017'
@@ -384,11 +387,12 @@ def select_model(cfg):
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_019'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_020'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_021'
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_022'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_022'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_023'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_024'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_026'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_027'
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_028'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_032'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_033'
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_034'
@@ -417,7 +421,14 @@ def select_model(cfg):
     cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_0005999.pth")  # path to the model we just trained
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
+
+
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_002'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt_best.pth")  # path to the model we just trained
+    # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei'
+    # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "best.pt")  # path to the model we just trained
     return cfg
+
 
 def add_dataset_name(cfg):
     for dataset_name in ['LUNA16', 'ASUS', 'LIDC']:
@@ -440,7 +451,7 @@ def common_config():
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     cfg = select_model(cfg)
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.1  # set a custom testing threshold
     cfg.MATCHING_THRESHOLD = 0.1
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -458,7 +469,7 @@ def common_config():
     # NOTE: this config means the number of classes, but a few popular unofficial tutorials incorrect uses num_classes+1 here.
 
     # False Positive reduction
-    cfg.nodule_cls = True
+    cfg.nodule_cls = False
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_011\ckpt_best.pth'
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_001\ckpt_best.pth'
@@ -476,10 +487,10 @@ def common_config():
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_028\ckpt_best.pth'
     # cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_033\ckpt_best.pth'
 
-    cfg.lung_mask_filtering = True
-    cfg.remove_1_slice = True
+    cfg.lung_mask_filtering = False
+    cfg.remove_1_slice = False
+    cfg.remove_unusual_nodule_by_lung_size = False
     cfg.remove_unusual_nodule_by_ratio = False
-    cfg.remove_unusual_nodule_by_lung_size = True
     cfg.lung_size_threshold = 0.4
     cfg.pred_slice_threshold = 1
     
@@ -495,116 +506,112 @@ def common_config():
     dir_name.insert(0, f'NC#{FPR_model_code}') if cfg.nodule_cls else dir_name
     dir_name.insert(0, str(cfg.INPUT.MIN_SIZE_TEST))
     cfg.SAVE_PATH = os.path.join(cfg.OUTPUT_DIR, '-'.join(dir_name))
-    cfg.MAX_SAVE_IMAGE_CASES = 1
+    cfg.MAX_SAVE_IMAGE_CASES = 3
     cfg.MAX_TEST_CASES = None
     cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = False
-    cfg.TEST_BATCH_SIZE = 2
+    cfg.TEST_BATCH_SIZE = 1
 
     return cfg
 
 
-def nodule_test():
-    cfg = common_config()
+# def nodule_test():
+#     cfg = common_config()
 
-    cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
-    cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
+#     cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign_merge'
+#     cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign\raw_merge'
 
-    # cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
-    # cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
+#     # cfg.RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant_merge'
+#     # cfg.DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\raw_merge'
 
-    cfg = add_dataset_name(cfg)
-    cfg.DATA_SPLIT = 'test'
+#     cfg = add_dataset_name(cfg)
+#     cfg.DATA_SPLIT = 'test'
 
-    cfg.SUBSET_INDICES = None
-    if cfg.DATA_SPLIT == 'train':
-        # cfg.CASE_INDICES = list(range(25))
-        cfg.CASE_INDICES = list(range(17))
-    elif cfg.DATA_SPLIT == 'valid':
-        # cfg.CASE_INDICES = list(range(25, 27))
-        cfg.CASE_INDICES = list(range(17, 19))
-    elif cfg.DATA_SPLIT == 'test':
-        # cfg.CASE_INDICES = list(range(27, 35))
-        cfg.CASE_INDICES = list(range(19, 25))
-    else:
-        cfg.CASE_INDICES = None
+#     cfg.SUBSET_INDICES = None
+#     if cfg.DATA_SPLIT == 'train':
+#         # cfg.CASE_INDICES = list(range(25))
+#         cfg.CASE_INDICES = list(range(17))
+#     elif cfg.DATA_SPLIT == 'valid':
+#         # cfg.CASE_INDICES = list(range(25, 27))
+#         cfg.CASE_INDICES = list(range(17, 19))
+#     elif cfg.DATA_SPLIT == 'test':
+#         # cfg.CASE_INDICES = list(range(27, 35))
+#         cfg.CASE_INDICES = list(range(19, 25))
+#     else:
+#         cfg.CASE_INDICES = None
 
-    train_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
-                                                   subset_indices=cfg.SUBSET_INDICES, 
-                                                   case_indices=list(range(17)),
-                                                #    case_indices=list(range(34)),
-                                                   only_nodule_slices=cfg.ONLY_NODULES)
-    test_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
-                                                  subset_indices=cfg.SUBSET_INDICES, 
-                                                  case_indices=list(range(19, 25)),
-                                                #   case_indices=list(range(36, 44)),
-                                                  only_nodule_slices=cfg.ONLY_NODULES)
+#     train_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
+#                                                    subset_indices=cfg.SUBSET_INDICES, 
+#                                                    case_indices=list(range(17)),
+#                                                 #    case_indices=list(range(34)),
+#                                                    only_nodule_slices=cfg.ONLY_NODULES)
+#     test_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
+#                                                   subset_indices=cfg.SUBSET_INDICES, 
+#                                                   case_indices=list(range(19, 25)),
+#                                                 #   case_indices=list(range(36, 44)),
+#                                                   only_nodule_slices=cfg.ONLY_NODULES)
 
-    from data import data_analysis
+#     from data import data_analysis
 
-    train_volumes = []
-    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(train_generator):
-        train_volumes.append(mask_vol)
+#     train_volumes = []
+#     for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(train_generator):
+#         train_volumes.append(mask_vol)
 
-    test_volumes = []
-    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(test_generator):
-        test_volumes.append(mask_vol)
+#     test_volumes = []
+#     for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(test_generator):
+#         test_volumes.append(mask_vol)
 
-    data_analysis.multi_nodule_distribution(train_volumes, test_volumes)
-    # data_analysis.multi_nodule_distribution(test_volumes[:3], test_volumes[3:])
+#     data_analysis.multi_nodule_distribution(train_volumes, test_volumes)
+#     # data_analysis.multi_nodule_distribution(test_volumes[:3], test_volumes[3:])
 
 
-def main():
+def cross_valid_eval():
     test_cfg = configuration.load_config(f'config_file/test.yml', dict_as_member=True)
+
     dataset_names = test_cfg.DATA.NAMES
+
     model_name = test_cfg.MODEL.NAME
+
     cfg = common_config()
+
     model_weight = cfg.MODEL.WEIGHTS
     save_path = cfg.SAVE_PATH
     cfg.MODEL_NAME = model_name
     # TODO: move to config
-    scatter_size = 50
     assign_fold = 4
+
     if assign_fold is not None:
         assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
         fold_indices = [assign_fold]
     else:
         fold_indices = list(range(test_cfg.CV_FOLD))
 
-    benign_target_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
-    benign_pred_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
-    malignant_target_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
-    malignant_pred_scatter_vis = ScatterVisualizer(scatter_size=scatter_size)
+    benign_target_scatter_vis = ScatterVisualizer()
+    benign_pred_scatter_vis = ScatterVisualizer()
+    malignant_target_scatter_vis = ScatterVisualizer()
+    malignant_pred_scatter_vis = ScatterVisualizer()
     benign_rcorder = DataFrameTool(
-        column_name=['study_id', 'type', 'nodule_id', 'avg_hu', 'size', 'index', 'row', 'column', 'DSC', 'IoU', 'Best_Slice_IoU', 'tp', 'fp', 'fn'])
+        column_name=['study_id', 'type', 'nodule_id', 'avg_hu', 'size', 'index', 'row', 'column', 'IoU', 'DSC', 'Best_Slice_IoU', 'tp', 'fp', 'fn'])
     malignant_rcorder = DataFrameTool(
-        column_name=['study_id', 'type', 'nodule_id', 'avg_hu', 'size', 'index', 'row', 'column', 'DSC', 'IoU', 'Best_Slice_IoU', 'tp', 'fp', 'fn'])
+        column_name=['study_id', 'type', 'nodule_id', 'avg_hu', 'size', 'index', 'row', 'column', 'IoU', 'DSC', 'Best_Slice_IoU', 'tp', 'fp', 'fn'])
 
 
     for fold in fold_indices:
         for dataset_name in dataset_names:
-            # coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.CV_FOLD}', str(fold))
-            coco_path = os.path.join(rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Annotations\ASUS_Nodule', dataset_name)
-            with open(os.path.join(coco_path, f'annotations_{test_cfg.DATA.SPLIT}.json'), newline='') as jsonfile:
-                annotation = json.load(jsonfile)
-            case_pids = []
-            for image in annotation['images']:
-                case_pid = image['id'].split('_')[0]
-                if case_pid not in case_pids:
-                    case_pids.append(case_pid)
-
+            coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.CV_FOLD}', str(fold))
+            # coco_path = os.path.join(rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Annotations\ASUS_Nodule', dataset_name)
+            
+            case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{test_cfg.DATA.SPLIT}.json'))
             cfg.RAW_DATA_PATH = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'merge')
             cfg.DATA_PATH = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'image')
             cfg.DATASET_NAME = dataset_name
             cfg.FOLD = fold
             
             # cfg.MODEL.WEIGHTS = os.path.join(os.path.split(model_weight)[0], str(cfg.FOLD), os.path.split(model_weight)[1])
-            # cfg.MODEL.WEIGHTS = os.path.join(os.path.split(model_weight)[0], os.path.split(model_weight)[1])
-            cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Liwei\FTP1m_test\model\FCN_all_best.pt'
+            # cfg.MODEL.WEIGHTS = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Liwei\FTP1m_test\model\FCN_all_best.pt'
 
             # cfg.SAVE_PATH = os.path.join(os.path.split(save_path)[0], str(cfg.FOLD), os.path.split(save_path)[1])
-            # cfg.SAVE_PATH = os.path.join(os.path.split(save_path)[0], os.path.split(save_path)[1])
-            cfg.SAVE_PATH = os.path.join(os.path.split(cfg.MODEL.WEIGHTS)[0])
+            # cfg.SAVE_PATH = os.path.join(os.path.split(cfg.MODEL.WEIGHTS)[0])
 
             volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
                                                             case_pids=case_pids)
@@ -660,8 +667,12 @@ def main():
                                             title='Malignant predict nodule', xlabel='size (pixels)', ylabel='meanHU')
     
     # TODO: file rename
-    benign_rcorder.save_data_frame(save_path=os.path.join(cfg.OUTPUT_DIR, 'benign.csv'))
-    malignant_rcorder.save_data_frame(save_path=os.path.join(cfg.OUTPUT_DIR, 'malignant.csv'))
+    benign_rcorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'benign.csv'))
+    malignant_rcorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'malignant.csv'))
+
+
+def main():
+    cross_valid_eval()
     
 if __name__ == '__main__':
     main()
