@@ -1,0 +1,3978 @@
+{
+    "categories": [
+        {
+            "name": "nodule",
+            "id": 1
+        }
+    ],
+    "images": [
+        {
+            "id": "1B001_0085",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B001\\1B001_0085.png"
+        },
+        {
+            "id": "1B001_0086",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B001\\1B001_0086.png"
+        },
+        {
+            "id": "1B001_0087",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B001\\1B001_0087.png"
+        },
+        {
+            "id": "1B002_0078",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B002\\1B002_0078.png"
+        },
+        {
+            "id": "1B002_0079",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B002\\1B002_0079.png"
+        },
+        {
+            "id": "1B003_0182",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B003\\1B003_0182.png"
+        },
+        {
+            "id": "1B004_0156",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B004\\1B004_0156.png"
+        },
+        {
+            "id": "1B004_0157",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B004\\1B004_0157.png"
+        },
+        {
+            "id": "1B005_0127",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B005\\1B005_0127.png"
+        },
+        {
+            "id": "1B005_0128",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B005\\1B005_0128.png"
+        },
+        {
+            "id": "1B005_0129",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B005\\1B005_0129.png"
+        },
+        {
+            "id": "1B005_0130",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B005\\1B005_0130.png"
+        },
+        {
+            "id": "1B005_0131",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B005\\1B005_0131.png"
+        },
+        {
+            "id": "1B006_0098",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B006\\1B006_0098.png"
+        },
+        {
+            "id": "1B006_0099",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B006\\1B006_0099.png"
+        },
+        {
+            "id": "1B006_0100",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B006\\1B006_0100.png"
+        },
+        {
+            "id": "1B006_0101",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B006\\1B006_0101.png"
+        },
+        {
+            "id": "1B006_0102",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B006\\1B006_0102.png"
+        },
+        {
+            "id": "1B006_0103",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B006\\1B006_0103.png"
+        },
+        {
+            "id": "1B007_0135",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B007\\1B007_0135.png"
+        },
+        {
+            "id": "1B007_0136",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B007\\1B007_0136.png"
+        },
+        {
+            "id": "1B007_0137",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B007\\1B007_0137.png"
+        },
+        {
+            "id": "1B008_0090",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B008\\1B008_0090.png"
+        },
+        {
+            "id": "1B008_0091",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B008\\1B008_0091.png"
+        },
+        {
+            "id": "1B008_0092",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B008\\1B008_0092.png"
+        },
+        {
+            "id": "1B009_0091",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0091.png"
+        },
+        {
+            "id": "1B009_0092",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0092.png"
+        },
+        {
+            "id": "1B009_0093",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0093.png"
+        },
+        {
+            "id": "1B009_0094",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0094.png"
+        },
+        {
+            "id": "1B009_0095",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0095.png"
+        },
+        {
+            "id": "1B009_0096",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0096.png"
+        },
+        {
+            "id": "1B009_0097",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B009\\1B009_0097.png"
+        },
+        {
+            "id": "1B010_0118",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B010\\1B010_0118.png"
+        },
+        {
+            "id": "1B010_0119",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B010\\1B010_0119.png"
+        },
+        {
+            "id": "1B010_0120",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B010\\1B010_0120.png"
+        },
+        {
+            "id": "1B011_0119",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B011\\1B011_0119.png"
+        },
+        {
+            "id": "1B012_0167",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B012\\1B012_0167.png"
+        },
+        {
+            "id": "1B012_0168",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B012\\1B012_0168.png"
+        },
+        {
+            "id": "1B013_0074",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B013\\1B013_0074.png"
+        },
+        {
+            "id": "1B013_0075",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B013\\1B013_0075.png"
+        },
+        {
+            "id": "1B014_0091",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B014\\1B014_0091.png"
+        },
+        {
+            "id": "1B015_0081",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B015\\1B015_0081.png"
+        },
+        {
+            "id": "1B015_0082",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B015\\1B015_0082.png"
+        },
+        {
+            "id": "1B016_0124",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B016\\1B016_0124.png"
+        },
+        {
+            "id": "1B016_0125",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B016\\1B016_0125.png"
+        },
+        {
+            "id": "1B016_0126",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B016\\1B016_0126.png"
+        },
+        {
+            "id": "1B017_0092",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B017\\1B017_0092.png"
+        },
+        {
+            "id": "1B017_0093",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B017\\1B017_0093.png"
+        },
+        {
+            "id": "1B017_0094",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B017\\1B017_0094.png"
+        },
+        {
+            "id": "1B018_0079",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B018\\1B018_0079.png"
+        },
+        {
+            "id": "1B019_0051",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B019\\1B019_0051.png"
+        },
+        {
+            "id": "1B020_0030",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B020\\1B020_0030.png"
+        },
+        {
+            "id": "1B020_0031",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B020\\1B020_0031.png"
+        },
+        {
+            "id": "1B021_0116",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B021\\1B021_0116.png"
+        },
+        {
+            "id": "1B021_0117",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B021\\1B021_0117.png"
+        },
+        {
+            "id": "1B021_0118",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B021\\1B021_0118.png"
+        },
+        {
+            "id": "1B021_0119",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B021\\1B021_0119.png"
+        },
+        {
+            "id": "1B021_0120",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B021\\1B021_0120.png"
+        },
+        {
+            "id": "1B022_0118",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B022\\1B022_0118.png"
+        },
+        {
+            "id": "1B022_0119",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B022\\1B022_0119.png"
+        },
+        {
+            "id": "1B022_0120",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B022\\1B022_0120.png"
+        },
+        {
+            "id": "1B022_0121",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B022\\1B022_0121.png"
+        },
+        {
+            "id": "1B023_0120",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B023\\1B023_0120.png"
+        },
+        {
+            "id": "1B023_0121",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B023\\1B023_0121.png"
+        },
+        {
+            "id": "1B023_0122",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B023\\1B023_0122.png"
+        },
+        {
+            "id": "1B024_0061",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0061.png"
+        },
+        {
+            "id": "1B024_0062",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0062.png"
+        },
+        {
+            "id": "1B024_0063",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0063.png"
+        },
+        {
+            "id": "1B024_0064",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0064.png"
+        },
+        {
+            "id": "1B024_0065",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0065.png"
+        },
+        {
+            "id": "1B024_0066",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0066.png"
+        },
+        {
+            "id": "1B024_0067",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0067.png"
+        },
+        {
+            "id": "1B024_0068",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0068.png"
+        },
+        {
+            "id": "1B024_0069",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0069.png"
+        },
+        {
+            "id": "1B024_0070",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0070.png"
+        },
+        {
+            "id": "1B024_0071",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B024\\1B024_0071.png"
+        }
+    ],
+    "annotations": [
+        {
+            "segmentation": {
+                "counts": [
+                    178981,
+                    3,
+                    509,
+                    5,
+                    508,
+                    4,
+                    508,
+                    5,
+                    508,
+                    1,
+                    1,
+                    1,
+                    510,
+                    3,
+                    510,
+                    1,
+                    80086
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                349,
+                293,
+                7,
+                6
+            ],
+            "area": 23,
+            "image_id": "1B001_0085",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 0
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    178983,
+                    1,
+                    510,
+                    4,
+                    508,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    507,
+                    5,
+                    508,
+                    3,
+                    511,
+                    1,
+                    79573
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                349,
+                294,
+                8,
+                6
+            ],
+            "area": 32,
+            "image_id": "1B001_0086",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 1
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    179494,
+                    3,
+                    509,
+                    4,
+                    508,
+                    5,
+                    507,
+                    5,
+                    507,
+                    5,
+                    80597
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                350,
+                294,
+                5,
+                5
+            ],
+            "area": 22,
+            "image_id": "1B001_0087",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 2
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    57573,
+                    5,
+                    508,
+                    5,
+                    507,
+                    5,
+                    510,
+                    1,
+                    203030
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                112,
+                229,
+                4,
+                6
+            ],
+            "area": 16,
+            "image_id": "1B002_0078",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 3
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    58085,
+                    4,
+                    508,
+                    8,
+                    504,
+                    8,
+                    506,
+                    4,
+                    508,
+                    3,
+                    202006
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                113,
+                229,
+                5,
+                8
+            ],
+            "area": 27,
+            "image_id": "1B002_0079",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 4
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    203445,
+                    2,
+                    509,
+                    5,
+                    507,
+                    6,
+                    506,
+                    6,
+                    507,
+                    5,
+                    508,
+                    3,
+                    56135
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                397,
+                180,
+                6,
+                6
+            ],
+            "area": 27,
+            "image_id": "1B003_0182",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 5
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    201439,
+                    1,
+                    510,
+                    2,
+                    510,
+                    2,
+                    509,
+                    3,
+                    510,
+                    2,
+                    58656
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                393,
+                221,
+                5,
+                3
+            ],
+            "area": 10,
+            "image_id": "1B004_0156",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 6
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    200417,
+                    1,
+                    509,
+                    3,
+                    508,
+                    4,
+                    507,
+                    5,
+                    507,
+                    5,
+                    509,
+                    3,
+                    59166
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                391,
+                221,
+                6,
+                5
+            ],
+            "area": 21,
+            "image_id": "1B004_0157",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 7
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    81709,
+                    1,
+                    507,
+                    7,
+                    506,
+                    7,
+                    505,
+                    8,
+                    504,
+                    8,
+                    504,
+                    9,
+                    503,
+                    9,
+                    502,
+                    10,
+                    503,
+                    9,
+                    503,
+                    9,
+                    504,
+                    7,
+                    507,
+                    4,
+                    509,
+                    3,
+                    174287
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                159,
+                297,
+                13,
+                10
+            ],
+            "area": 91,
+            "image_id": "1B005_0127",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 8
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    81197,
+                    1,
+                    508,
+                    7,
+                    504,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    12,
+                    500,
+                    13,
+                    498,
+                    14,
+                    498,
+                    13,
+                    500,
+                    12,
+                    500,
+                    11,
+                    504,
+                    6,
+                    507,
+                    4,
+                    508,
+                    4,
+                    173263
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                158,
+                296,
+                16,
+                14
+            ],
+            "area": 152,
+            "image_id": "1B005_0128",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 9
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    81707,
+                    4,
+                    508,
+                    8,
+                    503,
+                    11,
+                    501,
+                    11,
+                    500,
+                    14,
+                    498,
+                    15,
+                    497,
+                    17,
+                    495,
+                    17,
+                    495,
+                    12,
+                    500,
+                    12,
+                    500,
+                    13,
+                    500,
+                    13,
+                    501,
+                    8,
+                    505,
+                    5,
+                    508,
+                    3,
+                    173263
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                159,
+                297,
+                15,
+                17
+            ],
+            "area": 163,
+            "image_id": "1B005_0129",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 10
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    82224,
+                    4,
+                    506,
+                    6,
+                    504,
+                    8,
+                    504,
+                    9,
+                    500,
+                    12,
+                    500,
+                    12,
+                    500,
+                    12,
+                    499,
+                    13,
+                    501,
+                    11,
+                    501,
+                    11,
+                    502,
+                    10,
+                    502,
+                    9,
+                    505,
+                    3,
+                    509,
+                    3,
+                    509,
+                    2,
+                    172753
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                160,
+                296,
+                15,
+                13
+            ],
+            "area": 125,
+            "image_id": "1B005_0130",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 11
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    83244,
+                    2,
+                    510,
+                    7,
+                    504,
+                    9,
+                    502,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    504,
+                    10,
+                    502,
+                    2,
+                    1,
+                    7,
+                    505,
+                    4,
+                    508,
+                    1,
+                    173777
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                162,
+                298,
+                11,
+                11
+            ],
+            "area": 78,
+            "image_id": "1B005_0131",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 12
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    59594,
+                    1,
+                    508,
+                    5,
+                    505,
+                    8,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    10,
+                    501,
+                    11,
+                    501,
+                    10,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    502,
+                    10,
+                    503,
+                    9,
+                    504,
+                    7,
+                    506,
+                    4,
+                    195382
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                116,
+                195,
+                15,
+                11
+            ],
+            "area": 120,
+            "image_id": "1B006_0098",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 13
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    60099,
+                    9,
+                    502,
+                    11,
+                    500,
+                    12,
+                    500,
+                    13,
+                    500,
+                    12,
+                    499,
+                    13,
+                    499,
+                    13,
+                    499,
+                    13,
+                    499,
+                    13,
+                    499,
+                    13,
+                    499,
+                    14,
+                    499,
+                    12,
+                    500,
+                    11,
+                    502,
+                    10,
+                    503,
+                    8,
+                    505,
+                    4,
+                    509,
+                    3,
+                    510,
+                    1,
+                    193336
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                117,
+                193,
+                18,
+                14
+            ],
+            "area": 185,
+            "image_id": "1B006_0099",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 14
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    59591,
+                    2,
+                    506,
+                    9,
+                    502,
+                    11,
+                    500,
+                    13,
+                    499,
+                    13,
+                    499,
+                    13,
+                    499,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    499,
+                    13,
+                    499,
+                    13,
+                    499,
+                    13,
+                    500,
+                    11,
+                    502,
+                    9,
+                    504,
+                    6,
+                    507,
+                    3,
+                    193335
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                116,
+                193,
+                19,
+                14
+            ],
+            "area": 213,
+            "image_id": "1B006_0100",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 15
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    59589,
+                    7,
+                    503,
+                    11,
+                    500,
+                    13,
+                    498,
+                    14,
+                    498,
+                    14,
+                    497,
+                    15,
+                    497,
+                    15,
+                    498,
+                    14,
+                    499,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    499,
+                    13,
+                    499,
+                    12,
+                    501,
+                    9,
+                    504,
+                    6,
+                    193333
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                116,
+                192,
+                19,
+                16
+            ],
+            "area": 241,
+            "image_id": "1B006_0101",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 16
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    60618,
+                    1,
+                    510,
+                    2,
+                    509,
+                    4,
+                    506,
+                    7,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    505,
+                    5,
+                    1,
+                    1,
+                    509,
+                    1,
+                    1,
+                    1,
+                    509,
+                    1,
+                    1,
+                    1,
+                    509,
+                    1,
+                    511,
+                    1,
+                    193845
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                118,
+                197,
+                16,
+                8
+            ],
+            "area": 82,
+            "image_id": "1B006_0102",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 17
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    62663,
+                    4,
+                    506,
+                    7,
+                    506,
+                    6,
+                    507,
+                    3,
+                    510,
+                    2,
+                    510,
+                    2,
+                    510,
+                    2,
+                    196406
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                122,
+                197,
+                7,
+                7
+            ],
+            "area": 26,
+            "image_id": "1B006_0103",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 18
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    117515,
+                    4,
+                    507,
+                    5,
+                    507,
+                    5,
+                    508,
+                    3,
+                    143090
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                229,
+                266,
+                4,
+                5
+            ],
+            "area": 17,
+            "image_id": "1B007_0135",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 19
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    117003,
+                    4,
+                    507,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    507,
+                    4,
+                    142577
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                228,
+                266,
+                6,
+                6
+            ],
+            "area": 32,
+            "image_id": "1B007_0136",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 20
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    116494,
+                    1,
+                    509,
+                    3,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    3,
+                    510,
+                    2,
+                    143090
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                227,
+                267,
+                6,
+                4
+            ],
+            "area": 17,
+            "image_id": "1B007_0137",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 21
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    46360,
+                    2,
+                    507,
+                    5,
+                    507,
+                    3,
+                    509,
+                    3,
+                    510,
+                    1,
+                    213737
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                90,
+                277,
+                5,
+                5
+            ],
+            "area": 14,
+            "image_id": "1B008_0090",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 22
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    45846,
+                    3,
+                    507,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    5,
+                    508,
+                    3,
+                    213736
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                89,
+                276,
+                6,
+                6
+            ],
+            "area": 29,
+            "image_id": "1B008_0091",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 23
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    45334,
+                    2,
+                    509,
+                    5,
+                    507,
+                    5,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    5,
+                    507,
+                    5,
+                    213735
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                88,
+                276,
+                7,
+                6
+            ],
+            "area": 34,
+            "image_id": "1B008_0092",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 24
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    188680,
+                    3,
+                    507,
+                    8,
+                    504,
+                    9,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    9,
+                    503,
+                    9,
+                    504,
+                    7,
+                    506,
+                    6,
+                    506,
+                    6,
+                    68339
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                368,
+                261,
+                11,
+                10
+            ],
+            "area": 87,
+            "image_id": "1B009_0091",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 25
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    187144,
+                    1,
+                    506,
+                    11,
+                    500,
+                    16,
+                    496,
+                    17,
+                    495,
+                    17,
+                    495,
+                    19,
+                    493,
+                    20,
+                    492,
+                    20,
+                    491,
+                    21,
+                    492,
+                    20,
+                    492,
+                    19,
+                    493,
+                    20,
+                    493,
+                    18,
+                    496,
+                    15,
+                    499,
+                    12,
+                    501,
+                    10,
+                    505,
+                    5,
+                    66800
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                365,
+                257,
+                17,
+                21
+            ],
+            "area": 261,
+            "image_id": "1B009_0092",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 26
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    186118,
+                    9,
+                    501,
+                    12,
+                    499,
+                    14,
+                    497,
+                    16,
+                    495,
+                    18,
+                    494,
+                    18,
+                    494,
+                    19,
+                    492,
+                    20,
+                    492,
+                    20,
+                    492,
+                    20,
+                    492,
+                    21,
+                    491,
+                    21,
+                    492,
+                    20,
+                    492,
+                    20,
+                    493,
+                    18,
+                    494,
+                    17,
+                    496,
+                    16,
+                    497,
+                    15,
+                    498,
+                    13,
+                    500,
+                    11,
+                    503,
+                    8,
+                    505,
+                    7,
+                    506,
+                    5,
+                    508,
+                    3,
+                    64242
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                363,
+                256,
+                24,
+                21
+            ],
+            "area": 361,
+            "image_id": "1B009_0093",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 27
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    186119,
+                    6,
+                    504,
+                    10,
+                    501,
+                    12,
+                    499,
+                    13,
+                    498,
+                    15,
+                    496,
+                    17,
+                    495,
+                    18,
+                    494,
+                    19,
+                    492,
+                    20,
+                    492,
+                    20,
+                    492,
+                    21,
+                    491,
+                    21,
+                    491,
+                    21,
+                    492,
+                    20,
+                    493,
+                    18,
+                    494,
+                    18,
+                    494,
+                    18,
+                    495,
+                    16,
+                    497,
+                    15,
+                    498,
+                    13,
+                    500,
+                    11,
+                    502,
+                    10,
+                    504,
+                    7,
+                    64752
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                363,
+                256,
+                23,
+                21
+            ],
+            "area": 359,
+            "image_id": "1B009_0094",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 28
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    186629,
+                    8,
+                    503,
+                    10,
+                    501,
+                    12,
+                    499,
+                    15,
+                    497,
+                    16,
+                    495,
+                    17,
+                    495,
+                    18,
+                    494,
+                    19,
+                    493,
+                    19,
+                    493,
+                    20,
+                    492,
+                    20,
+                    493,
+                    19,
+                    493,
+                    19,
+                    493,
+                    18,
+                    495,
+                    17,
+                    495,
+                    17,
+                    496,
+                    15,
+                    498,
+                    14,
+                    498,
+                    13,
+                    500,
+                    12,
+                    501,
+                    9,
+                    505,
+                    4,
+                    64755
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                364,
+                257,
+                22,
+                20
+            ],
+            "area": 331,
+            "image_id": "1B009_0095",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 29
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    187143,
+                    4,
+                    507,
+                    7,
+                    503,
+                    11,
+                    501,
+                    11,
+                    501,
+                    12,
+                    499,
+                    15,
+                    497,
+                    15,
+                    497,
+                    16,
+                    496,
+                    16,
+                    496,
+                    16,
+                    496,
+                    17,
+                    496,
+                    15,
+                    497,
+                    15,
+                    497,
+                    14,
+                    499,
+                    13,
+                    500,
+                    11,
+                    502,
+                    9,
+                    504,
+                    7,
+                    506,
+                    4,
+                    65779
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                365,
+                259,
+                19,
+                17
+            ],
+            "area": 228,
+            "image_id": "1B009_0096",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 30
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    187656,
+                    2,
+                    508,
+                    6,
+                    505,
+                    7,
+                    505,
+                    8,
+                    504,
+                    8,
+                    504,
+                    10,
+                    502,
+                    11,
+                    501,
+                    11,
+                    502,
+                    9,
+                    503,
+                    9,
+                    505,
+                    7,
+                    505,
+                    6,
+                    506,
+                    6,
+                    506,
+                    3,
+                    67829
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                366,
+                261,
+                14,
+                11
+            ],
+            "area": 103,
+            "image_id": "1B009_0097",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 31
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    85245,
+                    5,
+                    507,
+                    5,
+                    508,
+                    3,
+                    509,
+                    3,
+                    175359
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                166,
+                253,
+                4,
+                5
+            ],
+            "area": 16,
+            "image_id": "1B010_0118",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 32
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    84222,
+                    4,
+                    507,
+                    5,
+                    507,
+                    6,
+                    507,
+                    5,
+                    508,
+                    3,
+                    510,
+                    1,
+                    175359
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                164,
+                253,
+                6,
+                6
+            ],
+            "area": 24,
+            "image_id": "1B010_0119",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 33
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    83709,
+                    4,
+                    508,
+                    4,
+                    509,
+                    4,
+                    509,
+                    4,
+                    508,
+                    4,
+                    509,
+                    3,
+                    175869
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                163,
+                253,
+                6,
+                6
+            ],
+            "area": 23,
+            "image_id": "1B010_0120",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 34
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    90421,
+                    3,
+                    509,
+                    4,
+                    508,
+                    4,
+                    509,
+                    2,
+                    170184
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                176,
+                309,
+                4,
+                4
+            ],
+            "area": 13,
+            "image_id": "1B011_0119",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 35
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    86658,
+                    7,
+                    504,
+                    9,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    500,
+                    12,
+                    501,
+                    11,
+                    502,
+                    9,
+                    503,
+                    7,
+                    171385
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                169,
+                126,
+                9,
+                12
+            ],
+            "area": 88,
+            "image_id": "1B012_0167",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 36
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    86660,
+                    6,
+                    505,
+                    8,
+                    503,
+                    10,
+                    502,
+                    10,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    501,
+                    11,
+                    502,
+                    10,
+                    502,
+                    9,
+                    504,
+                    7,
+                    169846
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                169,
+                129,
+                12,
+                11
+            ],
+            "area": 115,
+            "image_id": "1B012_0168",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 37
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    77973,
+                    3,
+                    508,
+                    5,
+                    506,
+                    7,
+                    505,
+                    7,
+                    505,
+                    7,
+                    505,
+                    7,
+                    505,
+                    7,
+                    505,
+                    6,
+                    180583
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                152,
+                147,
+                8,
+                7
+            ],
+            "area": 49,
+            "image_id": "1B013_0074",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 38
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    77974,
+                    3,
+                    509,
+                    3,
+                    508,
+                    5,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    508,
+                    4,
+                    509,
+                    2,
+                    180583
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                152,
+                148,
+                8,
+                6
+            ],
+            "area": 35,
+            "image_id": "1B013_0075",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 39
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    57091,
+                    2,
+                    508,
+                    5,
+                    507,
+                    5,
+                    506,
+                    6,
+                    506,
+                    6,
+                    507,
+                    5,
+                    509,
+                    2,
+                    201979
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                111,
+                256,
+                7,
+                6
+            ],
+            "area": 31,
+            "image_id": "1B014_0091",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 40
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    81275,
+                    5,
+                    506,
+                    7,
+                    505,
+                    7,
+                    505,
+                    7,
+                    506,
+                    6,
+                    508,
+                    1,
+                    178306
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                158,
+                378,
+                6,
+                7
+            ],
+            "area": 33,
+            "image_id": "1B015_0081",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 41
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    80763,
+                    4,
+                    507,
+                    7,
+                    505,
+                    7,
+                    506,
+                    7,
+                    505,
+                    7,
+                    505,
+                    5,
+                    508,
+                    3,
+                    178305
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                157,
+                378,
+                7,
+                8
+            ],
+            "area": 40,
+            "image_id": "1B015_0082",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 42
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    175443,
+                    3,
+                    509,
+                    4,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    3,
+                    509,
+                    3,
+                    84138
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                342,
+                339,
+                6,
+                4
+            ],
+            "area": 21,
+            "image_id": "1B016_0124",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 43
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    172884,
+                    2,
+                    508,
+                    6,
+                    506,
+                    7,
+                    504,
+                    8,
+                    504,
+                    8,
+                    503,
+                    9,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    505,
+                    6,
+                    507,
+                    3,
+                    510,
+                    2,
+                    83626
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                337,
+                336,
+                12,
+                9
+            ],
+            "area": 75,
+            "image_id": "1B016_0125",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 44
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    173906,
+                    4,
+                    507,
+                    7,
+                    504,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    8,
+                    505,
+                    7,
+                    506,
+                    6,
+                    507,
+                    3,
+                    84138
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                339,
+                336,
+                9,
+                9
+            ],
+            "area": 62,
+            "image_id": "1B016_0126",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 45
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    75426,
+                    2,
+                    509,
+                    4,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    5,
+                    507,
+                    6,
+                    506,
+                    6,
+                    506,
+                    7,
+                    510,
+                    1,
+                    181081
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                147,
+                161,
+                12,
+                7
+            ],
+            "area": 51,
+            "image_id": "1B017_0092",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 46
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    74914,
+                    2,
+                    508,
+                    4,
+                    508,
+                    5,
+                    507,
+                    5,
+                    507,
+                    6,
+                    506,
+                    7,
+                    506,
+                    7,
+                    505,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    506,
+                    6,
+                    509,
+                    2,
+                    181592
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                146,
+                160,
+                12,
+                9
+            ],
+            "area": 68,
+            "image_id": "1B017_0093",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 47
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    74912,
+                    4,
+                    508,
+                    5,
+                    506,
+                    7,
+                    507,
+                    6,
+                    507,
+                    7,
+                    505,
+                    8,
+                    505,
+                    6,
+                    506,
+                    6,
+                    506,
+                    5,
+                    507,
+                    5,
+                    507,
+                    5,
+                    182104
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                146,
+                159,
+                11,
+                11
+            ],
+            "area": 64,
+            "image_id": "1B017_0094",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 48
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    99677,
+                    3,
+                    508,
+                    4,
+                    508,
+                    4,
+                    508,
+                    3,
+                    511,
+                    1,
+                    160417
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                194,
+                348,
+                5,
+                4
+            ],
+            "area": 15,
+            "image_id": "1B018_0079",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 49
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    213833,
+                    2,
+                    509,
+                    4,
+                    507,
+                    6,
+                    506,
+                    6,
+                    507,
+                    4,
+                    509,
+                    2,
+                    45749
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                417,
+                327,
+                6,
+                6
+            ],
+            "area": 24,
+            "image_id": "1B019_0051",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 50
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    87414,
+                    5,
+                    507,
+                    6,
+                    506,
+                    6,
+                    506,
+                    5,
+                    508,
+                    4,
+                    508,
+                    4,
+                    172165
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                170,
+                374,
+                6,
+                6
+            ],
+            "area": 30,
+            "image_id": "1B020_0030",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 51
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    85366,
+                    5,
+                    506,
+                    8,
+                    504,
+                    8,
+                    503,
+                    10,
+                    502,
+                    10,
+                    502,
+                    11,
+                    501,
+                    11,
+                    501,
+                    12,
+                    500,
+                    12,
+                    500,
+                    12,
+                    500,
+                    12,
+                    501,
+                    10,
+                    502,
+                    6,
+                    170629
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                166,
+                372,
+                13,
+                12
+            ],
+            "area": 127,
+            "image_id": "1B020_0031",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 52
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    59145,
+                    2,
+                    510,
+                    4,
+                    508,
+                    5,
+                    506,
+                    7,
+                    504,
+                    9,
+                    503,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    9,
+                    502,
+                    9,
+                    501,
+                    11,
+                    501,
+                    12,
+                    500,
+                    12,
+                    500,
+                    12,
+                    502,
+                    9,
+                    504,
+                    7,
+                    506,
+                    5,
+                    194291
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                115,
+                260,
+                18,
+                13
+            ],
+            "area": 153,
+            "image_id": "1B021_0116",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 53
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    59658,
+                    1,
+                    510,
+                    4,
+                    507,
+                    6,
+                    504,
+                    9,
+                    503,
+                    9,
+                    503,
+                    10,
+                    502,
+                    11,
+                    501,
+                    10,
+                    502,
+                    10,
+                    503,
+                    8,
+                    503,
+                    8,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    504,
+                    8,
+                    505,
+                    7,
+                    506,
+                    8,
+                    509,
+                    2,
+                    193777
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                116,
+                261,
+                18,
+                12
+            ],
+            "area": 138,
+            "image_id": "1B021_0117",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 54
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    59657,
+                    1,
+                    511,
+                    2,
+                    510,
+                    3,
+                    509,
+                    3,
+                    509,
+                    2,
+                    509,
+                    4,
+                    508,
+                    7,
+                    506,
+                    7,
+                    505,
+                    6,
+                    506,
+                    4,
+                    511,
+                    1,
+                    510,
+                    3,
+                    507,
+                    8,
+                    503,
+                    10,
+                    502,
+                    10,
+                    503,
+                    9,
+                    503,
+                    10,
+                    506,
+                    4,
+                    508,
+                    2,
+                    193265
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                116,
+                264,
+                19,
+                11
+            ],
+            "area": 96,
+            "image_id": "1B021_0118",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 55
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    66825,
+                    8,
+                    504,
+                    9,
+                    505,
+                    8,
+                    507,
+                    2,
+                    193776
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                130,
+                265,
+                4,
+                10
+            ],
+            "area": 27,
+            "image_id": "1B021_0119",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 56
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    66827,
+                    6,
+                    505,
+                    7,
+                    509,
+                    5,
+                    194285
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                130,
+                266,
+                3,
+                9
+            ],
+            "area": 18,
+            "image_id": "1B021_0120",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 57
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    54023,
+                    1,
+                    510,
+                    3,
+                    509,
+                    3,
+                    509,
+                    3,
+                    509,
+                    3,
+                    509,
+                    3,
+                    509,
+                    3,
+                    509,
+                    2,
+                    204536
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                105,
+                262,
+                8,
+                3
+            ],
+            "area": 21,
+            "image_id": "1B022_0118",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 58
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    52998,
+                    2,
+                    1,
+                    2,
+                    507,
+                    5,
+                    507,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    5,
+                    507,
+                    1,
+                    205561
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                103,
+                262,
+                8,
+                6
+            ],
+            "area": 39,
+            "image_id": "1B022_0119",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 59
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    53002,
+                    2,
+                    508,
+                    6,
+                    505,
+                    7,
+                    505,
+                    7,
+                    505,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    506,
+                    5,
+                    508,
+                    3,
+                    205043
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                103,
+                263,
+                9,
+                8
+            ],
+            "area": 54,
+            "image_id": "1B022_0120",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 60
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    53514,
+                    3,
+                    509,
+                    4,
+                    508,
+                    4,
+                    508,
+                    5,
+                    506,
+                    7,
+                    505,
+                    6,
+                    506,
+                    5,
+                    507,
+                    4,
+                    509,
+                    2,
+                    204532
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                104,
+                265,
+                9,
+                7
+            ],
+            "area": 40,
+            "image_id": "1B022_0121",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 61
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    66302,
+                    1,
+                    511,
+                    2,
+                    508,
+                    4,
+                    507,
+                    6,
+                    505,
+                    8,
+                    506,
+                    5,
+                    508,
+                    3,
+                    510,
+                    2,
+                    192256
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                129,
+                250,
+                8,
+                8
+            ],
+            "area": 31,
+            "image_id": "1B023_0120",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 62
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    66814,
+                    2,
+                    507,
+                    7,
+                    505,
+                    7,
+                    505,
+                    6,
+                    506,
+                    5,
+                    507,
+                    5,
+                    508,
+                    4,
+                    192256
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                130,
+                251,
+                7,
+                7
+            ],
+            "area": 36,
+            "image_id": "1B023_0121",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 63
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    67324,
+                    3,
+                    508,
+                    6,
+                    507,
+                    4,
+                    508,
+                    3,
+                    509,
+                    3,
+                    510,
+                    3,
+                    510,
+                    1,
+                    191745
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                131,
+                251,
+                7,
+                6
+            ],
+            "area": 23,
+            "image_id": "1B023_0122",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 64
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    54573,
+                    10,
+                    502,
+                    12,
+                    500,
+                    13,
+                    499,
+                    3,
+                    4,
+                    4,
+                    1,
+                    1,
+                    499,
+                    1,
+                    6,
+                    6,
+                    508,
+                    3,
+                    204999
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                106,
+                301,
+                6,
+                13
+            ],
+            "area": 53,
+            "image_id": "1B024_0061",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 65
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    53044,
+                    16,
+                    491,
+                    24,
+                    486,
+                    27,
+                    485,
+                    28,
+                    484,
+                    28,
+                    484,
+                    28,
+                    484,
+                    27,
+                    485,
+                    21,
+                    491,
+                    16,
+                    497,
+                    13,
+                    499,
+                    12,
+                    500,
+                    10,
+                    501,
+                    11,
+                    501,
+                    9,
+                    502,
+                    10,
+                    501,
+                    9,
+                    503,
+                    9,
+                    503,
+                    8,
+                    505,
+                    6,
+                    507,
+                    5,
+                    511,
+                    1,
+                    198862
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                103,
+                299,
+                21,
+                30
+            ],
+            "area": 318,
+            "image_id": "1B024_0062",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 66
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    53048,
+                    10,
+                    497,
+                    16,
+                    494,
+                    18,
+                    491,
+                    21,
+                    491,
+                    21,
+                    491,
+                    21,
+                    491,
+                    21,
+                    491,
+                    21,
+                    491,
+                    20,
+                    492,
+                    18,
+                    494,
+                    15,
+                    497,
+                    13,
+                    499,
+                    12,
+                    499,
+                    13,
+                    499,
+                    12,
+                    500,
+                    12,
+                    500,
+                    12,
+                    498,
+                    14,
+                    494,
+                    17,
+                    493,
+                    19,
+                    492,
+                    20,
+                    492,
+                    20,
+                    492,
+                    19,
+                    503,
+                    7,
+                    197323
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                103,
+                292,
+                24,
+                31
+            ],
+            "area": 392,
+            "image_id": "1B024_0063",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 67
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    53557,
+                    12,
+                    497,
+                    17,
+                    494,
+                    20,
+                    491,
+                    24,
+                    488,
+                    24,
+                    488,
+                    25,
+                    487,
+                    25,
+                    486,
+                    26,
+                    486,
+                    24,
+                    487,
+                    19,
+                    492,
+                    18,
+                    494,
+                    17,
+                    493,
+                    18,
+                    493,
+                    19,
+                    492,
+                    20,
+                    491,
+                    20,
+                    490,
+                    21,
+                    490,
+                    22,
+                    487,
+                    25,
+                    485,
+                    27,
+                    485,
+                    26,
+                    485,
+                    18,
+                    494,
+                    11,
+                    197334
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                104,
+                287,
+                23,
+                42
+            ],
+            "area": 478,
+            "image_id": "1B024_0064",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 68
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    53051,
+                    7,
+                    503,
+                    12,
+                    499,
+                    14,
+                    495,
+                    18,
+                    493,
+                    20,
+                    490,
+                    22,
+                    490,
+                    24,
+                    487,
+                    24,
+                    488,
+                    21,
+                    490,
+                    21,
+                    490,
+                    20,
+                    491,
+                    20,
+                    491,
+                    20,
+                    492,
+                    19,
+                    491,
+                    20,
+                    491,
+                    5,
+                    1,
+                    15,
+                    490,
+                    5,
+                    2,
+                    14,
+                    490,
+                    5,
+                    2,
+                    14,
+                    490,
+                    5,
+                    1,
+                    15,
+                    491,
+                    4,
+                    2,
+                    15,
+                    498,
+                    13,
+                    500,
+                    12,
+                    500,
+                    3,
+                    197838
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                103,
+                295,
+                23,
+                35
+            ],
+            "area": 407,
+            "image_id": "1B024_0065",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 69
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    51007,
+                    1,
+                    509,
+                    6,
+                    507,
+                    6,
+                    500,
+                    13,
+                    497,
+                    16,
+                    495,
+                    18,
+                    492,
+                    21,
+                    490,
+                    23,
+                    489,
+                    24,
+                    488,
+                    24,
+                    488,
+                    24,
+                    488,
+                    24,
+                    489,
+                    22,
+                    491,
+                    20,
+                    492,
+                    20,
+                    492,
+                    20,
+                    493,
+                    20,
+                    492,
+                    15,
+                    497,
+                    14,
+                    498,
+                    13,
+                    499,
+                    11,
+                    503,
+                    7,
+                    506,
+                    6,
+                    506,
+                    5,
+                    507,
+                    5,
+                    507,
+                    5,
+                    508,
+                    4,
+                    508,
+                    4,
+                    197315
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                99,
+                306,
+                28,
+                24
+            ],
+            "area": 391,
+            "image_id": "1B024_0066",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 70
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    52027,
+                    7,
+                    504,
+                    9,
+                    501,
+                    11,
+                    500,
+                    13,
+                    498,
+                    14,
+                    498,
+                    15,
+                    497,
+                    15,
+                    497,
+                    16,
+                    496,
+                    16,
+                    496,
+                    17,
+                    496,
+                    17,
+                    495,
+                    17,
+                    495,
+                    17,
+                    496,
+                    16,
+                    496,
+                    15,
+                    497,
+                    12,
+                    500,
+                    12,
+                    500,
+                    12,
+                    500,
+                    11,
+                    502,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    504,
+                    6,
+                    506,
+                    5,
+                    508,
+                    3,
+                    197826
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                101,
+                310,
+                25,
+                18
+            ],
+            "area": 303,
+            "image_id": "1B024_0067",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 71
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    51514,
+                    6,
+                    505,
+                    7,
+                    504,
+                    10,
+                    502,
+                    10,
+                    501,
+                    11,
+                    501,
+                    12,
+                    500,
+                    13,
+                    500,
+                    12,
+                    500,
+                    13,
+                    500,
+                    13,
+                    499,
+                    13,
+                    500,
+                    13,
+                    499,
+                    14,
+                    498,
+                    14,
+                    498,
+                    14,
+                    498,
+                    13,
+                    500,
+                    11,
+                    502,
+                    10,
+                    503,
+                    8,
+                    504,
+                    7,
+                    506,
+                    6,
+                    506,
+                    5,
+                    507,
+                    5,
+                    507,
+                    5,
+                    508,
+                    3,
+                    198334
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                100,
+                311,
+                25,
+                17
+            ],
+            "area": 248,
+            "image_id": "1B024_0068",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 72
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    51517,
+                    5,
+                    503,
+                    10,
+                    501,
+                    12,
+                    500,
+                    12,
+                    500,
+                    13,
+                    499,
+                    14,
+                    498,
+                    15,
+                    497,
+                    15,
+                    498,
+                    15,
+                    498,
+                    14,
+                    499,
+                    15,
+                    499,
+                    15,
+                    497,
+                    16,
+                    497,
+                    15,
+                    497,
+                    16,
+                    496,
+                    14,
+                    499,
+                    10,
+                    503,
+                    8,
+                    504,
+                    7,
+                    506,
+                    6,
+                    508,
+                    3,
+                    200378
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                100,
+                312,
+                21,
+                22
+            ],
+            "area": 250,
+            "image_id": "1B024_0069",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 73
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    51519,
+                    1,
+                    508,
+                    6,
+                    505,
+                    8,
+                    503,
+                    10,
+                    501,
+                    12,
+                    500,
+                    13,
+                    499,
+                    14,
+                    498,
+                    15,
+                    498,
+                    15,
+                    498,
+                    14,
+                    500,
+                    13,
+                    500,
+                    15,
+                    498,
+                    14,
+                    499,
+                    11,
+                    502,
+                    8,
+                    504,
+                    7,
+                    506,
+                    6,
+                    507,
+                    5,
+                    507,
+                    5,
+                    507,
+                    5,
+                    507,
+                    5,
+                    508,
+                    4,
+                    508,
+                    3,
+                    199353
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                100,
+                313,
+                23,
+                20
+            ],
+            "area": 209,
+            "image_id": "1B024_0070",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 74
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    51005,
+                    2,
+                    510,
+                    4,
+                    506,
+                    7,
+                    505,
+                    8,
+                    504,
+                    9,
+                    505,
+                    8,
+                    508,
+                    4,
+                    509,
+                    5,
+                    508,
+                    6,
+                    506,
+                    6,
+                    506,
+                    7,
+                    505,
+                    7,
+                    505,
+                    7,
+                    505,
+                    8,
+                    504,
+                    8,
+                    504,
+                    9,
+                    503,
+                    10,
+                    503,
+                    9,
+                    503,
+                    9,
+                    505,
+                    7,
+                    506,
+                    6,
+                    506,
+                    6,
+                    506,
+                    6,
+                    508,
+                    4,
+                    509,
+                    3,
+                    198835
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                99,
+                315,
+                25,
+                18
+            ],
+            "area": 165,
+            "image_id": "1B024_0071",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 75
+        }
+    ]
+}

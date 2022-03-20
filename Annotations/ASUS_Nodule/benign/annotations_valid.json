@@ -1,0 +1,448 @@
+{
+    "categories": [
+        {
+            "name": "nodule",
+            "id": 1
+        }
+    ],
+    "images": [
+        {
+            "id": "1B025_0115",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B025\\1B025_0115.png"
+        },
+        {
+            "id": "1B025_0116",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B025\\1B025_0116.png"
+        },
+        {
+            "id": "1B025_0117",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B025\\1B025_0117.png"
+        },
+        {
+            "id": "1B026_0105",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B026\\1B026_0105.png"
+        },
+        {
+            "id": "1B026_0106",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B026\\1B026_0106.png"
+        },
+        {
+            "id": "1B026_0107",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B026\\1B026_0107.png"
+        },
+        {
+            "id": "1B027_0097",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B027\\1B027_0097.png"
+        },
+        {
+            "id": "1B027_0098",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B027\\1B027_0098.png"
+        },
+        {
+            "id": "1B027_0099",
+            "width": 512,
+            "height": 512,
+            "file_name": "C:\\Users\\test\\Desktop\\Leon\\Datasets\\ASUS_Nodules-preprocess\\benign\\raw\\Image\\1B027\\1B027_0099.png"
+        }
+    ],
+    "annotations": [
+        {
+            "segmentation": {
+                "counts": [
+                    192266,
+                    6,
+                    506,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    5,
+                    509,
+                    3,
+                    65265
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                375,
+                266,
+                10,
+                8
+            ],
+            "area": 70,
+            "image_id": "1B025_0115",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 0
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    191244,
+                    7,
+                    505,
+                    7,
+                    503,
+                    9,
+                    503,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    504,
+                    8,
+                    65261
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                373,
+                266,
+                12,
+                10
+            ],
+            "area": 108,
+            "image_id": "1B025_0116",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 1
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    192268,
+                    7,
+                    504,
+                    8,
+                    503,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    504,
+                    5,
+                    507,
+                    5,
+                    64239
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                375,
+                266,
+                12,
+                10
+            ],
+            "area": 105,
+            "image_id": "1B025_0117",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 2
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    113845,
+                    4,
+                    507,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    6,
+                    507,
+                    4,
+                    145223
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                222,
+                180,
+                7,
+                9
+            ],
+            "area": 50,
+            "image_id": "1B026_0105",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 3
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    114867,
+                    10,
+                    502,
+                    10,
+                    502,
+                    11,
+                    501,
+                    11,
+                    501,
+                    10,
+                    503,
+                    7,
+                    507,
+                    3,
+                    1,
+                    1,
+                    144197
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                224,
+                179,
+                7,
+                11
+            ],
+            "area": 63,
+            "image_id": "1B026_0106",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 4
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    114871,
+                    4,
+                    506,
+                    6,
+                    506,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    8,
+                    504,
+                    6,
+                    506,
+                    4,
+                    511,
+                    1,
+                    143175
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                224,
+                181,
+                9,
+                8
+            ],
+            "area": 53,
+            "image_id": "1B026_0107",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 5
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    89442,
+                    5,
+                    506,
+                    6,
+                    506,
+                    8,
+                    504,
+                    8,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    503,
+                    9,
+                    503,
+                    8,
+                    506,
+                    5,
+                    168089
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                174,
+                351,
+                10,
+                10
+            ],
+            "area": 79,
+            "image_id": "1B027_0097",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 6
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    89440,
+                    6,
+                    506,
+                    7,
+                    505,
+                    8,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    8,
+                    505,
+                    7,
+                    507,
+                    4,
+                    167578
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                174,
+                351,
+                11,
+                9
+            ],
+            "area": 85,
+            "image_id": "1B027_0098",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 7
+        },
+        {
+            "segmentation": {
+                "counts": [
+                    89955,
+                    4,
+                    506,
+                    6,
+                    504,
+                    9,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    10,
+                    502,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    503,
+                    9,
+                    504,
+                    7,
+                    506,
+                    5,
+                    510,
+                    1,
+                    166044
+                ],
+                "size": [
+                    512,
+                    512
+                ]
+            },
+            "bbox": [
+                175,
+                350,
+                13,
+                10
+            ],
+            "area": 98,
+            "image_id": "1B027_0099",
+            "category_id": 1,
+            "iscrowd": 0,
+            "id": 8
+        }
+    ]
+}
