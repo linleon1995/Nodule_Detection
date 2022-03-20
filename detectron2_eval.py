@@ -21,6 +21,8 @@ logging.basicConfig(level=logging.INFO)
 
 import site_path
 from modules.utils import metrics
+from modules.utils import metrics2
+from modules.utils import evaluator
 
 
 def eval(cfg):
@@ -164,6 +166,8 @@ def save_mask(cfg):
     evaluator = metrics.SegmentationMetrics(num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES)
     total_iou, total_dsc = [], []
     total_cm = 0
+    lidc_evaluator = evaluator.ClassEvaluator(num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES+1)
+    lidc_evaluator.register_metrics({"DSC": metrics2.mean_dsc, 'IoU': metrics2.mean_iou})
     for idx, d in enumerate(dataset_dicts):
 
         img_file_name = d["file_name"]
@@ -203,9 +207,9 @@ def save_mask(cfg):
         pred_mask = np.int32(pred_mask)
         # gt_mask = np.reshape(gt_mask, [-1])
         # pred_mask = np.reshape(pred_mask, [-1])
-        cm = confusion_matrix(np.reshape(gt_mask, [-1]), np.reshape(pred_mask, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1))
-        
-        total_cm += cm
+        # cm = confusion_matrix(np.reshape(gt_mask, [-1]), np.reshape(pred_mask, [-1]), labels=np.arange(0, cfg.MODEL.ROI_HEADS.NUM_CLASSES+1))
+        lidc_evaluator.evaluate(np.reshape(gt_mask, [-1]), np.reshape(pred_mask, [-1]))
+        # total_cm += cm
         # iou, dsc = eval_test(gt_mask, pred_mask, num_class=cfg.MODEL.ROI_HEADS.NUM_CLASSES+1)
         # print(f'IoU: {iou} DSC: {dsc}')
         # mean_iou = np.mean([x for x in iou if x > 0])
@@ -241,8 +245,10 @@ def save_mask(cfg):
         # cv2.imwrite(f'vis/mask2/{mask_file_name}.png', pred_mask)
         # out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         # cv2.imwrite(f'vis/instance/{mask_file_name}.png', out.get_image()[:, :, ::-1])
-    print(3)
-    print(f'IoU: {compute_mean_iou(total_cm=total_cm)} DSC: {compute_mean_dsc(total_cm=total_cm)}')
+    # print(3)
+    total_aggregation = lidc_evaluator.get_aggregation(np.mean)
+    mean_iou, mean_dsc = total_aggregation['IoU'], total_aggregation['DSC']
+    print(f'IoU: {mean_iou} DSC: {mean_dsc}')
 
 
 if __name__ == '__main__':
