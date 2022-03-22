@@ -1,0 +1,18 @@
+Time: 03/16/2022, 17:33:12
+Model: 2D-FCN
+Testing Dataset: ASUS-Benign
+Testing Case: 5
+Testing Nodule: 6
+Matching Threshold: 0.1
+
+VoxelTP/Target: 5/6
+VoxelTP/Prediction: 5/146
+Voxel Precision: 0.0342
+Voxel Recall: 0.8333
+Double Detection: 0
+
+PixelTP/Target: 8291/15285
+PixelTP/Prediction: 8291/34653
+Pixel Precision: 0.2393
+Pixel Recall: 0.5424
+Pixel F1: 0.3321

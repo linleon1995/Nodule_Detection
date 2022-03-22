@@ -23,11 +23,11 @@ import config
 mpl.use('TkAgg')
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from skimage import measure
-from numpy.lib.npyio import save
-from pylidc.utils import consensus
-from pathlib import Path
-from statistics import median_high
+# from skimage import measure
+# from numpy.lib.npyio import save
+# from pylidc.utils import consensus
+# from pathlib import Path
+# from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -36,11 +36,11 @@ from utils.utils import raw_preprocess, compare_result, compare_result_enlarge, 
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
-import time
-import pylidc as pl
+# import time
+# import pylidc as pl
 import pandas as pd
-from tqdm import tqdm
-import json
+# from tqdm import tqdm
+# import json
 from utils.volume_eval import volumetric_data_eval
 from utils.utils import Nodule_data_recording, DataFrameTool, SubmissionDataFrame, irc2xyz, get_nodule_center
 from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer

@@ -1,0 +1,23 @@
+Area Threshold: 20
+VoxelTP / Target: 120 / 227
+VoxelFN / Target: 107 / 227
+VoxelTP / Prediction: 120 / 3168
+VoxelFP / Prediction: 3048 / 3168
+System Precision: 0.0379
+System Recall: 0.5286
+
+PixelTP / Target: 223400 / 343606
+PixelFN / Target: 120206 / 343606
+PixelTP / Prediction: 223400 / 1206550
+PixelFP / Prediction: 983150 / 1206550
+Pixel Precision: 0.1852
+Pixel Recall: 0.6502
+Pixel F1: 0.2882
+
+mean Precision: 0.0483
+mean Recall: 0.3912
+Inference 9755.19 second 72.67 %
+Save result in image. 225.11 second 1.68 %
+Nodule Evaluation 2463.82 second 18.35 %
+Others 979.070743560791 second 7.29 %
+Total 13423.20 second 100.00 %

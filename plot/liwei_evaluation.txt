@@ -1,0 +1,15 @@
+Area Threshold: 20
+VoxelTP / Target: 115 / 226
+VoxelFN / Target: 111 / 226
+VoxelTP / Prediction: 115 / 2700
+VoxelFP / Prediction: 2585 / 2700
+Voxel Precision: 0.0426
+Voxel Recall: 0.5088
+
+PixelTP / Target: 229716 / 340207
+PixelFN / Target: 110491 / 340207
+PixelTP / Prediction: 229716 / 981987
+PixelFP / Prediction: 752271 / 981987
+Pixel Precision: 0.2339
+Pixel Recall: 0.6752
+Pixel F1: 0.3475

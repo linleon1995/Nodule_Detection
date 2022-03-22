@@ -1,0 +1,18 @@
+Time: 03/16/2022, 17:21:03
+Model: 2D-FCN
+Testing Dataset: ASUS-Malignant
+Testing Case: 8
+Testing Nodule: 13
+Matching Threshold: 0.1
+
+VoxelTP/Target: 8/13
+VoxelTP/Prediction: 8/220
+Voxel Precision: 0.0364
+Voxel Recall: 0.6154
+Double Detection: 0
+
+PixelTP/Target: 12137/22811
+PixelTP/Prediction: 12137/51101
+Pixel Precision: 0.2375
+Pixel Recall: 0.5321
+Pixel F1: 0.3284
