@@ -1,7 +1,7 @@
 import numpy as np
 import cc3d
 
-# TODO: class design
+
 class VolumePostProcessor():
     def __init__(self, connectivity=26, area_threshold=8):
         self.connectivity = connectivity

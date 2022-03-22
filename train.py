@@ -33,6 +33,7 @@ from utils import train_utils
 from data import data_utils
 from data import dataloader
 
+
 class ValidationLoss(HookBase):
     def __init__(self, cfg):
         super().__init__()
@@ -66,8 +67,6 @@ def d2_model_train(train_cfg):
         fold_indices = [assign_fold]
     else:
         fold_indices = list(range(train_cfg.CV_FOLD))
-
-    
     
     output_dir = cfg.OUTPUT_DIR
     for fold in fold_indices:
@@ -92,22 +91,17 @@ def d2_model_train(train_cfg):
     
 
 def pytorch_model_train(cfg):
-    # TODO: restore checkpoint path
-    checkpoint_root = os.path.join(cfg.TRAIN.PROJECT_PATH, 'checkpoints')
-    checkpoint_path = train_utils.create_training_path(checkpoint_root)
-    # TODO: dict as member?
-    cfg['TRAIN']['CHECKPOINT_PATH'] = checkpoint_path
+    exp_path = train_utils.create_training_path('checkpoints')
+    checkpoint_path = cfg.TRAIN.CHECKPOINT_PATH
+    model = build_model.build_seg_model(model_name=cfg.MODEL.NAME, slice_shift=cfg.DATA.SLICE_SHIFT, n_class=cfg.DATA.N_CLASS, device=configuration.get_device())
 
-    model = build_model(model_name=cfg.MODEL.NAME, slice_shift=cfg.DATA.SLICE_SHIFT, n_class=cfg.DATA.N_CLASS, pretrained=True)
-    # TODO: change this
-    model = model.model
-
+    # TODO: annotation json and cv
     train_cases = data_utils.get_pids_from_coco(
         [os.path.join(cfg.DATA.NAMES[dataset_name]['COCO_PATH'], f'annotations_train.json') for dataset_name in cfg.DATA.NAMES])
     valid_cases = data_utils.get_pids_from_coco(
         [os.path.join(cfg.DATA.NAMES[dataset_name]['COCO_PATH'], f'annotations_test.json') for dataset_name in cfg.DATA.NAMES])
 
-    # TODO:
+    # TODO: try to use dataset config
     input_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\input',
                    rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\shift\3\input']
     target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\target',
@@ -116,13 +110,13 @@ def pytorch_model_train(cfg):
     train_dataloader, valid_dataloader = dataloader.build_dataloader(input_roots, target_roots, train_cases, valid_cases, cfg.DATA.BATCH_SIZE)
     loss = train_utils.create_criterion(cfg.TRAIN.LOSS, n_class=cfg.DATA.N_CLASS)
     optimizer = train_utils.create_optimizer(lr=cfg.TRAIN.LR, optimizer_config=cfg.TRAIN.OPTIMIZER, model=model)
+    valid_activation = train_utils.create_activation(cfg.VALID.ACTIVATION)
 
     # Logger
     logger = train_utils.get_logger('train')
     logger.info('Start Training!!')
     logger.info(f'Training epoch: {cfg.TRAIN.EPOCH} Batch size: {cfg.DATA.BATCH_SIZE} Training Samples: {len(train_dataloader.dataset)}')
-    train_utils.config_logging(os.path.join(cfg.TRAIN.CHECKPOINT_PATH, 'logging.txt'), cfg, access_mode='w+')
-    activation = train_utils.create_activation('softmax')
+    train_utils.config_logging(os.path.join(exp_path, 'logging.txt'), cfg, access_mode='w+')
 
     trainer = Trainer(model,
                       criterion=loss,
@@ -132,12 +126,11 @@ def pytorch_model_train(cfg):
                       logger=logger,
                       device=configuration.get_device(),
                       n_class=cfg.DATA.N_CLASS,
-                      checkpoint_path=cfg.TRAIN.CHECKPOINT_PATH,
+                      exp_path=exp_path,
                       train_epoch=cfg.TRAIN.EPOCH,
                       batch_size=cfg.DATA.BATCH_SIZE,
-                      activation_func=activation,
-                    #   history=None)
-                      history=rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei\best.pt')
+                      valid_activation=valid_activation,
+                      history=checkpoint_path)
     trainer.fit()
 
 

@@ -56,11 +56,12 @@ def create_training_path(train_logdir):
     idx = 0
     path = os.path.join(train_logdir, "run_{:03d}".format(idx))
     while os.path.exists(path):
-        # if len(os.listdir(path)) == 0:
-        #     os.remove(path)
+        if len(os.listdir(path)) == 0:
+            break
         idx += 1
         path = os.path.join(train_logdir, "run_{:03d}".format(idx))
-    os.makedirs(path)
+    
+    os.makedirs(path, exist_ok=True)
     return path
 
 

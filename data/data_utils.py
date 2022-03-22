@@ -46,7 +46,6 @@ def get_shift_index(cur_index, index_shift, boundary=None):
 
 
 def get_files(path, keys=[], return_fullpath=True, sort=True, sorting_key=None, recursive=True, get_dirs=False, ignore_suffix=False):
-    # TODO: have a better name
     """Get all the file name under the given path with assigned keys
     Args:
         path: (str)

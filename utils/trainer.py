@@ -17,10 +17,10 @@ class Trainer(object):
                  logger,
                  device,
                  n_class,
-                 checkpoint_path,
+                 exp_path,
                  train_epoch=10,
                  batch_size=1,
-                 activation_func=None,
+                 valid_activation=None,
                  USE_TENSORBOARD=True,
                  USE_CUDA=True,
                  history=None,
@@ -28,7 +28,6 @@ class Trainer(object):
         self.n_class = n_class
         self.train_epoch = train_epoch
         self.batch_size = batch_size
-        # TODO: better way to warp or combine
         self.criterion = criterion
         self.optimizer = optimizer
         self.train_dataloader = train_dataloader
@@ -40,18 +39,17 @@ class Trainer(object):
         self.model = model
         if history is not None:
             self.load_model_from_checkpoint(self.history)
-        self.activation_func = activation_func
+        self.valid_activation = valid_activation
         self.USE_TENSORBOARD = USE_TENSORBOARD
-        self.checkpoint_path = checkpoint_path
+        self.exp_path = exp_path
         if self.USE_TENSORBOARD:
-            self.train_writer = SummaryWriter(log_dir=os.path.join(self.checkpoint_path, 'train'))
-            self.valid_writer = SummaryWriter(log_dir=os.path.join(self.checkpoint_path, 'valid'))
+            self.train_writer = SummaryWriter(log_dir=os.path.join(self.exp_path, 'train'))
+            self.valid_writer = SummaryWriter(log_dir=os.path.join(self.exp_path, 'valid'))
         if USE_CUDA:
             self.model.cuda()
         self.max_acc = 0
         train_samples = len(self.train_dataloader.dataset)
-        display_step = self.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
-        display_step = 20
+        self.display_step = self.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
 
     def fit(self):
         for self.epoch in range(1, self.train_epoch + 1):
@@ -72,7 +70,7 @@ class Trainer(object):
         total_train_loss = 0.0
         for i, data in enumerate(self.train_dataloader, self.iterations + 1):
             input_var, target_var = data['input'], data['target']
-            # TODO
+            # TODO input type
             input_var = input_var.float()
             target_var = target_var.long()
             input_var, target_var = input_var.to(self.device), target_var.to(self.device)
@@ -86,7 +84,7 @@ class Trainer(object):
             self.optimizer.step()
         
             loss = loss.item()
-            total_train_loss += loss
+            total_train_loss += loss*input_var.shape[0]
             if self.USE_TENSORBOARD:
                 self.train_writer.add_scalar('Loss/step', loss, i)
 
@@ -95,7 +93,7 @@ class Trainer(object):
         self.iterations = i
         if self.USE_TENSORBOARD:
             # TODO: correct total_train_loss
-            self.train_writer.add_scalar('Loss/epoch', self.batch_size*total_train_loss/train_samples, self.epoch)
+            self.train_writer.add_scalar('Loss/epoch', total_train_loss/train_samples, self.epoch)
 
     def validate(self):
         self.model.eval()
@@ -106,12 +104,13 @@ class Trainer(object):
             test_n_iter += 1
 
             input_var, labels = data['input'], data['target']
-            # TODO
+            # TODO input type
             input_var = input_var.float()
             labels = labels.long()
 
 
             input_var, labels = input_var.to(self.device), labels.to(self.device)
+            # TODO: what is aux in model?
             outputs = self.model(input_var)['out']
 
             loss = self.criterion(outputs, labels)
@@ -119,24 +118,13 @@ class Trainer(object):
             # loss = loss_func(outputs, torch.argmax(labels, dim=1)).item()
             total_test_loss += loss.item()
 
-            # TODO: torch.nn.functional.sigmoid(outputs)
-            # prob = torch.nn.functional.softmax(outputs, dim=1)
-            # prob = torch.sigmoid(outputs)
-            if self.activation_func:
-                activation_name = 'softmax'
-                if activation_name == 'softmax':
-                    prob = self.activation_func(outputs, dim=1)
-                else:
-                    prob = self.activation_func(outputs)
-            else:
-                prob = outputs
+            prob = self.valid_activation(outputs)
             prediction = torch.argmax(prob, dim=1)
             # TODO:
             labels = labels[:,1]
 
             labels = labels.cpu().detach().numpy()
             prediction = prediction.cpu().detach().numpy()
-
 
             evals = self.eval_tool(labels, prediction)
 
@@ -160,13 +148,13 @@ class Trainer(object):
             self.max_acc = self.avg_test_acc
             self.logger.info(f"-- Saving best model with testing accuracy {self.max_acc:.3f} --")
             checkpoint_name = 'ckpt_best.pth'
-            torch.save(checkpoint, os.path.join(self.checkpoint_path, checkpoint_name))
+            torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
 
         # if self.epoch%self.config.TRAIN.CHECKPOINT_SAVING_STEPS == 0:
         if self.epoch%20 == 0:
             self.logger.info(f"Saving model with testing accuracy {self.avg_test_acc:.3f} in epoch {self.epoch} ")
             checkpoint_name = 'ckpt_best_{:04d}.pth'.format(self.epoch)
-            torch.save(checkpoint, os.path.join(self.checkpoint_path, checkpoint_name))
+            torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
 
 
     def calculate_display_step(self, num_sample, batch_size, display_times=5):

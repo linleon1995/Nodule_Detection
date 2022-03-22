@@ -47,37 +47,24 @@ class GeneralDataset():
 
 def build_dataloader(input_roots, target_roots, train_cases, valid_cases, train_batch_size, pin_memory=True, num_workers=0):
     input_load_func = target_load_func = np.load
+    def get_samples(roots, cases, load_format):
+        data_dir = []
+        for root in roots:
+            data_dir.extend(get_files(root, keys=cases, get_dirs=True, recursive=False))
+        samples = []
+        for data_dir in data_dir:
+            samples.extend(get_files(data_dir, keys=load_format))
+        return samples
 
-    train_input_dirs = []
-    for input_root in input_roots:
-        train_input_dirs.extend(get_files(input_root, keys=train_cases, get_dirs=True, recursive=False))
-    train_input_samples = []
-    for data_dir in train_input_dirs:
-        train_input_samples.extend(get_files(data_dir, keys='npy'))
-
-    valid_input_dirs = []
-    for input_root in input_roots:
-        valid_input_dirs.extend(get_files(input_root, keys=valid_cases, get_dirs=True, recursive=False))
-    valid_input_samples = []
-    for data_dir in valid_input_dirs:
-        valid_input_samples.extend(get_files(data_dir, keys='npy'))
-
-    train_target_dirs = []
-    for input_root in target_roots:
-        train_target_dirs.extend(get_files(input_root, keys=train_cases, get_dirs=True, recursive=False))
-    train_target_samples = []
-    for data_dir in train_target_dirs:
-        train_target_samples.extend(get_files(data_dir, keys='npy'))
-
-    valid_target_dirs = []
-    for input_root in target_roots:
-        valid_target_dirs.extend(get_files(input_root, keys=valid_cases, get_dirs=True, recursive=False))
-    valid_target_samples = []
-    for data_dir in valid_target_dirs:
-        valid_target_samples.extend(get_files(data_dir, keys='npy'))
-
+    train_input_samples = get_samples(input_roots, train_cases, 'npy')   
+    valid_input_samples = get_samples(input_roots, valid_cases, 'npy')   
+    train_target_samples = get_samples(target_roots, train_cases, 'npy')   
+    valid_target_samples = get_samples(target_roots, valid_cases, 'npy')   
+            
+    # TODO: Temporally solution because of slowing validation
     # train_input_samples, train_target_samples = train_input_samples[:300], train_target_samples[:300]
     valid_input_samples, valid_target_samples = valid_input_samples[:300], valid_target_samples[:300]
+
     train_dataset = GeneralDataset(train_input_samples, train_target_samples, input_load_func, target_load_func)
     valid_dataset = GeneralDataset(valid_input_samples, valid_target_samples, input_load_func, target_load_func)
 
