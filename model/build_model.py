@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision
+from model.model_utils import layers
+from model import unet_2d
 
 # TODO: Encapsulation with varing first layer, last layer
 
@@ -19,11 +21,13 @@ def build_seg_model(model_name, slice_shift, n_class, device, pytorch_pretrained
 def load_model_from_checkpoint(ckpt, model, device):
     common_model_keys = ['model', 'net', 'checkpoint']
     state_key = torch.load(ckpt, map_location=device)
-    for k in state_key:
-        for model_key in common_model_keys:
-            if model_key in k:
-                model_key = k
+    model_key = None
+    for ckpt_state_key in state_key:
+        for test_key in common_model_keys:
+            if test_key in ckpt_state_key:
+                model_key = ckpt_state_key
                 break
+    assert model_key is not None, f'The checkpoint model key {model_key} does not exist in self-defined common model key.'
     model.load_state_dict(state_key[model_key])
     model = model.to(device)
     return model
@@ -39,7 +43,7 @@ def select_model(model_name, in_planes, n_class, pretrained=True):
         model.backbone.conv1 = nn.Conv2d(in_planes, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3,3), bias = False)
         model.classifier[4] = nn.Conv2d(256, n_class, kernel_size=(1, 1), stride=(1, 1))
     elif model_name == '2D-Unet':
-        pass
+        model = unet_2d.UNet_2d_backbone(in_channels=in_planes, out_channels=n_class, basic_module=layers.DoubleConv)
     else:
         raise ValueError(f'Undefined model of {model_name}.')
     return model
