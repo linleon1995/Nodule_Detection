@@ -110,11 +110,11 @@ def data_preprocess(dataset_names):
                 filekey = 'B'
             elif dataset_name == 'Malignant':
                 filekey = 'm'
-            # asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
+            asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
 
-            # # Convert medical 3d volume data to image format
-            # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
-            # medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
+            # Convert medical 3d volume data to image format
+            volume_generator = asus_nodule_volume_generator(data_path=merge_path)
+            medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
             # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
             # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
             

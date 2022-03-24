@@ -93,7 +93,9 @@ def d2_model_train(train_cfg):
 def pytorch_model_train(cfg):
     exp_path = train_utils.create_training_path('checkpoints')
     checkpoint_path = cfg.TRAIN.CHECKPOINT_PATH
-    model = build_model.build_seg_model(model_name=cfg.MODEL.NAME, slice_shift=cfg.DATA.SLICE_SHIFT, n_class=cfg.DATA.N_CLASS, device=configuration.get_device())
+    in_planes = 2*cfg.DATA.SLICE_SHIFT + 1
+    model = build_model.build_seg_model(model_name=cfg.MODEL.NAME, in_planes=in_planes, n_class=cfg.DATA.N_CLASS, device=configuration.get_device())
+    transform_config = cfg.DATA.TRANSFORM
 
     # TODO: annotation json and cv
     train_cases = data_utils.get_pids_from_coco(
@@ -107,7 +109,8 @@ def pytorch_model_train(cfg):
     target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\target',
                     rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\shift\3\target']
 
-    train_dataloader, valid_dataloader = dataloader.build_dataloader(input_roots, target_roots, train_cases, valid_cases, cfg.DATA.BATCH_SIZE)
+    train_dataloader, valid_dataloader = dataloader.build_dataloader(
+        input_roots, target_roots, train_cases, valid_cases, cfg.DATA.BATCH_SIZE, transform_config=transform_config)
     loss = train_utils.create_criterion(cfg.TRAIN.LOSS, n_class=cfg.DATA.N_CLASS)
     optimizer = train_utils.create_optimizer(lr=cfg.TRAIN.LR, optimizer_config=cfg.TRAIN.OPTIMIZER, model=model)
     valid_activation = train_utils.create_activation(cfg.VALID.ACTIVATION)
@@ -130,7 +133,8 @@ def pytorch_model_train(cfg):
                       train_epoch=cfg.TRAIN.EPOCH,
                       batch_size=cfg.DATA.BATCH_SIZE,
                       valid_activation=valid_activation,
-                      history=checkpoint_path)
+                      history=checkpoint_path,
+                      checkpoint_saving_steps=cfg.TRAIN.CHECKPOINT_SAVING_STEPS)
     trainer.fit()
 
 

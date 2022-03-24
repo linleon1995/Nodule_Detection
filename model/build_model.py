@@ -3,12 +3,14 @@ import torch.nn as nn
 import torchvision
 from model.model_utils import layers
 from model import unet_2d
+from model import unet3d
+
 
 # TODO: Encapsulation with varing first layer, last layer
 
 
-def build_seg_model(model_name, slice_shift, n_class, device, pytorch_pretrained=True, checkpoint_path=None):
-    in_planes = 2*slice_shift + 1
+# def build_seg_3d_model()
+def build_seg_model(model_name, in_planes, n_class, device, pytorch_pretrained=True, checkpoint_path=None):
     segmnetation_model = select_model(model_name, in_planes, n_class, pytorch_pretrained)
     
     if checkpoint_path is not None:
@@ -19,7 +21,7 @@ def build_seg_model(model_name, slice_shift, n_class, device, pytorch_pretrained
 
 
 def load_model_from_checkpoint(ckpt, model, device):
-    common_model_keys = ['model', 'net', 'checkpoint']
+    common_model_keys = ['model', 'net', 'checkpoint', 'model_state_dict']
     state_key = torch.load(ckpt, map_location=device)
     model_key = None
     for ckpt_state_key in state_key:
@@ -44,6 +46,13 @@ def select_model(model_name, in_planes, n_class, pretrained=True):
         model.classifier[4] = nn.Conv2d(256, n_class, kernel_size=(1, 1), stride=(1, 1))
     elif model_name == '2D-Unet':
         model = unet_2d.UNet_2d_backbone(in_channels=in_planes, out_channels=n_class, basic_module=layers.DoubleConv)
+    elif model_name == '3D-Unet':
+        # TODO: activation
+        # TODO: align n_class
+        n_class -= 1
+        model = unet3d.UNet3D(n_class=n_class)
+        # TODO:
+        model = nn.DataParallel(model, device_ids = [i for i in range(torch.cuda.device_count())])
     else:
         raise ValueError(f'Undefined model of {model_name}.')
     return model

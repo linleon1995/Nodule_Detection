@@ -160,7 +160,7 @@ def create_activation(name):
     if name == 'sigmoid':
         activation = torch.sigmoid
     elif name == 'softmax':
-        activation = torch.nn.functional.softmax
+        activation = torch.nn.Softmax(dim=1)
     else:
         raise ValueError('Unknown Loss name.')
     return activation

@@ -24,6 +24,7 @@ class volumetric_data_eval():
         self.DoubleDetections = []
         self.num_nodule = 0
         self.num_case = 0
+        os.makedirs(self.save_path, exist_ok=True)
         self.eval_file = open(os.path.join(self.save_path, 'evaluation.txt'), 'w+')
 
     def calculate(self, target_study, pred_study):

@@ -324,15 +324,17 @@ def random_flip(image, label=None, flip_prob=0.5, flip_mode='H'):
             if label is not None:
                 label = cv2.flip(label, flip_mode_code)
         return image, label
+        
+    flip_keys = flip_mode.split()
     # Horizontal flipping
-    if flip_mode in ['H', 'HV', 'VH']:
+    if 'V' in flip_keys or 'v' in flip_keys:
         image, label = rand_flip_op(image, label, flip_mode_code=1)
     # Vertical flipping
-    if flip_mode in ['V', 'HV', 'VH']:
+    if 'H' in flip_keys or 'h' in flip_keys:
         image, label = rand_flip_op(image, label, flip_mode_code=0)
     # Flip in vertical and horizontal
-    if flip_mode == '_HV':
-        image, label = rand_flip_op(image, label, flip_mode_code=-1)
+    # if flip_mode == '_HV':
+    #     image, label = rand_flip_op(image, label, flip_mode_code=-1)
 
     return image, label
 

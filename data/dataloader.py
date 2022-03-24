@@ -8,7 +8,8 @@ import os
 from data.volume_generator import ASUSNoduleVolumeGenerator, luna16_volume_generator, asus_nodule_volume_generator
 from data.build_coco import rle_decode
 from data.data_utils import get_files, get_shift_index
-
+from data.data_transformer import ImageDataTransformer
+from data.volume_to_3d_crop import CropVolume
 
 class GeneralDataset():
     def __init__(self, input_path_list, target_path_list, input_load_func, target_load_func, data_transformer=None):
@@ -24,11 +25,6 @@ class GeneralDataset():
         self.input_path_list = input_path_list
         self.target_path_list = target_path_list
         self.data_transformer = data_transformer
-        # if shuffle:
-        #     indices = np.arange(len(self.input_path_list))
-        #     np.random.shuffle(indices)
-        #     self.input_path_list = np.take(self.input_path_list, indices)
-        #     self.target_path_list = np.take(self.target_path_list, indices)
     
     def __len__(self):
         return len(self.input_path_list)
@@ -36,16 +32,25 @@ class GeneralDataset():
     def __getitem__(self, idx):
         input_data, target = self.input_load_func(self.input_path_list[idx]), self.target_load_func(self.target_path_list[idx])
         # if np.sum(target) > 0:
-        # TODO:
+        # TODO: multi-class issue
         target = target[np.newaxis]
         target = np.concatenate([1-target, target], axis=0)
+
+        # TODO: general implemtention for different dimesnion option (do this inside trnasformer)
+        input_data = np.swapaxes(np.swapaxes(input_data, 0, 2), 0, 1)
+        target = np.swapaxes(np.swapaxes(target, 0, 2), 0, 1)
+
         if self.data_transformer is not None:
             input_data, target, self.data_transformer(input_data, target)
+
+        input_data = np.swapaxes(np.swapaxes(input_data, 0, 2), 1, 2)
+        target = np.swapaxes(np.swapaxes(target, 0, 2), 1, 2)
         return {'input': input_data, 'target': target}
 
 
 
-def build_dataloader(input_roots, target_roots, train_cases, valid_cases, train_batch_size, pin_memory=True, num_workers=0):
+def build_dataloader(input_roots, target_roots, train_cases, valid_cases, train_batch_size, pin_memory=True, 
+                     num_workers=0, transform_config=None):
     input_load_func = target_load_func = np.load
     def get_samples(roots, cases, load_format):
         data_dir = []
@@ -63,17 +68,33 @@ def build_dataloader(input_roots, target_roots, train_cases, valid_cases, train_
             
     # TODO: Temporally solution because of slowing validation
     # train_input_samples, train_target_samples = train_input_samples[:300], train_target_samples[:300]
-    valid_input_samples, valid_target_samples = valid_input_samples[:300], valid_target_samples[:300]
+    valid_input_samples, valid_target_samples = valid_input_samples[:500], valid_target_samples[:500]
 
-    train_dataset = GeneralDataset(train_input_samples, train_target_samples, input_load_func, target_load_func)
+    transformer = ImageDataTransformer(transform_config) if transform_config is not None else None
+    train_dataset = GeneralDataset(
+        train_input_samples, train_target_samples, input_load_func, target_load_func, data_transformer=transformer)
     valid_dataset = GeneralDataset(valid_input_samples, valid_target_samples, input_load_func, target_load_func)
 
     train_dataloader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True, pin_memory=pin_memory, num_workers=num_workers)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=1, shuffle=False, pin_memory=pin_memory, num_workers=num_workers)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=4, shuffle=False, pin_memory=pin_memory, num_workers=num_workers)
     return train_dataloader, valid_dataloader
 
 
+# TODO: fix it
+def change_eval_size(vol, mask_vol, size):
+    vol = vol[...,0]
+    vol = np.swapaxes(np.swapaxes(vol, 0, 2), 0, 1)
+    vol = cv2.resize(vol, (size,size))
+    vol = np.swapaxes(np.swapaxes(vol, 0, 2), 1, 2)
+    vol = np.tile(vol[...,np.newaxis], (1, 1, 1, 3))
 
+    # mask_vol = mask_vol[...,np.newaxis]
+    mask_vol = cv2.resize(mask_vol, (size,size), interpolation=cv2.INTER_NEAREST)
+    mask_vol = mask_vol[np.newaxis]
+    # mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 2), 1, 2)
+    return vol, mask_vol
+
+# TODO: for all volume converter, add raise error while volume doesn't send in
 class SimpleNoduleDataset():
     def __init__(self, volume, slice_shift=3):
         self.volume = volume
@@ -84,7 +105,20 @@ class SimpleNoduleDataset():
 
     def __getitem__(self, vol_idx):
         slice_indcies = get_shift_index(cur_index=vol_idx, index_shift=self.slice_shift, boundary=[0, self.volume.shape[0]-1])
-        return self.volume[slice_indcies]
+        stack_images = self.volume[slice_indcies]
+        return stack_images
+
+
+class CropNoduleDataset():
+    def __init__(self, volume, crop_range, crop_shift):
+        self.cropping_op = CropVolume(crop_range, crop_shift)
+        self.crop_data = [data[np.newaxis] for data in self.cropping_op(volume)]
+
+    def __len__(self):
+        return len(self.crop_data)
+
+    def __getitem__(self, sample_idx):
+        return self.crop_data[sample_idx]
 
 
 class NoduleDataset():

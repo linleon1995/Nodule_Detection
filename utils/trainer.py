@@ -24,6 +24,7 @@ class Trainer(object):
                  USE_TENSORBOARD=True,
                  USE_CUDA=True,
                  history=None,
+                 checkpoint_saving_steps=20
                  ):
         self.n_class = n_class
         self.train_epoch = train_epoch
@@ -50,12 +51,14 @@ class Trainer(object):
         self.max_acc = 0
         train_samples = len(self.train_dataloader.dataset)
         self.display_step = self.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
+        self.checkpoint_saving_steps = checkpoint_saving_steps
 
     def fit(self):
         for self.epoch in range(1, self.train_epoch + 1):
             self.train()
             with torch.no_grad():
-                self.validate()
+                if self.valid_dataloader is not None:
+                    self.validate()
                 self.save_model()
 
         if self.USE_TENSORBOARD:
@@ -151,7 +154,7 @@ class Trainer(object):
             torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
 
         # if self.epoch%self.config.TRAIN.CHECKPOINT_SAVING_STEPS == 0:
-        if self.epoch%20 == 0:
+        if self.epoch%self.checkpoint_saving_steps == 0:
             self.logger.info(f"Saving model with testing accuracy {self.avg_test_acc:.3f} in epoch {self.epoch} ")
             checkpoint_name = 'ckpt_best_{:04d}.pth'.format(self.epoch)
             torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
@@ -159,7 +162,7 @@ class Trainer(object):
 
     def calculate_display_step(self, num_sample, batch_size, display_times=5):
         num_steps = max(num_sample//batch_size, 1)
-        display_steps = max(num_steps//(num_steps//display_times), 1)
+        display_steps = max(num_steps//display_times, 1)
         # display_steps = max(num_steps//display_times//display_times*display_times, 1)
         return display_steps
 

@@ -6,7 +6,7 @@ from data.volume_generator import luna16_volume_generator, asus_nodule_volume_ge
 from utils.utils import get_nodule_center, irc2xyz, DataFrameTool
 import cc3d
 
-CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
+CROP_RANGE =  {'index': 64, 'row': 64, 'column': 32}
 
 # ASUS_M_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
@@ -14,21 +14,24 @@ CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
 # VOLUME_GENERATOR = asus_nodule_volume_generator(DATA_PATH)
 # ASUS_N_ANNOTATION_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\annotations.csv'
 
-RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules'
+RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
 NEGATIVE_POSITIVE_RATIO = 10
 CONNECTIVITY = 26
-center_shift = True
-shift_step = 2
+CENTER_SHIFT = False
+SHIFT_STEP = 2
 
 class ASUS_CropRange_Builder():
     @staticmethod 
-    def build_random_sample_subset(crop_range, 
+    def build_random_sample_subset(data_path, 
+                                   crop_range, 
                                    vol_data_path, 
                                    volume_generator, 
                                    annotation_path,
-                                   negative_positive_ratio=1.0):
-        file_name_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio)
+                                   negative_positive_ratio=1.0,
+                                   center_shift=True,
+                                   shift_step=2):
+        file_name_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio, center_shift, shift_step)
         save_path = os.path.join(vol_data_path, f'{file_name_key}')
         positive_path = os.path.join(save_path, f'positive_IRC_{file_name_key}.csv') 
         negative_path = os.path.join(save_path, f'negative_IRC_{file_name_key}.csv') 
@@ -36,7 +39,8 @@ class ASUS_CropRange_Builder():
         # Get cropping samples
         if not os.path.isfile(positive_path) or not os.path.isfile(negative_path):
             luna16_annotations = pd.read_csv(annotation_path)
-            ASUS_CropRange_Builder.save_luna16_cropping_samples(luna16_annotations, crop_range, save_path, volume_generator, negative_positive_ratio)
+            ASUS_CropRange_Builder.save_luna16_cropping_samples(
+                luna16_annotations, crop_range, save_path, volume_generator, negative_positive_ratio, center_shift, shift_step)
         positive_crop_range = pd.read_csv(positive_path)
         negative_crop_range = pd.read_csv(negative_path)
 
@@ -51,10 +55,10 @@ class ASUS_CropRange_Builder():
         total_raw_path, total_file_name = [], []
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
-            if short_pid[1] == 'B':
-                nodule_type = 'benign_merge'
-            elif short_pid[1] == 'm':
-                nodule_type = 'malignant_merge'
+            # if short_pid[1] == 'B':
+            #     nodule_type = 'benign_merge'
+            # elif short_pid[1] == 'm':
+            #     nodule_type = 'malignant_merge'
             file_name = f'asus-{index:04d}-{short_pid}'
             file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
             total_file_name.append(file_name)
@@ -73,10 +77,10 @@ class ASUS_CropRange_Builder():
 
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
-            if short_pid[1] == 'B':
-                nodule_type = 'benign_merge'
-            elif short_pid[1] == 'm':
-                nodule_type = 'malignant_merge'
+            # if short_pid[1] == 'B':
+            #     nodule_type = 'benign_merge'
+            # elif short_pid[1] == 'm':
+            #     nodule_type = 'malignant_merge'
 
             file_name = f'asus-{index:04d}-{short_pid}'
             file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
@@ -89,7 +93,7 @@ class ASUS_CropRange_Builder():
             raw_file, target_file = os.path.join(raw_path, f'{file_name}.npy'), os.path.join(target_path, f'{file_name}.npy')
             if not os.path.isfile(raw_file) or not os.path.isfile(target_file):
                 print(f'Saving ASUS nodule volume {index:04d} with shape {crop_range}')
-                _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(short_pid, nodule_type)
+                _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(data_path, short_pid)
                 crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
 
                 if not os.path.isfile(raw_file):
@@ -124,7 +128,9 @@ class ASUS_CropRange_Builder():
                                      crop_range, 
                                      save_path, 
                                      volume_generator,
-                                     negative_positive_ratio):
+                                     negative_positive_ratio, 
+                                     center_shift, 
+                                     shift_step):
         # e.g., ASUS_CropRange_Builder.save_luna16_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
         # where dataset save')
         total_positive, total_negative = None, None
@@ -136,7 +142,8 @@ class ASUS_CropRange_Builder():
             nodule_annotation = luna16_annotations.loc[luna16_annotations['seriesuid'].isin([volume_info['pid']])]
             nodule_center_xyz = nodule_annotation[['coordX', 'coordY', 'coordZ']].to_numpy()
             positive, negative = ASUS_CropRange_Builder.get_luna16_cropping_sample(
-                target_volume, crop_range, nodule_center_xyz, volume_info['origin'], volume_info['spacing'], volume_info['direction'])
+                target_volume, crop_range, nodule_center_xyz, volume_info['origin'], volume_info['spacing'], 
+                volume_info['direction'], center_shift, shift_step)
             
             def add_data_sample(total_sample, sample_df, volume_info, category_key):
                 num_sample = sample_df.shape[0]
@@ -154,14 +161,14 @@ class ASUS_CropRange_Builder():
             if negative is not None:
                 total_negative = add_data_sample(total_negative, negative, volume_info, category_key='negative')
 
-        filename_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio)
+        filename_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio, center_shift, shift_step)
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
         total_positive.to_csv(os.path.join(save_path, f'positive_IRC_{filename_key}.csv'), index=False)
         total_negative.to_csv(os.path.join(save_path, f'negative_IRC_{filename_key}.csv'), index=False)
 
     @staticmethod
-    def get_luna16_cropping_sample(target_volume, crop_range, nodule_center_xyz, origin_xyz, spacing_xyz, direction_xyz):
+    def get_luna16_cropping_sample(target_volume, crop_range, nodule_center_xyz, origin_xyz, spacing_xyz, direction_xyz, center_shift, shift_step):
         """Get single volume cropping samples with center, crop range"""
         depth, height, width = target_volume.shape
         positive_sample, negative_samples = None, None
@@ -171,6 +178,12 @@ class ASUS_CropRange_Builder():
 
         index_begin, row_begin, column_begin = crop_range['index']//2, crop_range['row']//2, crop_range['column']//2
         index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
+
+        # TODO: function
+        index_range_shift, row_range_shift, col_range_shift = 0, 100 , 100
+        index_begin, index_end = index_begin+index_range_shift, index_end-index_range_shift
+        row_begin, row_end = row_begin+row_range_shift, row_end-row_range_shift
+        column_begin, column_end = column_begin+col_range_shift, column_end-col_range_shift
         
         # Get positive samples
         crop_range_descend = np.sort(np.array(list(crop_range.values())))[::-1]
@@ -227,9 +240,13 @@ class ASUS_CropRange_Builder():
         return np.array((int(cri_a[2]), int(cri_a[1]), int(cri_a[0])))
 
     @staticmethod         
-    def get_filename_key(crop_range, negative_positive_ratio):
+    def get_filename_key(crop_range, negative_positive_ratio, shift, shift_step):
         index, row, col = crop_range['index'], crop_range['row'], crop_range['column']
-        return f'{index}x{row}x{col}-{negative_positive_ratio}'
+        file_key = f'{index}x{row}x{col}-{negative_positive_ratio}'
+        if shift:
+            assert shift_step > 0
+            file_key = f'{file_key}-shift-{shift_step}'
+        return file_key
 
     @staticmethod
     def crop_volume(volume, crop_range, crop_center):
@@ -284,20 +301,25 @@ def save_asus_center_info(volume_generator, connectivity, save_path):
 
 def main():
     # for nodule_type in ['benign_merge', 'malignant_merge']:
-    for nodule_type in ['malignant_merge']:
+    for nodule_type in ['ASUS-Benign', 'ASUS-Malignant']:
     # for nodule_type in ['malignant']:
         vol_data_path = os.path.join(VOL_DATA_PATH, nodule_type, 'crop')
-        DATA_PATH = os.path.join(RAW_DATA_PATH, nodule_type)
+        DATA_PATH = os.path.join(RAW_DATA_PATH, nodule_type, 'merge')
         VOLUME_GENERATOR = asus_nodule_volume_generator(DATA_PATH)
         ANNOTATION_PATH = os.path.join(DATA_PATH, 'annotations.csv')
 
         if not os.path.isfile(ANNOTATION_PATH):
             save_asus_center_info(volume_generator=VOLUME_GENERATOR, connectivity=CONNECTIVITY, save_path=ANNOTATION_PATH)
-        ASUS_CropRange_Builder.build_random_sample_subset(crop_range=CROP_RANGE, 
-                                                            vol_data_path=vol_data_path, 
-                                                            volume_generator=VOLUME_GENERATOR, 
-                                                            annotation_path=ANNOTATION_PATH, 
-                                                            negative_positive_ratio=NEGATIVE_POSITIVE_RATIO)
+        VOLUME_GENERATOR = asus_nodule_volume_generator(DATA_PATH)
+        # TODO: data_path & voluume generator are repeat info, should only input one
+        ASUS_CropRange_Builder.build_random_sample_subset(data_path=DATA_PATH,
+                                                          crop_range=CROP_RANGE, 
+                                                          vol_data_path=vol_data_path, 
+                                                          volume_generator=VOLUME_GENERATOR, 
+                                                          annotation_path=ANNOTATION_PATH, 
+                                                          negative_positive_ratio=NEGATIVE_POSITIVE_RATIO,
+                                                          center_shift=CENTER_SHIFT,
+                                                          shift_step=SHIFT_STEP)
   
 
 def check_data_repeat():

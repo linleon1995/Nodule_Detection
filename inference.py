@@ -35,12 +35,13 @@ def d2_model_inference(vol, batch_size, predictor):
 #     return pred_vol
 
 
-def pytorch_model_inference(vol, predictor, dataloader):
-    # pred_vol = np.zeros_like(vol[...,0])
-    for idx, sample in enumerate(dataloader):
-        sample = sample.to(torch.device('cuda:0'))
-        sample = sample.to(torch.float)
-        pred = predictor(sample[...,0])['out']
+
+
+def pytorch_model_inference(predictor, dataloader):
+    for idx, (vol, _) in enumerate(dataloader):
+        vol = vol.to(torch.device('cuda:0'))
+        vol = vol.to(torch.float)
+        pred = predictor(vol[...,0])['out']
         pred = nn.Softmax(dim=1)(pred)
         pred = torch.argmax(pred, dim=1)
         if idx == 0:

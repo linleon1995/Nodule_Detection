@@ -28,6 +28,9 @@ class LungNoduleStudy():
         nodule_mapping = {}
         for id in self.nodule_ids:
             nodule_volume = np.uint8(np.where(self.category_volume==id, 1, 0))
+            # TODO: caused by test with different image size
+            # TODO: bug when plot scatter but hu=None
+            # hu = None
             if self.raw_volume is not None:
                 hu = np.mean(nodule_volume*self.raw_volume[...,0])
             else:
