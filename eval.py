@@ -225,18 +225,18 @@ def eval(cfg, volume_generator):
     else:
         nodule_classifier = None
 
-    evaluator = D2SegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
-                                      slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
-                                      post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
-                                      lung_mask_path=lung_mask_path, save_all_images=cfg.SAVE_ALL_IMAGES, batch_size=cfg.TEST_BATCH_SIZE)
+    # evaluator = D2SegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
+    #                                   slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
+    #                                   post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
+    #                                   lung_mask_path=lung_mask_path, save_all_images=cfg.SAVE_ALL_IMAGES, batch_size=cfg.TEST_BATCH_SIZE)
     # evaluator = Pytorch2dSegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
     #                                   slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
     #                                   post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
     #                                   lung_mask_path=lung_mask_path)
-    # evaluator = Pytorch3dSegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
-    #                                   save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
-    #                                   post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
-    #                                   lung_mask_path=lung_mask_path, save_all_images=cfg.SAVE_ALL_IMAGES)
+    evaluator = Pytorch3dSegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
+                                      save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
+                                      post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
+                                      lung_mask_path=lung_mask_path, save_all_images=cfg.SAVE_ALL_IMAGES)
     target_studys, pred_studys = evaluator.run()
     return target_studys, pred_studys
 
@@ -485,8 +485,8 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
 
-    # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_000'
-    # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-050.pt")  # path to the model we just trained
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_002'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-070.pt")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004'
     # # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt_best.pth")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei'

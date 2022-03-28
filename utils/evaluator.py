@@ -196,8 +196,9 @@ def nodule_visualize(save_path, pid, vol, mask_vol, pred_vol, target_vol_categor
     for vis_idx in vis_indices:
         # plt.savefig(vis_vol[vis_idx])
         cv2.imwrite(os.path.join(origin_save_path, f'vis-{pid}-{vis_idx}.png'), vis_vol[vis_idx])
-        for crop_idx, vis_crop in enumerate(vis_crops[vis_idx]):
-            cv2.imwrite(os.path.join(enlarge_save_path, f'vis-{pid}-{vis_idx}-crop{crop_idx:03d}.png'), vis_crop)
+        if vis_idx in vis_crops:
+            for crop_idx, vis_crop in enumerate(vis_crops[vis_idx]):
+                cv2.imwrite(os.path.join(enlarge_save_path, f'vis-{pid}-{vis_idx}-crop{crop_idx:03d}.png'), vis_crop)
 
     temp = np.where(mask_vol+pred_vol>0, 1, 0)
     zs_c, ys_c, xs_c = np.where(temp)
