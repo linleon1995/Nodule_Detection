@@ -1,7 +1,7 @@
 
 
 # TODO: consider overlapping
-from lib2to3.pgen2.literals import simple_escapes
+import numpy as np
 
 
 class CropVolume():
@@ -12,9 +12,14 @@ class CropVolume():
     def __call__(self, volume):
         crop_data = []
         crop_slices = self.get_crop_slice(volume.shape)
-        for crop_slice in crop_slices:
+        
+        for slice_range in crop_slices:
+            # crop = volume.copy()
+            # for dim , crop_slice_dim in enumerate(crop_slice):
+            #     crop = np.take(crop, crop_slice_dim, dim)
+            crop_slice = [slice(*r) for r in slice_range]
             crop = volume[crop_slice]
-            crop_data.append(crop)
+            crop_data.append({'slice': slice_range, 'data':crop})
         return crop_data
 
     def get_crop_slice(self, volume_shape):
@@ -44,14 +49,34 @@ class CropVolume():
     def simple_slice(length, shift, crop_length):
         slices = []
         for start in range(shift, length-shift-crop_length, crop_length):
-            slices.append(slice(start, start+crop_length))
+            # slices.append(slice(start, start+crop_length))
+            slices.append((start, start+crop_length))
         return slices
 
 
 if __name__ == '__main__':
-    import numpy as np
+    # import numpy as np
 
     crop_ops = CropVolume((32,64,64), (0, 100, 100))
     np_data = np.zeros((100, 512, 512))
+    a = np_data[1:30, 2:45]
+    b = slice(*(1,51))
+    # a_idx = np.arange(1, 10)
+    # b_idx = np.arange(11, 16)
+    # c_idx = np.meshgrid(a_idx, b_idx)
+    # a = np_data[a_idx]
+    # b = np_data[:,b_idx,b_idx]
+    # z_indices = np.random.randint(0,30,(30,30))
+
+    # def linidx_take(val_arr,z_indices):
+    #     # Get number of columns and rows in values array
+    #     _,nC,nR = val_arr.shape
+
+    #     # Get linear indices and thus extract elements with np.take
+    #     idx = nC*nR*z_indices + nR*np.arange(nR)[:,None] + np.arange(nC)
+    #     return np.take(val_arr,idx) # Or val_arr.ravel()[idx]
+        
+    # c = np.take(np_data, z_indices)
     crop_ops(np_data)
+    print(3)
     

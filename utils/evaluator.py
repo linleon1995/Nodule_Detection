@@ -153,11 +153,14 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         vol = np.float32(vol[...,0])
         vol = np.swapaxes(np.swapaxes(vol, 0, 2), 0, 1)
         vol /= 255
+        pred_vol = torch.zeros(vol.shape)
+        # TODO: dataloader takes long time
         dataset = self.data_converter(vol, crop_range=(64,64,32), crop_shift=(0,0,0))
         dataloder = DataLoader(dataset, batch_size=1, shuffle=False)
         for idx, input_data in enumerate(dataloder):
-            input_data = input_data.to(torch.device('cuda:0'))
-            pred = self.predictor(input_data)
+            data, data_slice = input_data['data'], input_data['slice']
+            data = data.to(torch.device('cuda:0'))
+            pred = self.predictor(data)
             # pred = nn.Softmax(dim=1)(pred)
             # pred = torch.argmax(pred, dim=1)
 
@@ -169,15 +172,32 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
             # pred = nn.Sigmoid()(pred)
 
             pred = torch.where(pred>0.5, 1, 0)
-            pred_np = pred.cpu().detach().numpy()
-            if np.sum(pred_np)>0:
-                print('!!!!!!')
-                for s in range(32):
-                    if np.sum(pred_np[...,s])>0:
-                        plt.imshow(pred_np[0,0,...,s])
-                        plt.show()
-        # pred_vol = pred_vol.cpu().detach().numpy()
-        pred_vol = np.zeros_like(vol)
+            # a = torch.tensor(data_slice[0]).cpu().detach().numpy()
+            data_slice = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in data_slice]
+            # TODO: batch size problem
+            # print(torch.sum(pred_vol))
+            pred_vol[data_slice] = pred[0,0]
+
+
+        #     data_np = data.cpu().detach().numpy()
+        #     pred_np = pred.cpu().detach().numpy()
+
+        #     # pred_vol2 = pred_vol[0,0].copy()
+        #     # pred_crop = pred_vol2
+        #     # for dim, crop_indices in enumerate(data_slice):
+        #     #     pred_crop = np.take(pred_crop, crop_indices, axis=dim)
+        #     # pred_crop = pred_np
+        #     # pred_crop = np.ones_like(pred_np)
+        #     if np.sum(pred_np)>0 and np.sum(data_np)>0:
+        #         print('!!!!!!')
+        #         for s in range(32):
+        #             if np.sum(pred_np[...,s])>0:
+        #                 plt.imshow(data_np[0,0,...,s], 'gray')
+        #                 plt.imshow(pred_np[0,0,...,s], alpha=0.2)
+        #                 plt.savefig(f'plot/cube-{idx}-{s}.png')
+        # # pred_vol = pred_vol.cpu().detach().numpy()
+        # pred_vol = np.zeros_like(vol)
+        pred_vol = pred_vol.cpu().detach().numpy()
         pred_vol = np.swapaxes(np.swapaxes(pred_vol, 0, 2), 1, 2)
         return pred_vol
 

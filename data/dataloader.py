@@ -112,7 +112,9 @@ class SimpleNoduleDataset():
 class CropNoduleDataset():
     def __init__(self, volume, crop_range, crop_shift):
         self.cropping_op = CropVolume(crop_range, crop_shift)
-        self.crop_data = [data[np.newaxis] for data in self.cropping_op(volume)]
+        self.crop_data = self.cropping_op(volume)
+        for idx in range(len(self.crop_data)):
+            self.crop_data[idx]['data'] = self.crop_data[idx]['data'][np.newaxis]
 
     def __len__(self):
         return len(self.crop_data)
