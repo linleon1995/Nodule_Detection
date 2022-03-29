@@ -68,63 +68,6 @@ import cc3d
 
 # TODO: modify the name of lung_mask_filtering and reduce_false_p
 
-def volume_outputs_to_pred_volume(volume_outputs):
-    volume_shape = [len(volume_outputs)] + list(volume_outputs[0].image_size)
-    pred_vol = np.zeros(volume_shape, np.float32)
-    for img_idx, instance in enumerate(volume_outputs):
-        pred_masks = instance._fields['pred_masks'].cpu().detach().numpy() 
-        pred_mask = np.sum(pred_masks, axis=0)
-        pred_mask = mask_preprocess(pred_mask)
-        pred_vol[img_idx] = pred_mask
-    return pred_vol
-
-
-def volume_outputs_to_pred_scores(volume_outputs):
-    all_slices_scores = []
-    for img_idx, instance in enumerate(volume_outputs):
-        scores = instance._fields['scores'].cpu().detach().numpy() 
-        all_slices_scores.append(scores)
-    return all_slices_scores
-
-
-def convert_pred_format(volume_outputs):
-    pred_vol = volume_outputs_to_pred_volume(volume_outputs)
-    pred_scores = volume_outputs_to_pred_scores(volume_outputs)
-
-    # TODO: the affect need to be confirmed
-    # Remove single slice prediction
-    # score_filter = []
-    # for img_idx, scores in enumerate(pred_scores):
-    #     if scores.size > 0:
-    #         last, next = max(0, img_idx-1), min(len(pred_scores)-1, img_idx+1)
-    #         if pred_scores[last].size == 0 and pred_scores[next].size == 0:
-    #             pred_scores[img_idx] = np.array([], np.float32)
-    #             score_filter.append(0)
-    #         else:
-    #             score_filter.append(1)
-    #     else:
-    #         score_filter.append(0)
-    # score_filter = np.array(score_filter, np.float32)
-    # score_filter = np.reshape(score_filter, [score_filter.size, 1, 1])
-    # pred_vol *= score_filter
-    return pred_vol, pred_scores
-
-
-def get_output(pred_vol, pred_scores, origin, spacing, direction): 
-    pred_vol, pred_metadata = volumetric_data_eval.volume_preprocess(pred_vol)
-    pred_category = np.unique(pred_vol)[1:]
-    total_nodule_infos = []
-    for label in pred_category:
-        pred_nodule = np.where(pred_vol==label, 1, 0)
-        pred_center_irc = get_nodule_center(pred_nodule)
-        pred_center_xyz = irc2xyz(pred_center_irc, origin, spacing, direction)
-        # TODO: The nodule prob is actually the mean of all nodule probs of assign slice.
-        # This is suboptimal but temporally acceptable solution.
-        # Because nodule based prob need to convert 2d bbox to 3d bbox which is hard to implement
-        nodule_prob = np.mean(pred_scores[int(pred_center_irc[0])])
-        nodule_infos= {'Center_xyz': pred_center_xyz, 'Nodule_prob': nodule_prob}
-        total_nodule_infos.append(nodule_infos)
-    return total_nodule_infos
 
 
 class BatchPredictor(DefaultPredictor):
@@ -185,27 +128,10 @@ def detectron2_eval(cfg):
     # another equivalent way to evaluate the model is to use `trainer.test`
 
 
-def eval(cfg, volume_generator):
-    in_planes = 2*cfg.SLICE_SHIFT + 1
+def eval(cfg, volume_generator, data_converter, predictor, evaluator_gen):
     save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME, cfg.DATA_SPLIT)
     save_vis_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
     lung_mask_path = os.path.join(cfg.DATA_PATH, 'Lung_Mask_show')
-
-    # TODO: take model, dataloader up 1 level
-    # TODO: all pytorch model (or evene include d2 model) should come from same build_model function.
-    if cfg.MODEL_NAME == '2D-Mask-RCNN':
-        data_converter = None
-        predictor = BatchPredictor(cfg)
-    elif cfg.MODEL_NAME in ['2D-FCN', '2D-Unet']:
-        data_converter = SimpleNoduleDataset
-        predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
-                                                device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
-        # predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=3, n_class=2, device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
-    elif cfg.MODEL_NAME in ['Model_Genesis', '3D-Unet']:
-        # TODO: make the difference between 3D unet nad model_genensis
-        data_converter = CropNoduleDataset
-        predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
-                                                device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
 
     vol_metric = volumetric_data_eval(
         model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
@@ -224,216 +150,14 @@ def eval(cfg, volume_generator):
         nodule_classifier = NoduleClassifier(crop_range, cfg.FP_reducer_checkpoint, prob_threshold=cfg.NODULE_CLS_PROB)
     else:
         nodule_classifier = None
-
-    # evaluator = D2SegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
-    #                                   slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
-    #                                   post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
-    #                                   lung_mask_path=lung_mask_path, save_all_images=cfg.SAVE_ALL_IMAGES, batch_size=cfg.TEST_BATCH_SIZE)
-    # evaluator = Pytorch2dSegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
-    #                                   slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
-    #                                   post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
-    #                                   lung_mask_path=lung_mask_path)
-    evaluator = Pytorch3dSegEvaluator(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
-                                      save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
-                                      post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
-                                      lung_mask_path=lung_mask_path, save_all_images=cfg.SAVE_ALL_IMAGES)
+    evaluator = evaluator_gen(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
+                              slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
+                              post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
+                              lung_mask_path=lung_mask_path)
     target_studys, pred_studys = evaluator.run()
     return target_studys, pred_studys
 
 
-def eval2(cfg, volume_generator):
-    save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME, cfg.DATA_SPLIT)
-    if not os.path.isdir(save_path):
-        os.makedirs(save_path)
-    save_vis_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
-    total_pid = []
-    target_studys, pred_studys = [], []
-    lung_mask_path = os.path.join(cfg.DATA_PATH, 'Lung_Mask_show')
-
-    # predictor = BatchPredictor(cfg)
-    # TODO:
-    predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, slice_shift=3, n_class=2, device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
-    # predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, slice_shift=3, n_class=2, device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
-
-    vol_metric = volumetric_data_eval(model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
-    # metadata_recorder = DataFrameTool()
-    post_processer = VolumePostProcessor(cfg.connectivity, cfg.area_threshold)
-    # nodule_visualizer = Visualizer()
-    
-    fp_reduce_condition = (cfg.remove_1_slice or cfg.remove_unusual_nodule_by_lung_size or cfg.lung_mask_filtering)
-    if fp_reduce_condition:
-        fp_reducer = FalsePositiveReducer(_1SR=cfg.remove_1_slice, 
-                                          RUNLS=cfg.remove_unusual_nodule_by_lung_size, 
-                                          LMF=cfg.lung_mask_filtering, 
-                                          slice_threshold=cfg.pred_slice_threshold,
-                                          lung_size_threshold=cfg.lung_size_threshold)
-
-    if cfg.nodule_cls:
-        crop_range = {'index': cfg.crop_range[0], 'row': cfg.crop_range[1], 'column': cfg.crop_range[2]}
-        nodule_classifier = NoduleClassifier(crop_range, cfg.FP_reducer_checkpoint, prob_threshold=cfg.NODULE_CLS_PROB)
-
-
-    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(volume_generator):
-        # TODO: use decorator to write a breaking condition
-        if cfg.MAX_TEST_CASES is not None:
-            if vol_idx >= cfg.MAX_TEST_CASES:
-                break
-            
-        pid, scan_idx = infos['pid'], infos['scan_idx']
-        total_pid.append(pid)
-        mask_vol = np.int32(mask_vol)
-        
-        mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 2), 0, 1)
-        mask_vol = cv2.resize(mask_vol, (800,800), interpolation=cv2.INTER_NEAREST)
-        mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 2), 1, 2)
-
-        # vol, mask_vol = change_eval_size(vol, mask_vol, size=1120)
-        # Model Inference
-        print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
-        
-        dataset = SimpleNoduleDataset(vol, mask_vol, size=800, slice_shift=3)
-        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
-        pred_vol = pytorch_model_inference(predictor, dataloader)
-        # pred_vol = d2_model_inference(vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
-        # pred_vol = model_inference(cfg.MODEL_NAME, vol, batch_size=cfg.TEST_BATCH_SIZE, predictor=predictor)
-
-        # Data post-processing
-        # TODO: the target volume should reduce small area but 1 pixel remain in 1m0037 
-        pred_vol_category = post_processer(pred_vol)
-        # target_vol_individual = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
-        target_vol_individual = post_processer(mask_vol)
-
-        # False positive reducing
-        if fp_reduce_condition:
-            pred_vol_category = fp_reducer(pred_vol_category, raw_vol, lung_mask_path, pid)
-
-        # Nodule classification
-        if cfg.nodule_cls:
-            pred_vol_category, pred_nodule_info = nodule_classifier.nodule_classify(vol, pred_vol_category, mask_vol)
-        else:
-            pred_nodule_info = None
-        # Evaluation
-        target_study = LungNoduleStudy(pid, target_vol_individual, raw_volume=raw_vol)
-        pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
-        vol_metric.calculate(target_study, pred_study)
-
-        # print('test')
-        # TODO: single function
-        # # Visualize
-        if save_vis_condition(vol_idx):
-            origin_save_path = os.path.join(save_path, 'images', pid, 'origin')
-            enlarge_save_path = os.path.join(save_path, 'images', pid, 'enlarge')
-            _3d_save_path = os.path.join(save_path, 'images', pid, '3d')
-            for path in [origin_save_path, enlarge_save_path, _3d_save_path]:
-                if not os.path.isdir(path):
-                    os.makedirs(path)
-
-            # # for j, (img, mask, pred) in enumerate(zip(vol, mask_vol, pred_vol)):
-            # #     save_mask(img, mask, pred, num_class=2, save_path=image_save_path, save_name=f'{pid}-{j:03d}')
-            
-            # # npy_save_path = os.path.join(save_path, 'npy')
-            # # if not os.path.isdir(npy_save_path):
-            # #     os.makedirs(npy_save_path)
-            # # np.save(os.path.join(npy_save_path, f'{pid}.npy'), np.uint8(pred_vol))
-
-            vis_vol, vis_indices, vis_crops = visualize(vol, pred_vol_category, mask_vol, pred_nodule_info)
-            for vis_idx in vis_indices:
-                # plt.savefig(vis_vol[vis_idx])
-                cv2.imwrite(os.path.join(origin_save_path, f'vis-{pid}-{vis_idx}.png'), vis_vol[vis_idx])
-                for crop_idx, vis_crop in enumerate(vis_crops[vis_idx]):
-                    cv2.imwrite(os.path.join(enlarge_save_path, f'vis-{pid}-{vis_idx}-crop{crop_idx:03d}.png'), vis_crop)
-
-            temp = np.where(mask_vol+pred_vol>0, 1, 0)
-            zs_c, ys_c, xs_c = np.where(temp)
-            crop_range = {'z': (np.min(zs_c), np.max(zs_c)), 'y': (np.min(ys_c), np.max(ys_c)), 'x': (np.min(xs_c), np.max(xs_c))}
-            if crop_range['z'][1]-crop_range['z'][0] > 2 and \
-               crop_range['y'][1]-crop_range['y'][0] > 2 and \
-               crop_range['x'][1]-crop_range['x'][0] > 2:
-                save_mask_in_3d(target_vol_individual, 
-                                save_path1=os.path.join(_3d_save_path, f'{pid}-raw-mask.png'),
-                                save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-mask.png'), 
-                                crop_range=crop_range)
-                save_mask_in_3d(pred_vol_category,
-                                save_path1=os.path.join(_3d_save_path, f'{pid}-raw-pred.png'),
-                                save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-pred.png'),
-                                crop_range=crop_range)
-        target_studys.append(target_study)
-        pred_studys.append(pred_study)
-        #     nodule_visualizer()
-
-    _ = vol_metric.evaluation(show_evaluation=True)
-    return target_studys, pred_studys
-
-    
-def froc(cfg, volume_generator):
-    time_recording = time_record()
-    time_recording.set_start_time('Total')
-
-    save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME)
-
-    if not os.path.isdir(save_path):
-        os.makedirs(save_path)
-    pid_list = []
-
-    predictor = BatchPredictor(cfg)
-    vol_metric = volumetric_data_eval(save_path)
-    submission_recorder = SubmissionDataFrame()
-    idx = 0
-    for pid, volume_outputs, nodule_infos in build_pred_generator(volume_generator, predictor, cfg.TEST_BATCH_SIZE):
-        if cfg.MAX_TEST_CASES is not None:
-            if idx > cfg.MAX_TEST_CASES: 
-                break
-        idx += 1
-        pid_list.append(pid)
-        pred_vol, pred_scores = convert_pred_format(volume_outputs)
-        vol_nodule_infos = get_output(pred_vol, pred_scores, 
-                                      nodule_infos['origin'], nodule_infos['spacing'], nodule_infos['direction'])
-
-        for nodule_infos in vol_nodule_infos:
-            if not nodule_infos['Nodule_prob']: 
-                nodule_infos['Nodule_prob'] = 0.5
-            submission = [pid] + nodule_infos['Center_xyz'].tolist() + [nodule_infos['Nodule_prob']]
-            submission_recorder.write_row(submission)
-
-    submission_recorder.save_data_frame(save_path=os.path.join(save_path, 'FROC', f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission.csv'))
-    time_recording.set_end_time('Total')
-
-    seriesuid = pd.DataFrame(data=pid_list)
-    annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
-    if not os.path.isdir(annotation_dir):
-        os.makedirs(annotation_dir)
-    seriesuid.to_csv(os.path.join(save_path, 'FROC', 'annotations', 'seriesuids.csv'), index=False, header=False)
-
-    CalculateFROC(f'{cfg.DATA_SPLIT}-{cfg.DATASET_NAME}-submission', save_path)
-
-
-def CalculateFROC(submission_filename, save_path):
-    annotation_dir = os.path.join(save_path, 'FROC', 'annotations')
-
-    # select calculate cases from seriesuid.csv
-    annotations = pd.read_csv('evaluationScript/annotations/annotations.csv')
-    annotations_excluded = pd.read_csv('evaluationScript/annotations/annotations_excluded.csv')
-    calculate_pid = pd.read_csv(os.path.join(annotation_dir, 'seriesuids.csv'))
-    calculate_annotations = annotations.loc[annotations['seriesuid'].isin(calculate_pid.iloc[:, 0])]
-    calculate_annotations_excluded = annotations_excluded.loc[annotations_excluded['seriesuid'].isin(calculate_pid.iloc[:, 0])]
-
-    # save annotation and annotation_excluded
-    calculate_annotations.to_csv(os.path.join(annotation_dir, 'annotations.csv'), index=False)
-    calculate_annotations_excluded.to_csv(os.path.join(annotation_dir, 'annotations_excluded.csv'), index=False)
-
-    noduleCADEvaluationLUNA16.noduleCADEvaluation(os.path.join(annotation_dir, 'annotations.csv'),
-                                                  os.path.join(annotation_dir, 'annotations_excluded.csv'),
-                                                #   'evaluationScript/annotations/seriesuids2.csv',
-                                                  os.path.join(annotation_dir, 'seriesuids.csv'),
-                                                  os.path.join(save_path, 'FROC', f'{submission_filename}.csv'),
-                                                  os.path.join(save_path, 'FROC'))
-
-
-# def save_sample_submission(vol_nodule_infos):
-    # TODO: class
-    # TODO: no index in the first column
-    # TODO: coordX, Y, Z --> calculate center in volume_eval and coord transform in here (use nodule DSC as prob)
-    
 
 def select_model(cfg):
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_001'
@@ -485,8 +209,8 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
 
-    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_008'
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-020.pt")  # path to the model we just trained
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_012'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-best.pt")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004'
     # # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt_best.pth")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei'
@@ -686,7 +410,26 @@ def cross_valid_eval():
 
             volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
                                                             case_pids=case_pids)
-            target_studys, pred_studys = eval(cfg, volume_generator=volume_generator)
+
+            in_planes = 2*cfg.SLICE_SHIFT + 1
+            if cfg.MODEL_NAME == '2D-Mask-RCNN':
+                data_converter = None
+                predictor = BatchPredictor(cfg)
+                evaluator_gen = D2SegEvaluator
+            elif cfg.MODEL_NAME in ['2D-FCN', '2D-Unet']:
+                data_converter = SimpleNoduleDataset
+                predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
+                                                        device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
+                # predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=3, n_class=2, device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
+                evaluator_gen = Pytorch2dSegEvaluator
+            elif cfg.MODEL_NAME in ['Model_Genesis', '3D-Unet']:
+                # TODO: make the difference between 3D unet nad model_genensis
+                data_converter = CropNoduleDataset
+                predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
+                                                        device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
+                evaluator_gen = Pytorch3dSegEvaluator
+            target_studys, pred_studys = eval(cfg, volume_generator, data_converter, predictor, evaluator_gen)
+
 
             for target_study, pred_study in zip(target_studys, pred_studys):
                 if dataset_name == 'ASUS-Benign':

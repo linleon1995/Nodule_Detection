@@ -152,3 +152,15 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant\crop\64x64x32-10\positive\Image\asus-0000-1m0001.npy'
+    # input_data = np.load(path)
+    # target = np.load(path.replace('Image', 'Mask'))
+    # import matplotlib
+    # matplotlib.use('TkAgg')
+    # import matplotlib.pyplot as plt
+    # for s in range(32):
+    #     if np.sum(target[...,s]) > 0:
+    #         plt.imshow(input_data[...,s], 'gray')
+    #         plt.imshow(target[...,s], alpha=0.2)
+    #         plt.show()
+    

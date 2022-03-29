@@ -16,7 +16,7 @@ CROP_RANGE =  {'index': 64, 'row': 64, 'column': 32}
 
 RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
-NEGATIVE_POSITIVE_RATIO = 10
+NEGATIVE_POSITIVE_RATIO = 100
 CONNECTIVITY = 26
 CENTER_SHIFT = False
 SHIFT_STEP = 2

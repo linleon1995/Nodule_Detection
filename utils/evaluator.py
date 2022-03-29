@@ -89,7 +89,8 @@ class NoudleSegEvaluator():
 
 class D2SegEvaluator(NoudleSegEvaluator):
     def __init__(self, predictor, volume_generator, save_path, data_converter, eval_metrics, slice_shift, save_vis_condition=True, 
-                 max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', save_all_images=False, batch_size=1):
+                 max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', 
+                 save_all_images=False, batch_size=1, *args, **kwargs):
         super().__init__(predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition, 
                          max_test_cases, post_processer, fp_reducer, nodule_classifier, lung_mask_path, save_all_images, batch_size)
         self.slice_shift = slice_shift
@@ -121,7 +122,8 @@ class D2SegEvaluator(NoudleSegEvaluator):
 
 class Pytorch2dSegEvaluator(NoudleSegEvaluator):
     def __init__(self, predictor, volume_generator, save_path, data_converter, eval_metrics, slice_shift, save_vis_condition=True, 
-                 max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', save_all_images=False, batch_size=1):
+                 max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', 
+                 save_all_images=False, batch_size=1, *args, **kwargs):
         super().__init__(predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition, 
                          max_test_cases, post_processer, fp_reducer, nodule_classifier, lung_mask_path, save_all_images, batch_size)
         self.slice_shift = slice_shift
@@ -145,7 +147,8 @@ class Pytorch2dSegEvaluator(NoudleSegEvaluator):
 
 class Pytorch3dSegEvaluator(NoudleSegEvaluator):
     def __init__(self, predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition=True, 
-                 max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', save_all_images=False, batch_size=1):
+                 max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', 
+                 save_all_images=False, batch_size=1, *args, **kwargs):
         super().__init__(predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition, 
                          max_test_cases, post_processer, fp_reducer, nodule_classifier, lung_mask_path, save_all_images, batch_size)
     
@@ -159,6 +162,7 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         dataloder = DataLoader(dataset, batch_size=1, shuffle=False)
         for idx, input_data in enumerate(dataloder):
             data, data_slice = input_data['data'], input_data['slice']
+            data = data.float()
             data = data.to(torch.device('cuda:0'))
             pred = self.predictor(data)
             # pred = nn.Softmax(dim=1)(pred)
