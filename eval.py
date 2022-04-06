@@ -209,8 +209,8 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
 
-    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_012'
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-best.pt")  # path to the model we just trained
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_023'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-000.pt")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004'
     # # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt_best.pth")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei'
@@ -367,7 +367,7 @@ def cross_valid_eval():
     save_path = cfg.SAVE_PATH
     cfg.MODEL_NAME = model_name
     # TODO: move to config
-    assign_fold = 4
+    assign_fold = 0
 
     if assign_fold is not None:
         assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
@@ -491,13 +491,34 @@ def main():
 if __name__ == '__main__':
     main()
 
+    # x_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant\crop\32x64x64-1\positive\Image\asus-0037-1m0033.npy'
+    # m_path = x_path.replace('Image', 'Mask')
+    # x_arr = np.load(x_path)
+    # m_arr = np.load(m_path)
+    # for s in range(0, x_arr.shape[0], 4):
+    #     plt.imshow(x_arr[s], 'gray')
+    #     plt.imshow(m_arr[s], alpha=0.2)
+    #     plt.show()
 
-    # nodule_test()
-    # asus_benign_eval()
-    # asus_malignant_eval()
-    # luna16_eval()
 
-    # liwei_asus_malignant_eval()
-    
+    # x_path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\generated_cubes\x_test_64x64x32.npy'
+    # m_path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\generated_cubes\m_test_64x64x32.npy'
+    # x_arr = np.load(x_path)
+    # m_arr = np.load(m_path)
+
+    # for i in range(x_arr.shape[0]):
+    #     for s in range(0, x_arr.shape[3], 4):
+    #         if np.sum(m_arr[i,...,s,0])<=0:
+    #             plt.imshow(x_arr[i,...,s,0], 'gray')
+    #             plt.imshow(m_arr[i,...,s,0], alpha=0.2)
+    #             plt.show()
+
+
+    # path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\generated_cubes\bat_32_s_64x64x32_0.npy'
+    # arr = np.load(path)
+    # for i in range(arr.shape[0]):
+    #     for s in range(0, arr.shape[3], 4):
+    #         plt.imshow(arr[i,...,s], 'gray')
+    #         plt.show()
     
     

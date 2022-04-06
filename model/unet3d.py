@@ -122,7 +122,14 @@ class UNet3D(nn.Module):
         self.out_tr = OutputTransition(64, n_class)
 
     def forward(self, x):
+        # x_npy = x.cpu().detach().numpy()
+        # import matplotlib.pyplot as plt
+        # import numpy as np
+        # if np.sum(x_npy[0,0,...,0]>0):
+        #     plt.imshow(x_npy[0,0,...,0])
+        #     plt.show()
         self.out64, self.skip_out64 = self.down_tr64(x)
+        
         self.out128,self.skip_out128 = self.down_tr128(self.out64)
         self.out256,self.skip_out256 = self.down_tr256(self.out128)
         self.out512,self.skip_out512 = self.down_tr512(self.out256)

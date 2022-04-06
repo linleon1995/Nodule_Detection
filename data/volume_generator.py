@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO)
 from modules.data import dataset_utils
 
 
-
+# TODO: unifyinterface
 def get_data_by_pid_asus(data_path, pid):
     raw_and_mask = dataset_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
     for _dir in raw_and_mask:

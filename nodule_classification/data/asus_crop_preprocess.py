@@ -6,7 +6,7 @@ from data.volume_generator import luna16_volume_generator, asus_nodule_volume_ge
 from utils.utils import get_nodule_center, irc2xyz, DataFrameTool
 import cc3d
 
-CROP_RANGE =  {'index': 64, 'row': 64, 'column': 32}
+CROP_RANGE =  {'index': 32, 'row': 64, 'column': 64}
 
 # ASUS_M_RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\malignant'
 
@@ -16,10 +16,10 @@ CROP_RANGE =  {'index': 64, 'row': 64, 'column': 32}
 
 RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
-NEGATIVE_POSITIVE_RATIO = 100
+NEGATIVE_POSITIVE_RATIO = 10
 CONNECTIVITY = 26
-CENTER_SHIFT = False
-SHIFT_STEP = 2
+CENTER_SHIFT = True
+SHIFT_STEP = 8
 
 class ASUS_CropRange_Builder():
     @staticmethod 
@@ -38,15 +38,16 @@ class ASUS_CropRange_Builder():
 
         # Get cropping samples
         if not os.path.isfile(positive_path) or not os.path.isfile(negative_path):
-            luna16_annotations = pd.read_csv(annotation_path)
-            ASUS_CropRange_Builder.save_luna16_cropping_samples(
-                luna16_annotations, crop_range, save_path, volume_generator, negative_positive_ratio, center_shift, shift_step)
+            tmh_annotations = pd.read_csv(annotation_path)
+            ASUS_CropRange_Builder.save_tmh_cropping_samples(
+                tmh_annotations, crop_range, save_path, volume_generator, negative_positive_ratio, center_shift, shift_step)
         positive_crop_range = pd.read_csv(positive_path)
         negative_crop_range = pd.read_csv(negative_path)
 
         # Merge positive and negative samples and save in data_samples
         num_positive_sample = positive_crop_range.shape[0]
         num_negative_sample = int(negative_positive_ratio*num_positive_sample)
+        num_negative_sample = np.clip(num_negative_sample, 0, negative_crop_range.shape[0])
         negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
         # data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
         data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
@@ -124,14 +125,14 @@ class ASUS_CropRange_Builder():
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
     @staticmethod
-    def save_luna16_cropping_samples(luna16_annotations,
+    def save_tmh_cropping_samples(tmh_annotations,
                                      crop_range, 
                                      save_path, 
                                      volume_generator,
                                      negative_positive_ratio, 
                                      center_shift, 
                                      shift_step):
-        # e.g., ASUS_CropRange_Builder.save_luna16_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
+        # e.g., ASUS_CropRange_Builder.save_tmh_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
         # where dataset save')
         total_positive, total_negative = None, None
         
@@ -139,9 +140,9 @@ class ASUS_CropRange_Builder():
             # if vol_idx >= 3: break
             print(vol_idx+1, volume_info['pid'])
 
-            nodule_annotation = luna16_annotations.loc[luna16_annotations['seriesuid'].isin([volume_info['pid']])]
+            nodule_annotation = tmh_annotations.loc[tmh_annotations['seriesuid'].isin([volume_info['pid']])]
             nodule_center_xyz = nodule_annotation[['coordX', 'coordY', 'coordZ']].to_numpy()
-            positive, negative = ASUS_CropRange_Builder.get_luna16_cropping_sample(
+            positive, negative = ASUS_CropRange_Builder.get_tmh_cropping_sample(
                 target_volume, crop_range, nodule_center_xyz, volume_info['origin'], volume_info['spacing'], 
                 volume_info['direction'], center_shift, shift_step)
             
@@ -168,7 +169,7 @@ class ASUS_CropRange_Builder():
         total_negative.to_csv(os.path.join(save_path, f'negative_IRC_{filename_key}.csv'), index=False)
 
     @staticmethod
-    def get_luna16_cropping_sample(target_volume, crop_range, nodule_center_xyz, origin_xyz, spacing_xyz, direction_xyz, center_shift, shift_step):
+    def get_tmh_cropping_sample(target_volume, crop_range, nodule_center_xyz, origin_xyz, spacing_xyz, direction_xyz, center_shift, shift_step):
         """Get single volume cropping samples with center, crop range"""
         depth, height, width = target_volume.shape
         positive_sample, negative_samples = None, None
@@ -199,6 +200,8 @@ class ASUS_CropRange_Builder():
                     for index_shift in [-shift_step, shift_step]:
                         for row_shift in [-shift_step, shift_step]:
                             for column_shift in [-shift_step, shift_step]:
+                                # if center_shift ==0 and index_shift == 0 and column_shift == 0:
+                                #     continue
                                 nodule_center[0] = nodule_center[0] + index_shift
                                 nodule_center[1] = nodule_center[1] + row_shift
                                 nodule_center[2] = nodule_center[2] + column_shift
@@ -301,7 +304,7 @@ def save_asus_center_info(volume_generator, connectivity, save_path):
 
 def main():
     # for nodule_type in ['benign_merge', 'malignant_merge']:
-    for nodule_type in ['ASUS-Benign', 'ASUS-Malignant']:
+    for nodule_type in ['ASUS-Malignant', 'ASUS-Benign']:
     # for nodule_type in ['malignant']:
         vol_data_path = os.path.join(VOL_DATA_PATH, nodule_type, 'crop')
         DATA_PATH = os.path.join(RAW_DATA_PATH, nodule_type, 'merge')
