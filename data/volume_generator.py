@@ -17,35 +17,33 @@ from Liwei.LUNA16_test import dataset_seg, util
 raw_cache = getCache('part2segment')
 
 logging.basicConfig(level=logging.INFO)
-
-from modules.data import dataset_utils
-
+from data import data_utils
 
 # TODO: unifyinterface
 def get_data_by_pid_asus(data_path, pid):
-    raw_and_mask = dataset_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
+    raw_and_mask = data_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
     for _dir in raw_and_mask:
         if 'raw' in _dir:
             raw_dir = _dir
         elif 'mask' in _dir:
             mask_dir = _dir
 
-    vol_raw_path = dataset_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
-    vol, origin, spacing, direction = dataset_utils.load_itk(vol_raw_path)
+    vol_raw_path = data_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
+    vol, origin, spacing, direction = data_utils.load_itk(vol_raw_path)
     raw_vol = vol.copy()
     raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
     vol = np.clip(vol, -1000, 1000)
     vol = raw_preprocess(vol, output_dtype=np.uint8)
 
-    vol_mask_path = dataset_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
-    mask_vol, _, _, _ = dataset_utils.load_itk(vol_mask_path)
+    vol_mask_path = data_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
+    mask_vol, _, _, _ = data_utils.load_itk(vol_mask_path)
     mask_vol = mask_preprocess(mask_vol)        
     return raw_vol, vol, mask_vol, origin, spacing, direction    
 
 
 def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
     # nodule_type = os.path.split(data_path)[1]
-    case_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
+    case_list = data_utils.get_files(data_path, recursive=False, get_dirs=True)
     if case_pids is not None:
         sub_case_list = []
         for case_dir in case_list:
@@ -58,7 +56,7 @@ def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
 
     print(f'Generating {len(case_list)} cases...')
     for case_dir in case_list:
-        raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
+        raw_and_mask = data_utils.get_files(case_dir, recursive=False, get_dirs=True)
         assert len(raw_and_mask) == 2
            
         pid = os.path.split(case_dir)[1]
@@ -79,7 +77,7 @@ class ASUSNoduleVolumeGenerator():
 
     def build_volume_generator(self):
         # nodule_type = os.path.split(data_path)[1]
-        case_list = dataset_utils.get_files(self.data_path, recursive=False, get_dirs=True)
+        case_list = data_utils.get_files(self.data_path, recursive=False, get_dirs=True)
         if self.case_pids is not None:
             sub_case_list = []
             for case_dir in case_list:
@@ -92,7 +90,7 @@ class ASUSNoduleVolumeGenerator():
 
         print(f'Generating {len(case_list)} cases...')
         for case_dir in case_list:
-            raw_and_mask = dataset_utils.get_files(case_dir, recursive=False, get_dirs=True)
+            raw_and_mask = data_utils.get_files(case_dir, recursive=False, get_dirs=True)
             assert len(raw_and_mask) == 2
             
             pid = os.path.split(case_dir)[1]
@@ -104,22 +102,22 @@ class ASUSNoduleVolumeGenerator():
 
     @classmethod
     def get_data_by_pid_asus(cls, data_path, pid):
-        raw_and_mask = dataset_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
+        raw_and_mask = data_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
         for _dir in raw_and_mask:
             if 'raw' in _dir:
                 raw_dir = _dir
             elif 'mask' in _dir:
                 mask_dir = _dir
 
-        vol_raw_path = dataset_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
-        vol, origin, spacing, direction = dataset_utils.load_itk(vol_raw_path)
+        vol_raw_path = data_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
+        vol, origin, spacing, direction = data_utils.load_itk(vol_raw_path)
         raw_vol = vol.copy()
         raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
         vol = np.clip(vol, -1000, 1000)
         vol = raw_preprocess(vol, output_dtype=np.uint8)
 
-        vol_mask_path = dataset_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
-        mask_vol, _, _, _ = dataset_utils.load_itk(vol_mask_path)
+        vol_mask_path = data_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
+        mask_vol, _, _, _ = data_utils.load_itk(vol_mask_path)
         mask_vol = mask_preprocess(mask_vol)        
         return raw_vol, vol, mask_vol, origin, spacing, direction    
 
@@ -130,6 +128,7 @@ class ASUSNoduleVolumeGenerator():
             raw_vol = all_gen[0]
             total_num_slice[pid] = raw_vol.shape[0]
         return total_num_slice
+
 
 def make_mask(center, diam, z, width, height, spacing, origin):
     '''
@@ -235,14 +234,14 @@ class luna16_volume_generator():
 
     @classmethod   
     def Build_luna16_volume_generator(cls, mask_generating_op, data_path=None, subset_indices=None, case_indices=None, only_nodule_slices=None):
-        # TODO: Cancel dependency of [dataset_utils.get_files]
+        # TODO: Cancel dependency of [data_utils.get_files]
         # TODO: use self.total_case_list to calculate
-        subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
+        subset_list = data_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
         if subset_indices:
             subset_list = np.take(subset_list, subset_indices)
         
         for subset_dir in subset_list:
-            case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False)
+            case_list = data_utils.get_files(subset_dir, 'mhd', recursive=False)
             if case_indices:
                 case_list = np.take(case_list, case_indices)
             for case_dir in case_list:
@@ -256,12 +255,12 @@ class luna16_volume_generator():
     @staticmethod
     def get_case_list(data_path, subset_indices, case_indices):
         total_case_list = []
-        subset_list = dataset_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
+        subset_list = data_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
         if subset_indices:
             subset_list = np.take(subset_list, subset_indices)
         
         for subset_dir in subset_list:
-            case_list = dataset_utils.get_files(subset_dir, 'mhd', recursive=False, return_fullpath=True)
+            case_list = data_utils.get_files(subset_dir, 'mhd', recursive=False, return_fullpath=True)
             if case_indices:
                 case_list = np.take(case_list, case_indices)
             total_case_list.extend(case_list)
@@ -278,7 +277,7 @@ class luna16_volume_generator():
         raw_vol = raw_preprocess(raw_vol, output_dtype=np.uint8)
         mask_vol = mask_preprocess(mask_vol)
         infos = {'dataset': 'LUNA16', 'pid': pid, 'scan_idx': 0, 
-                    'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
+                 'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
         return raw_vol, mask_vol, infos
 
 

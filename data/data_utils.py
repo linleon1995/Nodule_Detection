@@ -4,7 +4,20 @@ import logging
 import cv2
 import json
 import cc3d
+import SimpleITK as sitk
 
+
+def load_itk(filename):
+    '''
+    This funciton reads a '.mhd' file using SimpleITK and return the image array, origin and spacing of the image.
+    '''
+    # Reads the image using SimpleITK
+    itkimage = sitk.ReadImage(filename)
+    ct_scan = sitk.GetArrayFromImage(itkimage)
+    origin = np.array(list(reversed(itkimage.GetOrigin())))
+    spacing = np.array(list(reversed(itkimage.GetSpacing())))
+    direction = np.array(list(reversed(itkimage.GetDirection()))).reshape(3, 3)
+    return ct_scan, origin, spacing, direction
 
 
 def get_pids_from_coco(coco_paths):

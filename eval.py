@@ -209,8 +209,8 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
 
-    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_023'
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-000.pt")  # path to the model we just trained
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_000'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-020.pt")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004'
     # # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt_best.pth")  # path to the model we just trained
     # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei'

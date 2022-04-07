@@ -52,12 +52,6 @@ class NoudleSegEvaluator():
             # target_vol_category = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
             target_vol_category = self.post_processer(mask_vol)
 
-            # for s in range(200):
-            #     if np.sum(mask_vol[s])>0:
-            #         plt.imshow(vol[s], 'gray')
-            #         plt.imshow(mask_vol[s]+pred_vol[s]*2, alpha=0.2)
-            #         # plt.savefig(f'plot/cube-{idx}-{s}.png')
-            #         plt.show()
 
             # False positive reducing
             if self.fp_reducer is not None:
