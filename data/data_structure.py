@@ -22,6 +22,8 @@ class LungNoduleStudy():
         self.nodule_num = len(self.nodule_ids)
         self.volume_shape = category_volume.shape
         self.study_evals = {}
+        self.nodule_evals = {}
+        self.remove_nodule_record = {}
         self.nodule_instances = self.build_nodule_instance()
 
     def build_nodule_instance(self):
@@ -37,6 +39,9 @@ class LungNoduleStudy():
                 hu = None
             nodule_mapping[id] = Nodule(self.study_id, id, nodule_volume, hu)
         return nodule_mapping
+
+    def record_nodule_removal(self, name, nodules_ids):
+        self.remove_nodule_record[name] = nodules_ids
 
     def get_binary_volume(self):
         return np.where(self.category_volume>0, 1, 0)

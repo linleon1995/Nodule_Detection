@@ -75,17 +75,17 @@ class volumetric_data_eval():
                         pred_nodules2.remove(pred_nodule_id)
                     else:
                         print(f'This is strange: CAD mark {pred_nodule_id} detected two nodules! Check for overlapping nodule annotations, SeriesUID: {target_study.study_id}, nodule Annot ID: {target_nodule_id}')
-                # if iou == 0:
-                #     fp += 1
-                # else:
-                #     match_candidates.append(pred_nodule)
+
             if len(nodule_matches) > 1: # double detection
                 doubleCandidatesIgnored += (len(nodule_matches) - 1)
 
             if found:
                 tp += 1
+                target_study.nodule_evals[target_nodule_id] = 'tp'
+                pred_study.nodule_evals[pred_nodule_id] = 'tp'
             else:
                 fn += 1
+                target_study.nodule_evals[target_nodule_id] = 'fn'
 
             # merge_nodule = sum([candidate.nodule_volume for candidate in match_candidates])
             # merge_nodule = np.where(merge_nodule>0, 1, 0)
@@ -99,6 +99,9 @@ class volumetric_data_eval():
             #     fn += 1
 
         fp = len(pred_nodules2)
+        for pred_nodule_id in pred_nodules2:
+            pred_study.nodule_evals[pred_nodule_id] = 'fp'
+
         target_study.set_score('NoduleTP', tp)
         target_study.set_score('NoduleFP', fp)
         target_study.set_score('NoduleFN', fn)
@@ -197,6 +200,6 @@ class volumetric_data_eval():
             self.write_and_print(f'Pixel Recall: {self.Slice_Recall:.4f}')
             self.write_and_print(f'Pixel F1: {self.Slice_F1:.4f}')
             self.eval_file.close()
-
+        
         return self.VoxelTP, self.VoxelFP, self.VoxelFN, self.Volume_Precisiion, self.Volume_Recall
 

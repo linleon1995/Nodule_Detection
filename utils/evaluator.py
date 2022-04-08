@@ -44,7 +44,7 @@ class NoudleSegEvaluator():
             pid, scan_idx = infos['pid'], infos['scan_idx']
             print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
             
-            pred_vol = self.model_inference(vol)
+            pred_vol = self.model_inference(vol, mask_vol)
 
             # Data post-processing
             # TODO: the target volume should reduce small area but 1 pixel remain in 1m0037 131
@@ -52,10 +52,23 @@ class NoudleSegEvaluator():
             # target_vol_category = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
             target_vol_category = self.post_processer(mask_vol)
 
+            # for s in range(mask_vol.shape[0]):
+            #     if np.sum(mask_vol[s])>0:
+            #         plt.imshow(vol[s], 'gray')
+            #         plt.imshow(mask_vol[s]+pred_vol[s]*2, alpha=0.2)
+            #         # plt.savefig(f'plot/cube-{idx}-{s}.png')
+            #         plt.show()
+
+            
+            # Evaluation
+            target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
+            pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
+            # TODO
+            self.eval_metrics.calculate(target_study, pred_study)
 
             # False positive reducing
             if self.fp_reducer is not None:
-                pred_vol_category = self.fp_reducer(pred_vol_category, raw_vol, self.lung_mask_path, pid)
+                pred_vol_category = self.fp_reducer(pred_study, raw_vol, self.lung_mask_path, pid)
 
             # Nodule classification
             if self.nodule_classifier is not None:
@@ -63,10 +76,6 @@ class NoudleSegEvaluator():
             else:
                 pred_nodule_info = None
 
-            # Evaluation
-            target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
-            pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
-            self.eval_metrics.calculate(target_study, pred_study)
 
             # Visualize
             # # TODO: repeat part
@@ -151,10 +160,13 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         super().__init__(predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition, 
                          max_test_cases, post_processer, fp_reducer, nodule_classifier, lung_mask_path, save_all_images, batch_size)
     
-    def model_inference(self, vol):
+    def model_inference(self, vol, mask_vol):
+        # TODO: remove mask_vol
         vol = np.float32(vol[...,0])
         vol = np.swapaxes(np.swapaxes(vol, 0, 2), 0, 1)
         vol /= 255
+        mask_vol = np.swapaxes(np.swapaxes(mask_vol, 0, 2), 0, 1)
+
         pred_vol = torch.zeros(vol.shape)
         # TODO: dataloader takes long time
         dataset = self.data_converter(vol, crop_range=(64,64,32), crop_shift=(0,0,0))
@@ -163,7 +175,14 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
             # if idx%20!=0:
             #     continue
             data, data_slice = input_data['data'], input_data['slice']
+            
             # data = data.float()
+            
+            # # TODO: custom data_slice
+            # data_slice = [slice(256+32, 320+32), slice(0+32, 64+32), slice(32, 64)]
+            # data = vol[data_slice][np.newaxis,np.newaxis]
+            # data = torch.from_numpy(data)
+
             data = data.to(torch.device('cuda:0'))
             pred = self.predictor(data)
             # print(torch.max(pred), torch.min(pred))
@@ -171,15 +190,18 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
             data_slice = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in data_slice]
             # TODO: batch size problem
             # print(torch.sum(pred_vol))
+
             pred_vol[data_slice] = pred[0,0]
 
 
+            # mask_np = mask_vol[data_slice]
             # data_np = data.cpu().detach().numpy()
             # pred_np = pred.cpu().detach().numpy()
-            # for s in range(0, 32, 8):
-            #     if np.sum(pred_np[...,s])>0:
+            # print(idx, data_slice, len(dataset))
+            # for s in range(0, 32):
+            #     if np.sum(mask_np[...,s])>0:
             #         plt.imshow(data_np[0,0,...,s], 'gray')
-            #         plt.imshow(pred_np[0,0,...,s], alpha=0.2)
+            #         plt.imshow(2*pred_np[0,0,...,s]+mask_np[...,s], alpha=0.2, vmin=0, vmax=3)
             #         # plt.savefig(f'plot/cube-{idx}-{s}.png')
             #         plt.show()
 

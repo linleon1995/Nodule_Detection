@@ -44,9 +44,13 @@ class CropVolume():
     def simple_slice(length, shift, crop_length, overlapping):
         slices = []
         crop_length = int(crop_length*overlapping)
-        for start in range(shift, length-shift-crop_length, crop_length):
+        for start in range(shift, length-shift, crop_length):
             # slices.append(slice(start, start+crop_length))
-            slices.append((start, start+crop_length))
+            if start+crop_length > length:
+                start, end = length-crop_length, length
+            else:
+                start, end = start, start+crop_length
+            slices.append((start, end))
         return slices
 
 
