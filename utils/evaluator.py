@@ -185,13 +185,15 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
 
             data = data.to(torch.device('cuda:0'))
             pred = self.predictor(data)
-            # print(torch.max(pred), torch.min(pred))
-            pred = torch.where(pred>0.5, 1, 0)
             data_slice = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in data_slice]
-            # TODO: batch size problem
-            # print(torch.sum(pred_vol))
 
+            pred = torch.where(pred>0.5, 1, 0)
+            # TODO: batch size problem
             pred_vol[data_slice] = pred[0,0]
+
+            # pred_temp = torch.zeros(vol.shape)
+            # pred_temp[data_slice] = pred[0,0]
+            # pred += pred_temp
 
 
             # mask_np = mask_vol[data_slice]

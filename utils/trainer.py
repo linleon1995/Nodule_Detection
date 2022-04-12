@@ -73,9 +73,7 @@ class Trainer(object):
         total_train_loss = 0.0
         for i, data in enumerate(self.train_dataloader, self.iterations + 1):
             input_var, target_var = data['input'], data['target']
-            # TODO input type
-            input_var = input_var.float()
-            target_var = target_var.long()
+            input_var, target_var = input_var.float(), target_var.float()
             input_var, target_var = input_var.to(self.device), target_var.to(self.device)
 
             # TODO: what is aux in model?
@@ -107,12 +105,9 @@ class Trainer(object):
             test_n_iter += 1
 
             input_var, labels = data['input'], data['target']
-            # TODO input type
-            input_var = input_var.float()
-            labels = labels.long()
-
-
+            input_var, target_var = input_var.float(), target_var.float()
             input_var, labels = input_var.to(self.device), labels.to(self.device)
+            
             # TODO: what is aux in model?
             outputs = self.model(input_var)['out']
 

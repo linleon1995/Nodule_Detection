@@ -367,7 +367,7 @@ def cross_valid_eval():
     save_path = cfg.SAVE_PATH
     cfg.MODEL_NAME = model_name
     # TODO: move to config
-    assign_fold = 4
+    assign_fold = 0
 
     if assign_fold is not None:
         assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
@@ -409,7 +409,7 @@ def cross_valid_eval():
             # cfg.SAVE_PATH = os.path.join(os.path.split(cfg.MODEL.WEIGHTS)[0])
 
             # TODO: exp
-            case_pids = case_pids[2:]
+            # case_pids = case_pids[2:]
             volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
                                                             case_pids=case_pids)
 
