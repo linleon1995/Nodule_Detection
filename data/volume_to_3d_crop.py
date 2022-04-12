@@ -80,6 +80,7 @@ def build_crop_data(volume_generator, cropping_op, save_dir):
     p_rate = 100*p_samples/(p_samples+n_samples)
     print(f'positive rate {p_rate:.02f}')
 
+
 def build_tmh_crop_data(crop_range, crop_shift, convert_dtype, save_dir, overlapping):
     cropping_op = CropVolume(crop_range, crop_shift, convert_dtype, overlapping)
     crop_range_key = 'x'.join([str(s) for s in list(crop_range)])

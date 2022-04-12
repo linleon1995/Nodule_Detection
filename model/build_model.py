@@ -1,12 +1,19 @@
+import os
 import torch
 import torch.nn as nn
 import torchvision
 from model.model_utils import layers
 from model import unet_2d
 from model import unet3d
-
-
+from model import keras_unet3d
 # TODO: Encapsulation with varing first layer, last layer
+
+
+def build_keras_unet3d(row, col, index, checkpoint_path):
+    predictor = keras_unet3d.unet_model_3d((1, row, col, index), batch_normalization=True)
+    print(f"[INFO] Load trained model from {checkpoint_path}")
+    predictor.load_weights(checkpoint_path)
+    return predictor
 
 
 # def build_seg_3d_model()

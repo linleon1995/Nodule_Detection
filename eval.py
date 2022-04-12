@@ -56,6 +56,8 @@ from data.data_structure import LungNoduleStudy
 from data.dataloader import GeneralDataset, SimpleNoduleDataset, CropNoduleDataset
 from data.data_utils import get_pids_from_coco
 from utils.evaluator import Pytorch2dSegEvaluator, Pytorch3dSegEvaluator, D2SegEvaluator
+from utils.keras_evaluator import Keras3dSegEvaluator
+from data.volume_to_3d_crop import CropVolume
 from model import build_model
 logging.basicConfig(level=logging.INFO)
 
@@ -211,10 +213,10 @@ def select_model(cfg):
 
     cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_003'
     cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-025.pt")  # path to the model we just trained
-    # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004'
-    # # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt_best.pth")  # path to the model we just trained
-    # # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\liwei'
-    # # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "best.pt")  # path to the model we just trained
+    
+
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\keras\downstream_tasks\models\ncs\run_2'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "Vnet-genesis.h5")
     return cfg
 
 
@@ -258,7 +260,7 @@ def common_config():
 
     # False Positive reduction
     cfg.nodule_cls = False
-    cfg.crop_range = [48, 48, 48]
+    # cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_011\ckpt_best.pth'
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_001\ckpt_best.pth'
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004\ckpt_best.pth'
@@ -367,7 +369,7 @@ def cross_valid_eval():
     save_path = cfg.SAVE_PATH
     cfg.MODEL_NAME = model_name
     # TODO: move to config
-    assign_fold = 0
+    assign_fold = 4
 
     if assign_fold is not None:
         assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
@@ -430,6 +432,11 @@ def cross_valid_eval():
                 predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
                                                         device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=cfg.MODEL.WEIGHTS)
                 evaluator_gen = Pytorch3dSegEvaluator
+            elif cfg.MODEL_NAME in ['k_Model_Genesis', 'k_3D-Unet']:
+                data_converter = CropVolume
+                predictor = build_model.build_keras_unet3d(
+                    test_cfg.DATA.crop_row, test_cfg.DATA.crop_col, test_cfg.DATA.crop_index, checkpoint_path=cfg.MODEL.WEIGHTS)
+                evaluator_gen = Keras3dSegEvaluator
             target_studys, pred_studys = eval(cfg, volume_generator, data_converter, predictor, evaluator_gen)
 
 
@@ -491,6 +498,12 @@ def main():
     cross_valid_eval()
     
 if __name__ == '__main__':
+    # x = np.ones(shape=(150, 512, 512))
+    # ind1 = np.arange(64)
+    # ind2 = np.arange(64)
+    # ind3 = np.arange(32)
+    # y = x[ind1][:,ind2]
+    # print(3)
     main()
 
     # x_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant\crop\32x64x64-1\positive\Image\asus-0037-1m0033.npy'
