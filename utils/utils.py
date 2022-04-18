@@ -1,12 +1,7 @@
 import os
-import stat
 import cv2
 import numpy as np
-import site_path
-import pylidc as pl
-from pylidc.utils import consensus
 from statistics import median_high
-import cc3d
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 

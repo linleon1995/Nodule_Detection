@@ -1,19 +1,14 @@
 import numpy as np
-import collections
 import torch
 from nodule_classification.data.luna16_crop_preprocess import LUNA16_CropRange_Builder
 from nodule_classification.model.ResNet_3d import build_3d_resnet
-from utils.volume_eval import volumetric_data_eval
-from utils.utils import compare_result, compare_result_enlarge
-from modules.utils import configuration
-import matplotlib.pyplot as plt
 
 # TODO: torch, numpy problem
 # TODO: class design
 class NoduleClassifier():
     def __init__(self, crop_range, checkpint_path, model_depth=50, num_class=2, prob_threshold=0.5):
         self.crop_range = crop_range
-        self.device = configuration.get_device()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else 'cpu')
         self.classifier = self.build_classifier(checkpint_path, model_depth, num_class)
         self.prob_threshold = prob_threshold
 

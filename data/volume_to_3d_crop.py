@@ -1,10 +1,8 @@
-from distutils.log import info
 import os
 
 # TODO: consider remove zeros
 
 import numpy as np
-from pyrsistent import v
 from data.volume_generator import asus_nodule_volume_generator
 
 
@@ -43,8 +41,8 @@ class CropVolume():
     @staticmethod
     def simple_slice(length, shift, crop_length, overlapping):
         slices = []
-        crop_length = int(crop_length*overlapping)
-        for start in range(shift, length-shift, crop_length):
+        step = int(crop_length*overlapping)
+        for start in range(shift, length-shift, step):
             # slices.append(slice(start, start+crop_length))
             if start+crop_length > length:
                 start, end = length-crop_length, length
@@ -111,10 +109,10 @@ if __name__ == '__main__':
     # crop_ops(np_data)
     # print(3)
 
-    convert_dtype = np.uint8
-    crop_range = (64, 64, 32)
-    crop_shift = (100, 100, 0)
-    overlapping = 1.0
-    save_dir = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
-    build_tmh_crop_data(crop_range, crop_shift, convert_dtype, save_dir, overlapping)
+    # convert_dtype = np.uint8
+    # crop_range = (64, 64, 32)
+    # crop_shift = (100, 100, 0)
+    # overlapping = 1.0
+    # save_dir = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
+    # build_tmh_crop_data(crop_range, crop_shift, convert_dtype, save_dir, overlapping)
     pass

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from torch import positive
-from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, get_data_by_pid_asus
+from data.volume_generator import  asus_nodule_volume_generator, get_data_by_pid_asus
 from utils.utils import get_nodule_center, irc2xyz, DataFrameTool
 import cc3d
 
@@ -18,8 +18,8 @@ RAW_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule'
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess'
 NEGATIVE_POSITIVE_RATIO = 10
 CONNECTIVITY = 26
-CENTER_SHIFT = True
-SHIFT_STEP = 8
+CENTER_SHIFT = False
+SHIFT_STEP = 0
 
 class ASUS_CropRange_Builder():
     @staticmethod 

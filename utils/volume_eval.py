@@ -1,9 +1,6 @@
 import os
-from detectron2.data.catalog import Metadata
 import numpy as np
 import matplotlib.pyplot as plt
-import cc3d
-from utils import utils
 import time
 
 # TODO: delte these two globals

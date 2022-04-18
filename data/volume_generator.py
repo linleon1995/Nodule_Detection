@@ -2,16 +2,11 @@
 import os
 import functools
 import numpy as np
-import matplotlib.pyplot as plt
-from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils.utils import cv2_imshow, calculate_malignancy, irc2xyz, segment_lung, mask_preprocess, raw_preprocess
-# import data_preprocess
-# from convert_to_coco_structure import lidc_to_datacatlog_valid
+from utils.utils import mask_preprocess, raw_preprocess
 import logging
-import pandas as pd
 from Liwei.LUNA16_test.disk import getCache
 from Liwei.LUNA16_test import dataset_seg, util
 raw_cache = getCache('part2segment')

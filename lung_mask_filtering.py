@@ -7,9 +7,8 @@ from pyrsistent import v
 from scipy.ndimage import median_filter
 from skimage import measure, morphology
 from sklearn.cluster import KMeans
-from utils.utils import cv2_imshow
 
-from modules.data import dataset_utils
+from data.data_utils import get_files
 
 
 # TODO: metaclass: register post-processing function
@@ -35,7 +34,7 @@ class FalsePositiveReducer():
                 for lung_mask_idx, lung_mask in enumerate(lung_mask_vol):
                     cv2.imwrite(os.path.join(lung_mask_case_path, f'{pid}-{lung_mask_idx:03d}.png'), 255*lung_mask)
             else:
-                lung_mask_files = dataset_utils.get_files(lung_mask_case_path, 'png')
+                lung_mask_files = get_files(lung_mask_case_path, 'png')
                 lung_mask_vol = np.zeros_like(pred_vol_category)
                 for lung_mask_idx, lung_mask in enumerate(lung_mask_files): 
                     lung_mask_vol[lung_mask_idx] = cv2.imread(lung_mask)[...,0]

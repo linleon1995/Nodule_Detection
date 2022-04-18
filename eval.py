@@ -1,9 +1,5 @@
-from detectron2.evaluation import COCOEvaluator, inference_on_dataset, SemSegEvaluator
-from detectron2.data import build_detection_test_loader
-from detectron2.utils.visualizer import ColorMode
+
 from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.engine import DefaultPredictor
 from detectron2 import model_zoo
 from detectron2.data.datasets import register_coco_instances
@@ -51,7 +47,7 @@ from reduce_false_positive import NoduleClassifier
 from data.data_postprocess import VolumePostProcessor
 from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
 from inference import model_inference, d2_model_inference, pytorch_model_inference
-from lung_mask_filtering import get_lung_mask, remove_unusual_nodule_by_ratio, remove_unusual_nodule_by_lung_size, _1_slice_removal, FalsePositiveReducer
+from lung_mask_filtering import FalsePositiveReducer
 from data.data_structure import LungNoduleStudy
 from data.dataloader import GeneralDataset, SimpleNoduleDataset, CropNoduleDataset
 from data.data_utils import get_pids_from_coco
@@ -99,35 +95,6 @@ class BatchPredictor(DefaultPredictor):
             preds = self.model(images)
         return preds
 
-
-def detectron2_eval(cfg):
-    # Inference should use the config with parameters that are used in training
-    # cfg now already contains everything we've set previously. We changed it a little bit for inference:
-    predictor = DefaultPredictor(cfg)
-
-    # register_coco_instances("my_dataset_valid", {}, "annotations_valid.json", rf"C:\Users\test\Desktop\Leon\Datasets\LIDC-IDRI-process\LIDC-IDRI-Preprocessing-png\Image")
-    register_coco_instances("my_dataset_valid", {}, rf"Annotations\LUNA16\annotations_valid.json", cfg.DATA_PATH)
-    # DatasetCatalog.register("my_dataset_valid", lidc_to_datacatlog_valid)
-    dataset_dicts = DatasetCatalog.get("my_dataset_valid")
-    metadata = MetadataCatalog.get("my_dataset_valid")
-
-    for d in random.sample(dataset_dicts, 3):    
-        im = cv2.imread(d["file_name"])
-        outputs = predictor(im)  # format is documented at https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
-        v = Visualizer(im[:, :, ::-1],
-                    metadata=metadata, 
-                    scale=1.0, 
-                    instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels. This option is only available for segmentation models
-        )
-        out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-        cv2_imshow(out.get_image()[:, :, ::-1])
-
-
-    evaluator = COCOEvaluator("my_dataset_valid", cfg, distributed=False, output_dir="./output")
-    # evaluator = SemSegEvaluator("my_dataset_valid", distributed=False, num_classes=2, output_dir="./output")
-    val_loader = build_detection_test_loader(cfg, "my_dataset_valid")
-    print(inference_on_dataset(predictor.model, val_loader, evaluator))
-    # another equivalent way to evaluate the model is to use `trainer.test`
 
 
 def eval(cfg, volume_generator, data_converter, predictor, evaluator_gen):
@@ -211,12 +178,12 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
 
-    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_003'
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-025.pt")  # path to the model we just trained
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_009'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-030.pt")  # path to the model we just trained
     
 
-    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\keras\downstream_tasks\models\ncs\run_2'
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "Vnet-genesis.h5")
+    # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\keras\downstream_tasks\models\ncs\run_4'
+    # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "Vnet-genesis.h5")
     return cfg
 
 
@@ -260,7 +227,7 @@ def common_config():
 
     # False Positive reduction
     cfg.nodule_cls = False
-    # cfg.crop_range = [48, 48, 48]
+    cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_011\ckpt_best.pth'
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_001\ckpt_best.pth'
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_004\ckpt_best.pth'
@@ -372,10 +339,10 @@ def cross_valid_eval():
     assign_fold = 4
 
     if assign_fold is not None:
-        assert assign_fold < test_cfg.CV_FOLD, 'Assign fold out of range'
+        assert assign_fold < test_cfg.EVAL.CV_FOLD, 'Assign fold out of range'
         fold_indices = [assign_fold]
     else:
-        fold_indices = list(range(test_cfg.CV_FOLD))
+        fold_indices = list(range(test_cfg.EVAL.CV_FOLD))
 
     benign_target_scatter_vis = ScatterVisualizer()
     benign_pred_scatter_vis = ScatterVisualizer()
@@ -390,7 +357,7 @@ def cross_valid_eval():
 
     for fold in fold_indices:
         for dataset_name in dataset_names:
-            coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.CV_FOLD}', str(fold))
+            coco_path = os.path.join(test_cfg.PATH.DATA_ROOT[dataset_name], 'coco', test_cfg.TASK_NAME, f'cv-{test_cfg.EVAL.CV_FOLD}', str(fold))
             # coco_path = os.path.join(rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Annotations\ASUS_Nodule', dataset_name)
             
             case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{test_cfg.DATA.SPLIT}.json'))
@@ -498,42 +465,13 @@ def main():
     cross_valid_eval()
     
 if __name__ == '__main__':
-    # x = np.ones(shape=(150, 512, 512))
+    # x = np.zeros(shape=(150, 512, 512))
     # ind1 = np.arange(64)
     # ind2 = np.arange(64)
     # ind3 = np.arange(32)
-    # y = x[ind1][:,ind2]
+    # x[slice(64), slice(64), slice(32)] = 1
+    # print(np.sum(x))
     # print(3)
     main()
 
-    # x_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\ASUS-Malignant\crop\32x64x64-1\positive\Image\asus-0037-1m0033.npy'
-    # m_path = x_path.replace('Image', 'Mask')
-    # x_arr = np.load(x_path)
-    # m_arr = np.load(m_path)
-    # for s in range(0, x_arr.shape[0], 4):
-    #     plt.imshow(x_arr[s], 'gray')
-    #     plt.imshow(m_arr[s], alpha=0.2)
-    #     plt.show()
-
-
-    # x_path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\generated_cubes\x_test_64x64x32.npy'
-    # m_path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\generated_cubes\m_test_64x64x32.npy'
-    # x_arr = np.load(x_path)
-    # m_arr = np.load(m_path)
-
-    # for i in range(x_arr.shape[0]):
-    #     for s in range(0, x_arr.shape[3], 4):
-    #         if np.sum(m_arr[i,...,s,0])<=0:
-    #             plt.imshow(x_arr[i,...,s,0], 'gray')
-    #             plt.imshow(m_arr[i,...,s,0], alpha=0.2)
-    #             plt.show()
-
-
-    # path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\generated_cubes\bat_32_s_64x64x32_0.npy'
-    # arr = np.load(path)
-    # for i in range(arr.shape[0]):
-    #     for s in range(0, arr.shape[3], 4):
-    #         plt.imshow(arr[i,...,s], 'gray')
-    #         plt.show()
-    
     
