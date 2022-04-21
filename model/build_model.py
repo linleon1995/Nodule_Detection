@@ -64,7 +64,7 @@ def select_model(model_name, in_planes, n_class, pretrained=True):
         n_class -= 1
         model = unet3d.UNet3D(n_class=n_class)
         # TODO:
-        model = nn.DataParallel(model, device_ids = [i for i in range(torch.cuda.device_count())])
+        # model = nn.DataParallel(model, device_ids = [i for i in range(torch.cuda.device_count())])
     else:
         raise ValueError(f'Undefined model of {model_name}.')
     return model

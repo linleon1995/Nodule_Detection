@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import cc3d
+import os
 
 
 def build_nodule_metadata(volume):
@@ -62,3 +64,38 @@ def multi_nodule_distribution(train_volumes, test_volumes):
 
     fig.show()
     fig.savefig('lung.png')
+
+
+def tmh_base_check(volume_generator, save_path=None):
+    fig, ax = plt.subplots(1,1)
+    total_size = []
+    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(volume_generator):
+        cat_vol = cc3d.connected_components(mask_vol, connectivity=26) # category volume
+        nodule_ids = np.unique(cat_vol)[1:]
+        pid = infos['pid']
+
+        for n_id in nodule_ids:
+            nodule_vol = np.int32(cat_vol==n_id)
+            nodule_size = np.sum(nodule_vol)
+            nodule_id = f'{pid}_{n_id:03d}'
+            print(f'Nodule {nodule_id}  size {nodule_size} pixels')
+            total_size.append({nodule_id: nodule_size})
+
+            # Nodule HU changing
+            if save_path is not None:
+                zs, ys, xs = np.where(nodule_vol)
+                unique_zs = np.unique(zs)
+                # print(unique_zs, np.unique(ys), np.unique(xs))
+                nodule_hu = []
+                for z in unique_zs:
+                    hu = np.mean(nodule_vol[z]*raw_vol[z,...,0])
+                    nodule_hu.append(hu)
+                ax.plot(nodule_hu)
+                fig.savefig(os.path.join(save_path, f'{pid}_{n_id:03d}.png'))
+                plt.cla()
+                plt.clf()
+
+    print(20*'-')
+    nodule_sizes = list(total_size.values())
+    max_size_nodule = list(total_size.keys())[list(total_size.values()).index(max(nodule_sizes))]
+    print(f'Max size: {max_size_nodule} {max(nodule_sizes)}')

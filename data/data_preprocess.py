@@ -5,6 +5,7 @@ from data import medical_to_img
 from data import build_coco
 from data import asus_data_merge
 from data import data_utils
+from data.data_analysis import tmh_base_check
 
 import site_path
 from modules.utils import configuration
@@ -12,7 +13,7 @@ from modules.utils import configuration
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 
-DATASET_NAME = ['Benign', 'Malignant'] # Benign, Malignant, LUNA16, LUNA16-Round
+DATASET_NAME = ['Malignant', 'Benign'] # Benign, Malignant, LUNA16, LUNA16-Round
 
 
 def get_cv_split(num_fold, num_sample, shuffle=False):
@@ -56,6 +57,7 @@ def build_parameters(dataset_name):
     num_fold = cfg.CROSS_VALID_FOLD
 
     raw_path = os.path.join(data_root, 'raw')
+    stats_path = os.path.join(data_root, 'stats_path')
     merge_path = os.path.join(data_root, 'merge')
     image_path = os.path.join(data_root, 'image')
     coco_path = os.path.join(data_root, 'coco', task_name)
@@ -75,6 +77,7 @@ def build_parameters(dataset_name):
         'raw_path': raw_path,
         'cat_ids': cat_ids,
         'area_threshold': area_threshold,
+        'stats_path': stats_path,
         'merge_path': merge_path,
         'image_path': image_path,
         'coco_path': coco_path,
@@ -91,6 +94,7 @@ def data_preprocess(dataset_names):
 
         if dataset_parameter is not None:
             raw_path = dataset_parameter['raw_path']
+            stats_path = dataset_parameter['stats_path']
             merge_path = dataset_parameter['merge_path']
             image_path = dataset_parameter['image_path']
             coco_path = dataset_parameter['coco_path']
@@ -102,35 +106,45 @@ def data_preprocess(dataset_names):
             kc_image_path = image_path.replace('image', 'kc_image')
 
             for path in [merge_path, image_path, kc_image_path]:
-                if not os.path.isdir(path):
-                    os.makedirs(path)
+                os.makedirs(path, exist_ok=True)
 
-            # Merge mhd data
             if dataset_name == 'Benign':
                 filekey = 'B'
+                case_pids = [f'1B00{i}' for i in range(36, 38)]
+                case_pids += [f'1B00{i}' for i in range(39, 53)]
+                case_pids += [f'1B00{i}' for i in range(54, 56)]
+                case_pids = None
             elif dataset_name == 'Malignant':
                 filekey = 'm'
+                case_pids = [f'1m00{i}' for i in range(58, 61)]
+                case_pids = None
+
+            # # Merge mhd data
             asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
 
             # Convert medical 3d volume data to image format
-            volume_generator = asus_nodule_volume_generator(data_path=merge_path)
-            medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
+            # volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
+            # medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
             # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
             # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
-            
-            # Build up coco-structure
-            num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
-            cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
-                
-            for fold in cv_split_indices:
-                coco_split_path = os.path.join(coco_path, f'cv-{num_fold}', str(fold))
-                if not os.path.isdir(coco_split_path):
-                    os.makedirs(coco_split_path)
 
-                split_indices = cv_split_indices[fold]
-                build_coco.build_asus_nodule_coco(
-                    data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
-                    cat_ids=cat_ids, area_threshold=area_threshold, category=category)
+            # # TMH base check
+            # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
+            # tmh_base_check(volume_generator, save_path=stats_path)
+
+            # # Build up coco-structure
+            # num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
+            # cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
+                
+            # for fold in cv_split_indices:
+            #     coco_split_path = os.path.join(coco_path, f'cv-{num_fold}', str(fold))
+            #     if not os.path.isdir(coco_split_path):
+            #         os.makedirs(coco_split_path)
+
+            #     split_indices = cv_split_indices[fold]
+            #     build_coco.build_asus_nodule_coco(
+            #         data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
+            #         cat_ids=cat_ids, area_threshold=area_threshold, category=category)
 
 
 def main():

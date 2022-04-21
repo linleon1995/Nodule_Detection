@@ -48,7 +48,7 @@ def volumetric_data_preprocess_KC(data_split, save_path, volume_generator):
 
 
 def volumetric_data_preprocess(save_path, volume_generator):
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, dpi=300)
     for vol_idx, (_, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx, subset = infos['pid'], infos['scan_idx'], infos['subset']
         print(f'Patient {pid} Scan {vol_idx}')

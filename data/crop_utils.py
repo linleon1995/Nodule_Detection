@@ -33,9 +33,9 @@ def crops_to_volume(crops, slices, volume_shape, reweight=True):
         # importance_maps = np.tile(importance_map[np.newaxis, np.newaxis], (num_sample,1,1,1,1))
         importance_maps = importance_map[np.newaxis, np.newaxis]
 
-        import matplotlib.pyplot as plt
-        plt.imshow(importance_map[...,16])
-        plt.show()
+        # import matplotlib.pyplot as plt
+        # plt.imshow(importance_map[...,16])
+        # plt.show()
 
         crops *= importance_maps
     else:
@@ -53,6 +53,6 @@ def crops_to_volume(crops, slices, volume_shape, reweight=True):
     # print(np.min(volume), np.max(volume))
     total_times = np.clip(total_times, 1, None)
     volume /= total_times
-    print(np.min(volume), np.max(volume))
-    print(np.min(total_times), np.max(total_times))
+    print(f'Value [{np.min(volume)}, {np.max(volume)}]')
+    print(f'Times [{np.min(total_times)}, {np.max(total_times)}]')
     return volume

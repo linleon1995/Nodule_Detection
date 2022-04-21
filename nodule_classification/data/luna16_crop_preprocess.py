@@ -4,11 +4,12 @@ import pandas as pd
 from torch import positive
 from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
 
-CROP_RANGE =  {'index': 48, 'row': 48, 'column': 48}
-VOLUME_GENERATOR = luna16_volume_generator.Build_DLP_luna16_volume_generator()
+CROP_RANGE =  {'index': 32, 'row': 64, 'column': 64}
+DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+VOLUME_GENERATOR = luna16_volume_generator.Build_DLP_luna16_volume_generator(DATA_PATH)
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop'
 LUNA16_ANNOTATION_PATH = rf'evaluationScript/annotations/annotations.csv'
-CLASS_RATIO = 10
+CLASS_RATIO = 1000
 
 
 class LUNA16_CropRange_Builder():
@@ -33,6 +34,7 @@ class LUNA16_CropRange_Builder():
         # Merge positive and negative samples and save in data_samples
         num_positive_sample = positive_crop_range.shape[0]
         num_negative_sample = int(negative_positive_ratio*num_positive_sample)
+        num_negative_sample = min(num_negative_sample, negative_crop_range.shape[0])
         negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
         data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
@@ -49,10 +51,10 @@ class LUNA16_CropRange_Builder():
         total_raw_path = np.array([])
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
-            raw_volume, target_volume, volume_info = luna16_volume_generator.get_data_by_pid(data_info['seriesuid'])
+            raw_volume, volume, target_volume, volume_info = luna16_volume_generator.get_data_by_pid(data_info['seriesuid'])
             
             crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
-            raw_chunk = LUNA16_CropRange_Builder.crop_volume(raw_volume, crop_range, crop_center)
+            raw_chunk = LUNA16_CropRange_Builder.crop_volume(volume, crop_range, crop_center)
             target_chunk = LUNA16_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
             print(f'Saving LUNA16 nodule volume {index:04d} with shape {raw_chunk[...,0].shape}')
 
@@ -78,8 +80,8 @@ class LUNA16_CropRange_Builder():
         # where dataset save')
         total_positive, total_negative = None, None
         
-        for vol_idx, (raw_volume, target_volume, volume_info) in enumerate(volume_generator):
-            if vol_idx >= 3: break
+        for vol_idx, (raw_volume, volume, target_volume, volume_info) in enumerate(volume_generator):
+            # if vol_idx >= 3: break
             print(vol_idx+1, volume_info['pid'])
 
             nodule_annotation = luna16_annotations.loc[luna16_annotations['seriesuid'].isin([volume_info['pid']])]
@@ -221,4 +223,6 @@ def main():
   
 
 if __name__ == '__main__':
+    # x = luna16_volume_generator.get_data_by_pid(pid='1.3.6.1.4.1.14519.5.2.1.6279.6001.105756658031515062000744821260') 
+    # print(3)
     main()

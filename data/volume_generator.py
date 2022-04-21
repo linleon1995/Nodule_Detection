@@ -18,9 +18,10 @@ from data import data_utils
 def get_data_by_pid_asus(data_path, pid):
     raw_and_mask = data_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
     for _dir in raw_and_mask:
-        if 'raw' in _dir:
+        file_dir = os.path.split(_dir)[1]
+        if 'raw' in file_dir:
             raw_dir = _dir
-        elif 'mask' in _dir:
+        elif 'mask' in file_dir:
             mask_dir = _dir
 
     vol_raw_path = data_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
@@ -243,9 +244,9 @@ class luna16_volume_generator():
                 subset = os.path.split(subset_dir)[-1]
                 series_uid = os.path.split(case_dir)[1][:-4]
                 
-                raw_vol, mask_vol, infos = luna16_volume_generator.get_data_by_pid(series_uid, mask_generating_op)
+                raw_vol, vol, mask_vol, infos = luna16_volume_generator.get_data_by_pid(series_uid)
                 infos['subset'] = subset
-                yield raw_vol, raw_vol, mask_vol, infos
+                yield raw_vol, vol, mask_vol, infos
 
     @staticmethod
     def get_case_list(data_path, subset_indices, case_indices):
@@ -262,18 +263,19 @@ class luna16_volume_generator():
         return total_case_list
 
     @staticmethod
-    @raw_cache.memoize(typed=True)
+    # @raw_cache.memoize(typed=True)
     def get_data_by_pid(pid, mask_generating_op=dataset_seg.getCt):
         ct = mask_generating_op(pid)
         raw_vol = ct.hu_a
         mask_vol = ct.positive_mask
         
-        raw_vol = np.clip(raw_vol, -1000, 1000)
-        raw_vol = raw_preprocess(raw_vol, output_dtype=np.uint8)
+        vol = np.clip(raw_vol, -1000, 1000)
+        vol = raw_preprocess(vol, output_dtype=np.uint8)
         mask_vol = mask_preprocess(mask_vol)
         infos = {'dataset': 'LUNA16', 'pid': pid, 'scan_idx': 0, 
                  'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
-        return raw_vol, mask_vol, infos
+        # TODO:
+        return raw_vol, vol, mask_vol, infos
 
 
 def build_pred_generator(data_generator, predictor, batch_size=1):

@@ -62,7 +62,7 @@ from modules.utils import configuration
 
 from Liwei.LUNA16_test import util
 from Liwei.FTP1m_test import test
-import cc3d
+# import cc3d
 
 # TODO: modify the name of lung_mask_filtering and reduce_false_p
 
@@ -178,8 +178,8 @@ def select_model(cfg):
     # cfg.MODEL.WEIGHTS = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
 
-    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_009'
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-030.pt")  # path to the model we just trained
+    cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_002'
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "ckpt-best.pt")  # path to the model we just trained
     
 
     # cfg.OUTPUT_DIR = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\keras\downstream_tasks\models\ncs\run_4'
@@ -378,7 +378,7 @@ def cross_valid_eval():
             # cfg.SAVE_PATH = os.path.join(os.path.split(cfg.MODEL.WEIGHTS)[0])
 
             # TODO: exp
-            # case_pids = case_pids[2:]
+            case_pids = case_pids[1:]
             volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
                                                             case_pids=case_pids)
 

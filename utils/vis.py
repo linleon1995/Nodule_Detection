@@ -23,7 +23,40 @@ import cv2
 import cc3d
 from utils.volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
-    
+
+
+def plot_image_truth_prediction(x, y, p, rows=12, cols=12, name=None):
+    x, y, p = np.squeeze(x), np.squeeze(y), np.squeeze(p>0.5)
+    plt.rcParams.update({'font.size': 30})
+    plt.figure(figsize=(25*3, 25))
+
+    large_image = np.zeros((rows*x.shape[0], cols*x.shape[1]))
+    for b in range(rows*cols):
+        large_image[(b//rows)*x.shape[0]:(b//rows+1)*x.shape[0],
+                    (b%cols)*x.shape[1]:(b%cols+1)*x.shape[1]] = np.transpose(np.squeeze(x[:, :, b]))
+    plt.subplot(1, 3, 1)
+    plt.imshow(large_image, cmap='gray', vmin=0, vmax=1); plt.axis('off')
+
+    large_image = np.zeros((rows*x.shape[0], cols*x.shape[1]))
+    for b in range(rows*cols):
+        large_image[(b//rows)*y.shape[0]:(b//rows+1)*y.shape[0],
+                    (b%cols)*y.shape[1]:(b%cols+1)*y.shape[1]] = np.transpose(np.squeeze(y[:, :, b]))
+    plt.subplot(1, 3, 2)
+    plt.imshow(large_image, cmap='gray', vmin=0, vmax=1); plt.axis('off')
+
+    large_image = np.zeros((rows*p.shape[0], cols*p.shape[1]))
+    for b in range(rows*cols):
+        large_image[(b//rows)*p.shape[0]:(b//rows+1)*p.shape[0],
+                    (b%cols)*p.shape[1]:(b%cols+1)*p.shape[1]] = np.transpose(np.squeeze(p[:, :, b]))
+    plt.subplot(1, 3, 3)
+    plt.imshow(large_image, cmap='gray', vmin=0, vmax=1); plt.axis('off')
+
+    if name is not None:
+        plt.savefig(name)
+    else:
+        plt.show()   
+
+        
 # def plot_scatter2():
 #     import numpy as np
 #     import matplotlib as mpl
