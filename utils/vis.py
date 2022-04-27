@@ -25,6 +25,21 @@ from utils.volume_eval import volumetric_data_eval
 logging.basicConfig(level=logging.INFO)
 
 
+def show_mask_base(x, y, vis_type='mask', dpi=300, save_path=None):
+    fig, ax = plt.subplots(1, 1, dpi=dpi)
+    ax.imshow(x, 'gray')
+    if vis_type == 'mask':
+        ax.imshow(y, alpha=0.2)
+    if save_path is not None:
+        fig.savefig(save_path)
+    else:
+        fig.show()
+    plt.close(fig)
+
+
+
+
+
 def plot_image_truth_prediction(x, y, p, rows=12, cols=12, name=None):
     x, y, p = np.squeeze(x), np.squeeze(y), np.squeeze(p>0.5)
     plt.rcParams.update({'font.size': 30})
@@ -55,45 +70,6 @@ def plot_image_truth_prediction(x, y, p, rows=12, cols=12, name=None):
         plt.savefig(name)
     else:
         plt.show()   
-
-        
-# def plot_scatter2():
-#     import numpy as np
-#     import matplotlib as mpl
-#     import matplotlib.pylab as plt
-
-#     fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # setup the plot
-
-#     x = np.random.rand(20)  # define the data
-#     y = np.random.rand(20)  # define the data
-#     tag = np.random.randint(0, 20, 20)
-#     tag[10:12] = 0  # make sure there are some 0 values to show up as grey
-
-#     cmap = plt.cm.jet  # define the colormap
-#     # extract all colors from the .jet map
-#     cmaplist = [cmap(i) for i in range(cmap.N)]
-#     # force the first color entry to be grey
-#     cmaplist[0] = (.5, .5, .5, 1.0)
-
-#     # create the new map
-#     cmap = mpl.colors.LinearSegmentedColormap.from_list(
-#         'Custom cmap', cmaplist, cmap.N)
-
-#     # define the bins and normalize
-#     bounds = np.linspace(0, 20, 21)
-#     norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-
-#     # make the scatter
-#     scat = ax.scatter(x, y, c=tag, s=np.random.randint(100, 500, 20),
-#                     cmap=cmap, norm=norm)
-
-#     # create a second axes for the colorbar
-#     ax2 = fig.add_axes([0.95, 0.1, 0.03, 0.8])
-#     cb = plt.colorbar.ColorbarBase(ax2, cmap=cmap, norm=norm,
-#         spacing='proportional', ticks=bounds, boundaries=bounds, format='%1i')
-
-#     ax.set_title('Well defined discrete colors')
-#     ax2.set_ylabel('Very custom cbar [-]', size=12)
 
 
 class ScatterVisualizer():

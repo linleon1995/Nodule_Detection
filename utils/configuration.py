@@ -7,6 +7,9 @@ def _load_config_yaml(config_file):
 
 
 class DictAsMember(dict):
+    def __setattr__(self, __name, __value) -> None:
+        self.__setitem__(__name, __value)
+
     def __getattr__(self, name):
         value = self[name]
         if isinstance(value, dict):
