@@ -34,7 +34,8 @@ class LungNoduleStudy():
             # TODO: bug when plot scatter but hu=None
             # hu = None
             if self.raw_volume is not None:
-                hu = np.mean(nodule_volume*self.raw_volume[...,0])
+                hu = np.mean(nodule_volume*self.raw_volume)
+                # hu = np.mean(nodule_volume*self.raw_volume[...,0])
             else:
                 hu = None
             nodule_mapping[id] = Nodule(self.study_id, id, nodule_volume, hu)

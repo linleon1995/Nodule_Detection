@@ -1,4 +1,5 @@
 import slicerio
+from slicer.
 import nrrd
 import numpy as np
 import matplotlib.pyplot as plt

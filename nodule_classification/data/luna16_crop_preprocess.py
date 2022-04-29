@@ -6,11 +6,13 @@ from data.volume_generator import luna16_volume_generator, asus_nodule_volume_ge
 
 CROP_RANGE =  {'index': 32, 'row': 64, 'column': 64}
 DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
-VOLUME_GENERATOR = luna16_volume_generator.Build_DLP_luna16_volume_generator(DATA_PATH)
+VOLUME_GENERATOR = luna16_volume_generator.Build_DLP_luna16_volume_generator(DATA_PATH, subset_indices=[0, 1])
 VOL_DATA_PATH = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop'
 LUNA16_ANNOTATION_PATH = rf'evaluationScript/annotations/annotations.csv'
-CLASS_RATIO = 1000
+CLASS_RATIO = 50000
 
+# TODO: modify to iterate volume list once
+# TODO: General for different dataset
 
 class LUNA16_CropRange_Builder():
     @staticmethod 
@@ -27,7 +29,7 @@ class LUNA16_CropRange_Builder():
         # Get cropping samples
         if not os.path.isfile(positive_path) or not os.path.isfile(negative_path):
             luna16_annotations = pd.read_csv(luna16_annotation_path)
-            LUNA16_CropRange_Builder.save_luna16_cropping_samples(luna16_annotations, crop_range, save_path, volume_generator)
+            LUNA16_CropRange_Builder.save_data_sample_in_csv(luna16_annotations, crop_range, save_path, volume_generator)
         positive_crop_range = pd.read_csv(positive_path)
         negative_crop_range = pd.read_csv(negative_path)
 
@@ -44,13 +46,14 @@ class LUNA16_CropRange_Builder():
         negative_raw_path = os.path.join(save_path, 'negative', 'Image')
         positive_target_path = os.path.join(save_path, 'positive', 'Mask')
         negative_target_path = os.path.join(save_path, 'negative', 'Mask')
-        for save_dir in [positive_raw_path, negative_raw_path, positive_target_path, negative_target_path]:
-            if not os.path.isdir(save_dir):
-                os.makedirs(save_dir)
+        # for save_dir in [positive_raw_path, negative_raw_path, positive_target_path, negative_target_path]:
+        #     if not os.path.isdir(save_dir):
+        #         os.makedirs(save_dir)
 
         total_raw_path = np.array([])
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
+            subset = data_info['subset']
             raw_volume, volume, target_volume, volume_info = luna16_volume_generator.get_data_by_pid(data_info['seriesuid'])
             
             crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
@@ -59,10 +62,13 @@ class LUNA16_CropRange_Builder():
             print(f'Saving LUNA16 nodule volume {index:04d} with shape {raw_chunk[...,0].shape}')
 
             if data_info['category'] == 'positive':
-                raw_path, target_path = positive_raw_path, positive_target_path
+                raw_path, target_path = os.path.join(positive_raw_path, subset), os.path.join(positive_target_path, subset)
             elif data_info['category'] == 'negative':
-                raw_path, target_path = negative_raw_path, negative_target_path
-                
+                raw_path, target_path = os.path.join(negative_raw_path, subset), os.path.join(negative_target_path, subset)
+
+            os.makedirs(raw_path, exist_ok=True)    
+            os.makedirs(target_path, exist_ok=True)  
+
             file_name = f'luna16-{index:04d}-{short_pid}'
             np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk[...,0])
             np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
@@ -72,17 +78,17 @@ class LUNA16_CropRange_Builder():
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
     @staticmethod
-    def save_luna16_cropping_samples(luna16_annotations,
+    def save_data_sample_in_csv(luna16_annotations,
                                      crop_range, 
                                      save_path, 
                                      volume_generator=luna16_volume_generator.Build_DLP_luna16_volume_generator()):
-        # e.g., LUNA16_CropRange_Builder.save_luna16_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
+        # e.g., LUNA16_CropRange_Builder.save_data_sample_in_csv({'index': 64, 'row': 64, 'column': 64}, 'the path
         # where dataset save')
         total_positive, total_negative = None, None
         
         for vol_idx, (raw_volume, volume, target_volume, volume_info) in enumerate(volume_generator):
-            # if vol_idx >= 3: break
-            print(vol_idx+1, volume_info['pid'])
+            # if vol_idx > 267: break
+            print(f'Get data sample {vol_idx+1}', volume_info['pid'])
 
             nodule_annotation = luna16_annotations.loc[luna16_annotations['seriesuid'].isin([volume_info['pid']])]
             nodule_center_xyz = nodule_annotation[['coordX', 'coordY', 'coordZ']].to_numpy()

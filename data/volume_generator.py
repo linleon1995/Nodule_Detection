@@ -3,6 +3,7 @@ import os
 import functools
 import numpy as np
 import warnings
+import time
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from utils.utils import mask_preprocess, raw_preprocess
@@ -27,7 +28,7 @@ def get_data_by_pid_asus(data_path, pid):
     vol_raw_path = data_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
     vol, origin, spacing, direction = data_utils.load_itk(vol_raw_path)
     raw_vol = vol.copy()
-    raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
+    # raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
     vol = np.clip(vol, -1000, 1000)
     vol = raw_preprocess(vol, output_dtype=np.uint8)
 
@@ -64,7 +65,7 @@ def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
         yield raw_vol, vol, mask_vol, infos
 
 
-class ASUSNoduleVolumeGenerator():
+class TMHNoduleVolumeGenerator():
     def __init__(self, data_path=None, case_pids=None, case_indices=None):
         self.data_path = data_path
         self.case_pids = case_pids
@@ -215,7 +216,7 @@ class luna16_volume_generator():
         self.subset_indices = subset_indices
         self.case_indices = case_indices
         self.total_case_list = self.get_case_list(data_path, subset_indices, case_indices)
-        self.pid_list = [os.path.split(path)[1].split('.')[0] for path in self.total_case_list]
+        self.pid_list = [os.path.split(path)[1][:-4] for path in self.total_case_list]
         # self.pid_list = self.get_pid_list(data_path, subset_indices, case_indices)
 
     @classmethod
@@ -272,9 +273,9 @@ class luna16_volume_generator():
         vol = np.clip(raw_vol, -1000, 1000)
         vol = raw_preprocess(vol, output_dtype=np.uint8)
         mask_vol = mask_preprocess(mask_vol)
-        infos = {'dataset': 'LUNA16', 'pid': pid, 'scan_idx': 0, 
+        short_pid = pid.split('.')[-1]
+        infos = {'dataset': 'LUNA16', 'pid': short_pid, 'scan_idx': 0, 
                  'origin': ct.origin_xyz, 'spacing': ct.vxSize_xyz, 'direction': ct.direction_a}
-        # TODO:
         return raw_vol, vol, mask_vol, infos
 
 
@@ -288,7 +289,7 @@ def build_pred_generator(data_generator, predictor, batch_size=1):
 
         for img_idx in range(0, vol.shape[0], batch_size):
             if img_idx == 0:
-                print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
+                print(f'\n{print(time.ctime(time.time()))} Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
             start, end = img_idx, min(vol.shape[0], img_idx+batch_size)
             img = vol[start:end]
             img_list = np.split(img, img.shape[0], axis=0)

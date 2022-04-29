@@ -5,7 +5,7 @@ from data import medical_to_img
 from data import build_coco
 from data import asus_data_merge
 from data import data_utils
-from data.data_analysis import tmh_base_check
+from data.data_analysis import TMH_nodule_base_check, TMH_merging_check
 
 import site_path
 from modules.utils import configuration
@@ -47,7 +47,7 @@ def build_parameters(dataset_name):
     if dataset_name not in ['Benign', 'Malignant']:
         return None
 
-    config_name = f'ASUS-{dataset_name}'
+    config_name = f'TMH-{dataset_name}'
     cfg = configuration.load_config(f'data/config/{config_name}.yml', dict_as_member=True)
     data_root = cfg.PATH.DATA_ROOT
     task_name = cfg.TASK_NAME
@@ -105,22 +105,22 @@ def data_preprocess(dataset_names):
             shuffle = False
             kc_image_path = image_path.replace('image', 'kc_image')
 
-            for path in [merge_path, image_path, kc_image_path]:
+            for path in [merge_path, image_path, kc_image_path, stats_path]:
                 os.makedirs(path, exist_ok=True)
 
             if dataset_name == 'Benign':
                 filekey = 'B'
-                case_pids = [f'1B00{i}' for i in range(36, 38)]
-                case_pids += [f'1B00{i}' for i in range(39, 53)]
-                case_pids += [f'1B00{i}' for i in range(54, 56)]
+                case_pids = [f'1B00{i}' for i in range(38, 39)]
+                case_pids += [f'1B00{i}' for i in range(53, 54)]
+                case_pids += [f'1B00{i}' for i in range(56, 61)]
                 case_pids = None
             elif dataset_name == 'Malignant':
                 filekey = 'm'
-                case_pids = [f'1m00{i}' for i in range(58, 61)]
+                case_pids = [f'1m00{i}' for i in range(58, 60)]
                 case_pids = None
 
             # # Merge mhd data
-            asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
+            # asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
 
             # Convert medical 3d volume data to image format
             # volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
@@ -128,9 +128,9 @@ def data_preprocess(dataset_names):
             # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
             # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
-            # # TMH base check
-            # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
-            # tmh_base_check(volume_generator, save_path=stats_path)
+            # TMH base check
+            volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
+            TMH_nodule_base_check(volume_generator, save_path=stats_path)
 
             # # Build up coco-structure
             # num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
@@ -148,9 +148,27 @@ def data_preprocess(dataset_names):
 
 
 def main():
-    data_preprocess(DATASET_NAME)
+    # data_preprocess(DATASET_NAME)
+    TMH_merging_check()
 
 
 if __name__ == '__main__':
     main()
-    pass
+    # pass
+
+    # from data.data_utils import load_itk
+    # import matplotlib.pyplot as plt
+    # x, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043raw mhd\1.2.826.0.1.3680043.2.1125.1.66267488139869463859646041266078917.mhd')
+    # y, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043mask mhd\1.2.826.0.1.3680043.2.1125.1.20492007384673651600845318549231386.mhd')
+    # print(x.shape)
+    # print(np.sum(y))
+
+    # fig, ax = plt.subplots(1,1)
+    # for i in range(x.shape[0]):
+    #     if np.sum(y[i])>0:
+    #         print(i)
+    #         ax.imshow(x[i], 'gray')
+    #         ax.imshow(y[i], alpha=0.2)
+    #         fig.savefig(f'img{i}.png')
+    #         plt.cla()
+        

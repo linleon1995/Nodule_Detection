@@ -12,7 +12,7 @@ def modify_array_in_itk(itkimage, new_array):
     img_preprocessed.CopyInformation(itkimage)
     return img_preprocessed
 
-    
+
 def load_itk(filename):
     '''
     This funciton reads a '.mhd' file using SimpleITK and return the image array, origin and spacing of the image.

@@ -44,7 +44,7 @@ CandidateInfoTuple = namedtuple('CandidateInfoTuple', 'isNodule_bool, hasAnnotat
 
 ROOT = rf'C:\Users\test\Desktop\Leon\Datasets'
 data_subset_path = os.path.join(ROOT, 'LUNA16/data/subset*')
-seg_lung_path = os.path.join(ROOT, 'LUNA16/data/seg-lungs-LUNA16')
+seg_lung_path = os.path.join(ROOT, 'LUNA16/seg-lungs-LUNA16')
 annotations_path = os.path.join(ROOT, 'LUNA16/data/annotations.csv')
 candidates_path = os.path.join(ROOT, 'LUNA16/data/candidates.csv')
 

@@ -30,7 +30,7 @@ class FalsePositiveReducer():
             lung_mask_case_path = os.path.join(lung_mask_path, pid)
             if not os.path.isdir(lung_mask_case_path):
                 os.makedirs(lung_mask_case_path)
-                lung_mask_vol = get_lung_mask(raw_vol[...,0])
+                lung_mask_vol = get_lung_mask(raw_vol)
                 for lung_mask_idx, lung_mask in enumerate(lung_mask_vol):
                     cv2.imwrite(os.path.join(lung_mask_case_path, f'{pid}-{lung_mask_idx:03d}.png'), 255*lung_mask)
             else:

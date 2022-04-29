@@ -372,17 +372,17 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         # test_file_keys = [f'luna16-{idx:04d}' for idx in range(112, 240)]
 
 
-        train_input_samples = get_samples(input_roots, train_file_keys)   
-        train_target_samples = get_samples(target_roots, train_file_keys) 
-        x_train, y_train = load_data(train_input_samples, train_target_samples, remove_zeros=remove_zeros)
-        x_train = x_train[:,np.newaxis]
-        y_train = y_train[:,np.newaxis]
+        # train_input_samples = get_samples(input_roots, train_file_keys)   
+        # train_target_samples = get_samples(target_roots, train_file_keys) 
+        # x_train, y_train = load_data(train_input_samples, train_target_samples, remove_zeros=remove_zeros)
+        # x_train = x_train[:,np.newaxis]
+        # y_train = y_train[:,np.newaxis]
 
-        valid_input_samples = get_samples(input_roots, valid_file_keys)   
-        valid_target_samples = get_samples(target_roots, valid_file_keys) 
-        x_valid, y_valid = load_data(valid_input_samples, valid_target_samples, remove_zeros=remove_zeros)
-        x_valid = x_valid[:,np.newaxis]
-        y_valid = y_valid[:,np.newaxis]
+        # valid_input_samples = get_samples(input_roots, valid_file_keys)   
+        # valid_target_samples = get_samples(target_roots, valid_file_keys) 
+        # x_valid, y_valid = load_data(valid_input_samples, valid_target_samples, remove_zeros=remove_zeros)
+        # x_valid = x_valid[:,np.newaxis]
+        # y_valid = y_valid[:,np.newaxis]
 
         test_input_samples = get_samples(input_roots, test_file_keys)   
         test_target_samples = get_samples(target_roots, test_file_keys) 
@@ -390,16 +390,16 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         x_test = x_test[:,np.newaxis]
         y_test = y_test[:,np.newaxis]
 
-        print('x_train: {} | {} ~ {}'.format(x_train.shape, np.min(x_train), np.max(x_train)))
-        print('y_train: {} | {} ~ {}'.format(y_train.shape, np.min(y_train), np.max(y_train)))
+        # print('x_train: {} | {} ~ {}'.format(x_train.shape, np.min(x_train), np.max(x_train)))
+        # print('y_train: {} | {} ~ {}'.format(y_train.shape, np.min(y_train), np.max(y_train)))
 
-        print('x_valid: {} | {} ~ {}'.format(x_valid.shape, np.min(x_valid), np.max(x_valid)))
-        print('y_valid: {} | {} ~ {}'.format(y_valid.shape, np.min(y_valid), np.max(y_valid)))
+        # print('x_valid: {} | {} ~ {}'.format(x_valid.shape, np.min(x_valid), np.max(x_valid)))
+        # print('y_valid: {} | {} ~ {}'.format(y_valid.shape, np.min(y_valid), np.max(y_valid)))
 
         print('x_test: {} | {} ~ {}'.format(x_test.shape, np.min(x_test), np.max(x_test)))
         print('y_test: {} | {} ~ {}'.format(y_test.shape, np.min(y_test), np.max(y_test)))
 
-        x_data, y_data = x_train, y_train
+        x_data, y_data = x_test, y_test
         x_data_p = torch.from_numpy(x_data).float().cuda()
         
         p_data = []
@@ -410,11 +410,14 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         p_data = np.concatenate(p_data, axis=0)
         print('CWD', os.getcwd())
         total_dsc = []
+        crop_save_path = os.path.join(self.save_path, 'images', 'crop')
+        os.makedirs(crop_save_path, exist_ok=True)
         for i in range(0, x_data.shape[0], 1):
             dsc = binary_dsc(y_data[i], p_data[i])
             total_dsc.append(dsc)
-            # plot_image_truth_prediction(
-            #     x_data[i], y_data[i], p_data[i], rows=5, cols=5, name=f'plot/pytorch/img{i:03d}.png')
+            if i%5==0:
+                plot_image_truth_prediction(
+                    x_data[i], y_data[i], p_data[i], rows=5, cols=5, name=os.path.join(crop_save_path, f'img{i:03d}.png'))
         mean_dsc = sum(total_dsc)/len(total_dsc)
         print(f'Mean cropping DSC {mean_dsc:.4f}')
 

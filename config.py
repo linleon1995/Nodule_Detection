@@ -5,10 +5,96 @@ from detectron2 import model_zoo
 from detectron2.config import get_cfg
 
 import site_path
-from modules.utils import configuration
-from modules.utils import train_utils
+from utils import configuration
+from utils.train_utils import create_training_path
 
 
+class models_genesis_config:
+    model = "Unet3D"
+    suffix = "genesis_chest_ct"
+    exp_name = model + "-" + suffix
+    
+    # data
+    data = "generated_cubes"
+    # train_fold=[0]
+    train_fold=[0,1]
+    valid_fold=[5]
+    test_fold=[7,8,9]
+    hu_min = -1000.0
+    hu_max = 1000.0
+    scale = 32
+    input_rows = 64
+    input_cols = 64 
+    input_deps = 32
+    nb_class = 1
+    
+    # model pre-training
+    verbose = 1
+    weights = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Genesis_Chest_CT.pt'
+    # weights = 'pretrained_weights/Unet3D-genesis_chest_ct/run_015/ckpt-best.pt'
+    # weights = None
+    batch_size = 3
+    optimizer = "sgd"
+    workers = 10
+    max_queue_size = workers * 4
+    save_samples = "png"
+    nb_epoch = 200
+    patience = 50
+    lr = 5e-4
+    remove_empty_sample = False
+    class_balance = False
+    annot_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\annotations.csv'
+
+    # image deformation
+    nonlinear_rate = 0.9
+    paint_rate = 0.9
+    outpaint_rate = 0.8
+    inpaint_rate = 1.0 - outpaint_rate
+    local_rate = 0.5
+    flip_rate = 0.4
+    
+    # logs
+    model_path = "pretrained_weights"
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+    logs_path = os.path.join(model_path, "Logs")
+    if not os.path.exists(logs_path):
+        os.makedirs(logs_path)
+    
+    def display(self):
+        """Display Configuration values."""
+        print("\nConfigurations:")
+        for a in dir(self):
+            if not a.startswith("__") and not callable(getattr(self, a)):
+                print("{:30} {}".format(a, getattr(self, a)))
+        print("\n")
+
+
+
+def nodule_dataset_config(name):
+    TMH_Benign = {
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\raw',
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\image\Lung_Mask_show'
+    }
+
+    TMH_Malignant = {
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\raw',
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\image\Lung_Mask_show'
+    }
+
+    LUNA16 = {
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data',
+        'lung_mask': None
+    }
+
+    dataset_config = {
+        'TMH-Benign': TMH_Benign,
+        'TMH-Malignant': TMH_Malignant,
+        'LUNA16': LUNA16,
+    }
+    assert name in dataset_config, 'Unknown dataset.'
+
+    return dataset_config[name]
 
 
 def build_train_config(config_path):
@@ -38,7 +124,7 @@ def build_d2_config():
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.MODEL.WEIGHTS = get_model_weight()
-    cfg.OUTPUT_DIR = train_utils.create_training_path('output')
+    cfg.OUTPUT_DIR = create_training_path('output')
     # # By default, {MIN,MAX}_SIZE options are used in transforms.ResizeShortestEdge.
     # Please refer to ResizeShortestEdge for detailed definition.
     # Size of the smallest side of the image during training

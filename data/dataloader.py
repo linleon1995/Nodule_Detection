@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import os
 
-from data.volume_generator import ASUSNoduleVolumeGenerator, luna16_volume_generator, asus_nodule_volume_generator
+from data.volume_generator import TMHNoduleVolumeGenerator, luna16_volume_generator, asus_nodule_volume_generator
 from data.build_coco import rle_decode
 from data.data_utils import get_files, get_shift_index
 from data.data_transformer import ImageDataTransformer
@@ -110,8 +110,8 @@ class SimpleNoduleDataset():
 
 
 class CropNoduleDataset():
-    def __init__(self, volume, crop_range, crop_shift, convert_dtype=None):
-        self.cropping_op = CropVolume(crop_range, crop_shift, convert_dtype)
+    def __init__(self, volume, crop_range, crop_shift, convert_dtype=None, overlapping=1.0):
+        self.cropping_op = CropVolume(crop_range, crop_shift, convert_dtype, overlapping)
         self.crop_data = self.cropping_op(volume)
         for idx in range(len(self.crop_data)):
             self.crop_data[idx]['data'] = self.crop_data[idx]['data'][np.newaxis]

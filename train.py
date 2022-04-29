@@ -1,23 +1,11 @@
 
-
-import detectron2
-from detectron2.data.datasets import register_coco_instances
-from detectron2.utils.logger import setup_logger
-setup_logger()
-
 # import some common libraries
 import numpy as np
 import os, json, cv2, random
+import matplotlib.pyplot as plt
 import tensorboardX
 
-# import some common detectron2 utilities
-from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.engine import DefaultTrainer
-import matplotlib.pyplot as plt
 from detectron2.engine import HookBase
 from detectron2.data import build_detection_train_loader
 import detectron2.utils.comm as comm
@@ -61,6 +49,7 @@ def d2_model_train(train_cfg):
     cfg = train_cfg['d2']
     d2_register_coco(cfg, train_cfg.DATA.NAMES.keys())
 
+    # TODO:
     assign_fold = 4
     if assign_fold is not None:
         assert assign_fold < train_cfg.CV_FOLD, 'Assign fold out of range'
@@ -104,10 +93,10 @@ def pytorch_model_train(cfg):
         [os.path.join(cfg.DATA.NAMES[dataset_name]['COCO_PATH'], f'annotations_test.json') for dataset_name in cfg.DATA.NAMES])
 
     # TODO: try to use dataset config
-    input_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\input',
-                   rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\shift\3\input']
-    target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\shift\3\target',
-                    rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\shift\3\target']
+    input_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Malignant\shift\3\input',
+                   rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Benign\shift\3\input']
+    target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Malignant\shift\3\target',
+                    rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Benign\shift\3\target']
 
     train_dataloader, valid_dataloader = dataloader.build_dataloader(
         input_roots, target_roots, train_cases, valid_cases, cfg.DATA.BATCH_SIZE, transform_config=transform_config)
@@ -142,9 +131,9 @@ def main():
     config_path = f'config_file/train.yml'
     train_cfg = build_train_config(config_path)
 
-    if train_cfg.MODEL.NAME in ['2D-Mask-RCNN']:
+    if train_cfg.MODEL.backend == 'd2':
         d2_model_train(train_cfg)
-    else:
+    elif train_cfg.MODEL.backend == 'pytorch':
         pytorch_model_train(train_cfg)
 
 
