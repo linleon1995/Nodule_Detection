@@ -25,11 +25,11 @@ def _get_gaussian(patch_size, sigma_scale=1. / 8) -> np.ndarray:
 #     return volume
 
 
-def crops_to_volume(crops, slices, volume_shape, reweight=True):
+def crops_to_volume(crops, slices, volume_shape, reweight, reweight_sigma):
     volume, total_times = np.zeros(volume_shape), np.zeros(volume_shape)
     num_sample = crops.shape[0]
     if reweight:
-        importance_map = _get_gaussian(patch_size=(64,64,32), sigma_scale=0.25)
+        importance_map = _get_gaussian(patch_size=(64,64,32), sigma_scale=reweight_sigma)
         # importance_maps = np.tile(importance_map[np.newaxis, np.newaxis], (num_sample,1,1,1,1))
         importance_maps = importance_map[np.newaxis, np.newaxis]
 

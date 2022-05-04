@@ -156,10 +156,10 @@ if __name__ == '__main__':
     main()
     # pass
 
-    # from data.data_utils import load_itk
-    # import matplotlib.pyplot as plt
-    # x, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043raw mhd\1.2.826.0.1.3680043.2.1125.1.66267488139869463859646041266078917.mhd')
-    # y, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043mask mhd\1.2.826.0.1.3680043.2.1125.1.20492007384673651600845318549231386.mhd')
+    from data.data_utils import load_itk
+    import matplotlib.pyplot as plt
+    x, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043raw mhd\1.2.826.0.1.3680043.2.1125.1.66267488139869463859646041266078917.mhd')
+    y, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043mask mhd\1.2.826.0.1.3680043.2.1125.1.20492007384673651600845318549231386.mhd')
     # print(x.shape)
     # print(np.sum(y))
 

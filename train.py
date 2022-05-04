@@ -49,18 +49,16 @@ def d2_model_train(train_cfg):
     cfg = train_cfg['d2']
     d2_register_coco(cfg, train_cfg.DATA.NAMES.keys())
 
-    # TODO:
-    assign_fold = 4
-    if assign_fold is not None:
-        assert assign_fold < train_cfg.CV_FOLD, 'Assign fold out of range'
-        fold_indices = [assign_fold]
+    if train_cfg.CV.ASSIGN_FOLD is not None:
+        assert train_cfg.CV.ASSIGN_FOLD < train_cfg.CV.FOLD, 'Assign fold out of range'
+        fold_indices = [train_cfg.CV.ASSIGN_FOLD]
     else:
-        fold_indices = list(range(train_cfg.CV_FOLD))
+        fold_indices = list(range(train_cfg.CV.FOLD))
     
     output_dir = cfg.OUTPUT_DIR
     for fold in fold_indices:
-        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
-        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
+        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
+        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
 
         cfg.DATASETS.TRAIN = train_dataset
         cfg.DATASETS.VAL = valid_dataset

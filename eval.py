@@ -91,8 +91,9 @@ def eval(cfg, volume_generator, data_converter, predictor, evaluator_gen):
     evaluator = evaluator_gen(predictor, volume_generator, save_path, data_converter=data_converter, eval_metrics=vol_metric, 
                               slice_shift=cfg.SLICE_SHIFT, save_vis_condition=save_vis_condition, max_test_cases=cfg.MAX_TEST_CASES, 
                               post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
-                              lung_mask_path=cfg.LUNG_MASK_PATH)
-    # evaluator.crop_test_luna16()
+                              lung_mask_path=cfg.LUNG_MASK_PATH, overlapping=cfg.Inference.overlapping, reweight=cfg.Inference.reweight, 
+                              reweight_sigma=cfg.Inference.reweight_sigma)
+    evaluator.crop_test_luna16()
     target_studys, pred_studys = evaluator.run()
     return target_studys, pred_studys
 
@@ -152,7 +153,7 @@ def cross_valid_eval():
                 volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
                                                                 case_pids=case_pids)
             elif dataset_name == 'LUNA16':
-                subset_indices = [8, 9]
+                subset_indices = [1]
                 volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
                     data_path=cfg.RAW_DATA_PATH, subset_indices=subset_indices)
 

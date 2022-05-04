@@ -1,4 +1,5 @@
 
+from torch import short
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import os
@@ -40,13 +41,16 @@ class MhdNoduleDataset():
         input_data, target = [], []
         
         pid = os.path.split(self.input_path_list[idx])[1][:-4]
+        short_pid = pid.split('.')[-1]
         df = self.annotation_df.loc[self.annotation_df['seriesuid'] == pid]
         vol, origin_zyx, spacing_zyx, direction_zyx = load_itk(self.input_path_list[idx])
         vol = np.clip(vol, -1000, 1000)
         vol = raw_preprocess(vol, output_dtype=np.float32)
         vol = vol[...,0] / 255
 
-        mask_vol = np.load(self.target_path_list[pid])
+        mask_vol = np.load(self.target_path_list[short_pid])
+        # TODO:
+        mask_vol = np.where(mask_vol>0, 1, 0)
         # mask_vol = mask_preprocess(mask_vol)
 
         
@@ -167,14 +171,17 @@ def build_dataloader_mhd(input_roots, target_roots, train_cases, annot_path, val
     annotation_df = pd.read_csv(annot_path)
 
     def get_target_samples(sub_input_paths, target_paths):
+        input_samples = []
         target_samples = {}
         for input_path in sub_input_paths:
-            filename = os.path.split(input_path)[1][:-4]
+            pid = os.path.split(input_path)[1][:-4]
+            short_pid = pid.split('.')[-1]
             for target_path in target_paths:
-                if filename in target_path:
-                    target_samples[filename] = target_path
+                if short_pid in target_path:
+                    target_samples[short_pid] = target_path
+                    input_samples.append(input_path)
                     break
-        return target_samples
+        return input_samples, target_samples
 
     target_samples = []
     train_input_samples = []
@@ -190,7 +197,7 @@ def build_dataloader_mhd(input_roots, target_roots, train_cases, annot_path, val
 
         target_paths = get_files(target_root, keys='npy')
         target_samples.extend(target_paths)
-    train_target_samples = get_target_samples(train_input_samples, target_samples)
+    train_input_samples, train_target_samples = get_target_samples(train_input_samples, target_samples)
     
     train_dataset = MhdNoduleDataset(
         train_pid_list, train_input_samples, train_target_samples, data_transformer=transformer, crop_range=crop_range, annotation_df=annotation_df, mode='train')
@@ -209,7 +216,7 @@ def build_dataloader_mhd(input_roots, target_roots, train_cases, annot_path, val
                 valid_input_samples.extend(valid_input_paths)
                 valid_pid_list.extend(pids)
 
-        valid_target_samples = get_target_samples(valid_input_samples, target_paths)
+        valid_input_samples, valid_target_samples = get_target_samples(valid_input_samples, target_paths)
 
         valid_dataset = MhdNoduleDataset(valid_pid_list, valid_input_samples, valid_target_samples, crop_range=crop_range, annotation_df=annotation_df, mode='valid')
         valid_dataloader = DataLoader(valid_dataset, batch_size=1, shuffle=False, pin_memory=pin_memory, num_workers=num_workers)

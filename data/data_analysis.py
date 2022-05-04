@@ -14,35 +14,29 @@ from data.data_utils import get_files, load_itk
 def TMH_merging_check():
     benign_root = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Benign\raw'
     malignant_root = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Malignant\raw'
-
     benign_paths = get_files(benign_root, 'mhd')
     malignant_paths = get_files(malignant_root, 'mhd')
-
     total_paths = benign_paths + malignant_paths
 
     # remove mask path
     for idx, path in enumerate(total_paths):
         if 'mask' in path:
             total_paths.remove(path)
-    total_paths.pop(3)
+    total_paths.pop(3) # remove 1B0037 mask
     
-    output_paths = total_paths.copy()
-    merge_table = {}
-
     process_list =[]
+    df = pd.DataFrame()
     for idx, path in enumerate(total_paths):
         folder, filename = os.path.split(path)
         _, pid = os.path.split(os.path.split(folder)[0])
-        if pid in process_list:
+        if path in process_list:
             continue
         else:
-            process_list.append(pid)
-        temp_paths = total_paths.copy()
-        temp_paths.remove(path)
+            process_list.append(path)
+        compare_paths = total_paths.copy()
+        compare_paths = list(set(compare_paths)-set(process_list))
         same_list = [pid]
-        # print(idx, pid)
-        # total_paths.remove(path)
-        for compare_path in temp_paths:
+        for compare_path in compare_paths:
             compare_folder, compare_filename = os.path.split(compare_path)
             _, compare_pid = os.path.split(os.path.split(compare_folder)[0])
             if filename == compare_filename:
@@ -59,16 +53,15 @@ def TMH_merging_check():
 
             if same_name or same_value:
                 same_list.append(compare_pid)
-                process_list.append(compare_pid)
-                # temp_paths.remove(compare_path)
-                # total_paths.remove(compare_path)
+                process_list.append(compare_path)
                 print(f'pid {pid} compare_pid {compare_pid} name {same_name} value {same_value}')
-        merge_table[idx] = same_list
-        
+                
         print(same_list)
-    df = pd.DataFrame(merge_table)
-    df.to_csv('merge_table.csv')
-    print(3)
+        row_df = {f'case_{idx:03d}': pid for idx, pid in enumerate(same_list)}
+        df = df.append(row_df, ignore_index=True)
+        
+    df.to_csv(os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule', 'merge_table.csv'), index=False)
+
 
 def build_nodule_metadata(volume):
     if np.sum(volume) == np.sum(np.zeros_like(volume)):

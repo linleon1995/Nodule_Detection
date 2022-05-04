@@ -98,7 +98,7 @@ def main(config_reference):
                                     activation_func=activation_func,
                                     USE_TENSORBOARD=True,
                                     # USE_CUDA=True,)
-                                    history=rf'C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_011\ckpt_best.pth')
+                                    history=None)
 
     trainer_instance.fit()
 

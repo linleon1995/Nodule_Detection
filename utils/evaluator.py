@@ -6,7 +6,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from data.data_structure import LungNoduleStudy
 from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
-from utils.vis import plot_image_truth_prediction
+from utils.vis import plot_image_truth_prediction, show_mask_base
 from torch.utils.data import Dataset, DataLoader
 from data.crop_utils import crops_to_volume
 from utils.metrics import binary_dsc
@@ -287,10 +287,14 @@ class Pytorch2dSegEvaluator(NoudleSegEvaluator):
 class Pytorch3dSegEvaluator(NoudleSegEvaluator):
     def __init__(self, predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition=True, 
                  max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', 
-                 save_all_images=False, batch_size=1, *args, **kwargs):
+                 save_all_images=False, batch_size=1, overlapping=0.5, reweight=True, reweight_sigma=0.25, *args, **kwargs):
         super().__init__(predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition, 
                          max_test_cases, post_processer, fp_reducer, nodule_classifier, lung_mask_path, save_all_images, batch_size)
-    
+        
+        self.overlapping = overlapping
+        self.reweight = reweight
+        self.reweight_sigma = reweight_sigma
+
     def crop_test(self, vol, mask_vol):
         # key = '32x64x64-10-shift-8'
         remove_zeros = False
@@ -361,12 +365,13 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
             rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\positive\Image',
         ]
         target_roots = [
-        rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\positive\Mask',
+            rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\positive\Mask',
         ]
 
         train_file_keys = [f'luna16-{idx:04d}' for idx in range(852)]
         valid_file_keys = [f'luna16-{idx:04d}' for idx in range(852, 963)]
-        test_file_keys = [f'luna16-{idx:04d}' for idx in range(963, 1186)]
+        # test_file_keys = [f'luna16-{idx:04d}' for idx in range(963, 1186)]
+        test_file_keys = [f'luna16-{idx:04d}' for idx in range(112)]
         # train_file_keys = [f'luna16-{idx:04d}' for idx in range(112)]
         # valid_file_keys = [f'luna16-{idx:04d}' for idx in range(112, 240)]
         # test_file_keys = [f'luna16-{idx:04d}' for idx in range(112, 240)]
@@ -415,6 +420,9 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         for i in range(0, x_data.shape[0], 1):
             dsc = binary_dsc(y_data[i], p_data[i])
             total_dsc.append(dsc)
+            # if i== 70:
+            #     for j in range(32):
+            #         show_mask_base(x_data[i,0,...,j], y_data[i,0,...,j], save_path=f'plot/test{i}_{j}.png')
             if i%5==0:
                 plot_image_truth_prediction(
                     x_data[i], y_data[i], p_data[i], rows=5, cols=5, name=os.path.join(crop_save_path, f'img{i:03d}.png'))
@@ -430,7 +438,7 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
 
         pred_vol = torch.zeros(vol.shape)
         # TODO: dataloader takes long time
-        dataset = self.data_converter(vol, (64,64,32), (0,0,0), overlapping=0.5)
+        dataset = self.data_converter(vol, (64,64,32), (0,0,0), overlapping=self.overlapping)
         dataloder = DataLoader(dataset, batch_size=1, shuffle=False)
         pred_crops, pred_slices = [], []
         for idx, input_data in enumerate(dataloder):
@@ -478,7 +486,7 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         # pred_vol = np.zeros_like(vol)
         # pred_vol = pred_vol.cpu().detach().numpy()
         pred_crops = np.concatenate(pred_crops, axis=0)
-        pred_vol = crops_to_volume(pred_crops, pred_slices, vol.shape, reweight=True)
+        pred_vol = crops_to_volume(pred_crops, pred_slices, vol.shape, self.reweight, self.reweight_sigma)
         pred_vol = np.where(pred_vol>0.5, 1, 0)
         pred_vol = np.transpose(pred_vol, (2, 0, 1))
         return pred_vol

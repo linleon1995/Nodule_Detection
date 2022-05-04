@@ -51,7 +51,8 @@ def main():
     valid_cases = [f'subset{idx}' for idx in range(1, 2)]
 
     input_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data']
-    target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_hu_mask']
+    target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask']
+    # target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_hu_mask']
 
     # train_cases = [f'luna16-{idx:04d}' for idx in range(852)]
     # valid_cases = [f'luna16-{idx:04d}' for idx in range(852, 963)]

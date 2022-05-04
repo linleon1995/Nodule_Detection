@@ -84,7 +84,7 @@ def nodule_dataset_config(name):
 
     LUNA16 = {
         'raw': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data',
-        'lung_mask': None
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask'
     }
 
     dataset_config = {
