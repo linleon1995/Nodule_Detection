@@ -28,7 +28,8 @@ class CropVolume():
     def get_crop_slice(self, volume_shape):
         slices = []
         for dim_idx, length in enumerate(volume_shape):
-            slices.append(self.simple_slice(length, self.crop_shift[dim_idx], self.crop_size[dim_idx], self.overlapping))
+            slices.append(
+                self.simple_slice(length, self.crop_shift[dim_idx], self.crop_size[dim_idx], self.overlapping))
 
         # TODO: for arbitrary dimensions
         slice_comb = []
@@ -40,6 +41,7 @@ class CropVolume():
 
     @staticmethod
     def simple_slice(length, shift, crop_length, overlapping):
+        # TODO: np method
         slices = []
         step = int(crop_length*overlapping)
         for start in range(shift, length-shift, step):

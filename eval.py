@@ -93,7 +93,7 @@ def eval(cfg, volume_generator, data_converter, predictor, evaluator_gen):
                               post_processer=post_processer, fp_reducer=fp_reducer, nodule_classifier=nodule_classifier, 
                               lung_mask_path=cfg.LUNG_MASK_PATH, overlapping=cfg.Inference.overlapping, reweight=cfg.Inference.reweight, 
                               reweight_sigma=cfg.Inference.reweight_sigma)
-    evaluator.crop_test_luna16()
+    # evaluator.crop_test_luna16()
     target_studys, pred_studys = evaluator.run()
     return target_studys, pred_studys
 
@@ -154,8 +154,11 @@ def cross_valid_eval():
                                                                 case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]
-                volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
-                    data_path=cfg.RAW_DATA_PATH, subset_indices=subset_indices)
+                # volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
+                #     data_path=cfg.RAW_DATA_PATH, subset_indices=subset_indices)
+                mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask'
+                volume_generator = luna16_volume_generator.Build_LIDC_luna16_volume_generator(
+                    data_path=cfg.RAW_DATA_PATH, mask_path=mask_path, subset_indices=subset_indices)
 
             in_planes = 2*cfg.SLICE_SHIFT + 1
             if cfg.MODEL_NAME == '2D-Mask-RCNN':

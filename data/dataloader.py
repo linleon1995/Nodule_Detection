@@ -10,6 +10,7 @@ from data.build_coco import rle_decode
 from data.data_utils import get_files, get_shift_index
 from data.data_transformer import ImageDataTransformer
 from data.volume_to_3d_crop import CropVolume
+from data.crop_utils import CropVolumeOP
 
 class GeneralDataset():
     def __init__(self, input_path_list, target_path_list, input_load_func, target_load_func, data_transformer=None):
@@ -111,7 +112,8 @@ class SimpleNoduleDataset():
 
 class CropNoduleDataset():
     def __init__(self, volume, crop_range, crop_shift, convert_dtype=None, overlapping=1.0):
-        self.cropping_op = CropVolume(crop_range, crop_shift, convert_dtype, overlapping)
+        # self.cropping_op = CropVolume(crop_range, crop_shift, convert_dtype, overlapping)
+        self.cropping_op = CropVolumeOP(crop_range, crop_shift, convert_dtype, overlapping)
         self.crop_data = self.cropping_op(volume)
         for idx in range(len(self.crop_data)):
             self.crop_data[idx]['data'] = self.crop_data[idx]['data'][np.newaxis]

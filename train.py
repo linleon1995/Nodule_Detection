@@ -139,4 +139,19 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    # a = np.indices((8,64,64,32))
+    # b = [slice(64), slice(64), slice(32)]
+    # c = np.random.random((8,512,512,177))
+    # d = c[a[0], a[1]+32, a[2]+16, a[3]]
+    # print((d==c[:, 32:96, 16:80, :32]).all())
+    # print(3)
+
+    # a = np.indices((8,64,64,32))
+    # b = [slice(64), slice(64), slice(32)]
+    # c = np.random.random((8,512,512,177))
+    # d = c[a[0], a[1]+32, a[2]+16, a[3]]
+    # print((d==c[:, 32:96, 16:80, :32]).all())
+    # print(3)
+
     

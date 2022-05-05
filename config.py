@@ -84,7 +84,7 @@ def nodule_dataset_config(name):
 
     LUNA16 = {
         'raw': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data',
-        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask'
+        'lung_mask': None
     }
 
     dataset_config = {
@@ -99,7 +99,7 @@ def nodule_dataset_config(name):
 
 def build_train_config(config_path):
     train_cfg = build_custom_config(config_path)
-    if train_cfg.MODEL.NAME in ['2D-Mask-RCNN']:
+    if train_cfg.MODEL.backend == 'd2':
         d2_cfg = build_d2_config()
         d2_cfg.CV_FOLD = train_cfg.CV_FOLD
         train_cfg['d2'] = d2_cfg

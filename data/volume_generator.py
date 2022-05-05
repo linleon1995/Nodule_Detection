@@ -220,6 +220,51 @@ class luna16_volume_generator():
         # self.pid_list = self.get_pid_list(data_path, subset_indices, case_indices)
 
     @classmethod
+    def Build_LIDC_luna16_volume_generator(cls, data_path, mask_path, subset_indices=None, case_indices=None, only_nodule_slices=None):
+        subset_list = data_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
+        if subset_indices:
+            subset_list = np.take(subset_list, subset_indices)
+        total_raw_list = []
+        for subset_dir in subset_list:
+            case_list = data_utils.get_files(subset_dir, 'mhd', recursive=False)
+            if case_indices:
+                case_list = np.take(case_list, case_indices)
+            total_raw_list.extend(case_list)
+
+        subset_list = data_utils.get_files(mask_path, 'subset', recursive=False, get_dirs=True)
+        if subset_indices:
+            subset_list = np.take(subset_list, subset_indices)
+        total_target_list = []
+        for subset_dir in subset_list:
+            case_list = data_utils.get_files(subset_dir, 'npy', recursive=False)
+            if case_indices:
+                case_list = np.take(case_list, case_indices)
+            total_target_list.extend(case_list)
+
+        total_raw_paths, total_target_paths = [], []
+        for raw_path in total_raw_list:
+            for target_path in total_target_list:
+                folder, filename = os.path.split(raw_path)
+                pid = filename[:-4]
+                short_pid = pid.split('.')[-1]
+                if short_pid in target_path:
+                    subset = os.path.split(folder)[1]
+                    # total_raw_paths.append(raw_path)
+                    # total_target_paths.append(target_path)
+            
+        # for case_dir in total_raw_list:
+        #     subset = os.path.split(subset_dir)[-1]
+        #     pid = os.path.split(case_dir)[1][:-4]
+        #     short_pid = pid.split('.')[-1]
+        #     if short_pid not in target_path_mapping:
+        #         continue
+                
+                    raw_vol, vol, mask_vol, infos = luna16_volume_generator.data_warpping(
+                        raw_path, target_path, short_pid)
+                    infos['subset'] = subset
+                    yield raw_vol, vol, mask_vol, infos
+
+    @classmethod
     def Build_DLP_luna16_volume_generator(cls, data_path=None, subset_indices=None, case_indices=None, only_nodule_slices=None):
         mask_generating_op = dataset_seg.getCt
         return cls.Build_luna16_volume_generator(mask_generating_op, data_path, subset_indices, case_indices, only_nodule_slices)
@@ -231,7 +276,6 @@ class luna16_volume_generator():
 
     @classmethod   
     def Build_luna16_volume_generator(cls, mask_generating_op, data_path=None, subset_indices=None, case_indices=None, only_nodule_slices=None):
-        # TODO: Cancel dependency of [data_utils.get_files]
         # TODO: use self.total_case_list to calculate
         subset_list = data_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
         if subset_indices:
@@ -248,6 +292,20 @@ class luna16_volume_generator():
                 raw_vol, vol, mask_vol, infos = luna16_volume_generator.get_data_by_pid(series_uid)
                 infos['subset'] = subset
                 yield raw_vol, vol, mask_vol, infos
+
+    @staticmethod
+    # @raw_cache.memoize(typed=True)
+    def data_warpping(data_path, mask_path, pid):
+        raw_vol, orgin, spacing, direction = data_utils.load_itk(data_path)
+        vol = np.clip(raw_vol, -1000, 1000)
+        vol = raw_preprocess(vol, output_dtype=np.uint8)
+        mask_vol = np.load(mask_path)
+        mask_vol = mask_preprocess(mask_vol)
+
+        short_pid = pid.split('.')[-1]
+        infos = {'dataset': 'LUNA16', 'pid': short_pid, 'scan_idx': 0, 
+                 'origin': orgin, 'spacing': spacing, 'direction': direction}
+        return raw_vol, vol, mask_vol, infos
 
     @staticmethod
     def get_case_list(data_path, subset_indices, case_indices):

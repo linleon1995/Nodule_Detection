@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import cv2
 import torch
@@ -167,7 +168,9 @@ class NoudleSegEvaluator():
             direction, origin, spacing = infos['direction'], infos['origin'], infos['spacing']
             print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
             
+            inference_start = time.time()
             pred_vol = self.model_inference(vol, mask_vol)
+            inference_end = time.time()
 
             if self.quick_test:
                 pred_vol *= mask_vol
@@ -175,6 +178,7 @@ class NoudleSegEvaluator():
             # TODO: the target volume should reduce small area but 1 pixel remain in 1m0037 131
             pred_vol_category = self.post_processer(pred_vol)
             print(f'Predict Nodules {np.unique(pred_vol_category).size-1}')
+            print(f'Inference time {inference_end-inference_start:.2f}')
             # target_vol_category = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
             target_vol_category = self.post_processer(mask_vol)
 
@@ -439,52 +443,29 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         pred_vol = torch.zeros(vol.shape)
         # TODO: dataloader takes long time
         dataset = self.data_converter(vol, (64,64,32), (0,0,0), overlapping=self.overlapping)
-        dataloder = DataLoader(dataset, batch_size=1, shuffle=False)
+        dataloder = DataLoader(dataset, batch_size=8, shuffle=False)
         pred_crops, pred_slices = [], []
         for idx, input_data in enumerate(dataloder):
             # if idx%20!=0:
             #     continue
-            data, data_slice = input_data['data'], input_data['slice']
+            data, bbox = input_data['data'], input_data['slice']
             
             # data = data.float()
             
-            # # TODO: custom data_slice
-            # data_slice = [slice(256+32, 320+32), slice(0+32, 64+32), slice(32, 64)]
-            # data = vol[data_slice][np.newaxis,np.newaxis]
+            # # TODO: custom bbox
+            # bbox = [slice(256+32, 320+32), slice(0+32, 64+32), slice(32, 64)]
+            # data = vol[bbox][np.newaxis,np.newaxis]
             # data = torch.from_numpy(data)
 
             data = data.to(torch.device('cuda:0'))
             pred = self.predictor(data)
-            data_slice = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in data_slice]
-            pred_slices.append(data_slice)
+            # print(data, bbox, bbox[0])
+            bbox = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in bbox]
+            pred_slices.append(bbox)
 
-            # pred = torch.where(pred>0.5, 1, 0)
-            # TODO: batch size problem
-            # pred_vol[data_slice] = pred[0,0]
-
-            # pred_temp = torch.zeros(vol.shape)
-            # pred_temp[data_slice] = pred[0,0]
-            # pred += pred_temp
-
-            # mask_np = mask_vol[data_slice]
-            # data_np = data.cpu().detach().numpy()
             pred_np = pred.cpu().detach().numpy()
             pred_crops.append(pred_np)
 
-            # if np.sum(mask_np) > 0:
-                # plot_image_truth_prediction(
-                #     data_np, mask_np, pred_np, rows=5, cols=5, name=f'plot/pytorch/img_{idx:03d}.png')
-
-            # for s in range(0, 32):
-            #     if np.sum(mask_np[...,s])>0:
-            #         plt.imshow(data_np[0,0,...,s], 'gray')
-            #         plt.imshow(2*pred_np[0,0,...,s]+mask_np[...,s], alpha=0.2, vmin=0, vmax=3)
-            #         # plt.savefig(f'plot/pytorch/img_{idx:03d}_{s:03d}.png')
-            #         plt.show()
-
-        # pred_vol = pred_vol.cpu().detach().numpy()
-        # pred_vol = np.zeros_like(vol)
-        # pred_vol = pred_vol.cpu().detach().numpy()
         pred_crops = np.concatenate(pred_crops, axis=0)
         pred_vol = crops_to_volume(pred_crops, pred_slices, vol.shape, self.reweight, self.reweight_sigma)
         pred_vol = np.where(pred_vol>0.5, 1, 0)

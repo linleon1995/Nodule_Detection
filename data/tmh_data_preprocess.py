@@ -50,6 +50,7 @@ def build_parameters(dataset_name):
     config_name = f'TMH-{dataset_name}'
     cfg = configuration.load_config(f'data/config/{config_name}.yml', dict_as_member=True)
     data_root = cfg.PATH.DATA_ROOT
+    save_root = cfg.PATH.SAVE_ROOT
     task_name = cfg.TASK_NAME
     cat_ids = cfg.CATEGORY_ID[task_name]
     area_threshold = cfg.AREA_THRESHOLD
@@ -57,10 +58,10 @@ def build_parameters(dataset_name):
     num_fold = cfg.CROSS_VALID_FOLD
 
     raw_path = os.path.join(data_root, 'raw')
-    stats_path = os.path.join(data_root, 'stats_path')
-    merge_path = os.path.join(data_root, 'merge')
-    image_path = os.path.join(data_root, 'image')
-    coco_path = os.path.join(data_root, 'coco', task_name)
+    stats_path = os.path.join(save_root, 'stats_path')
+    merge_path = os.path.join(save_root, 'merge')
+    image_path = os.path.join(save_root, 'image')
+    coco_path = os.path.join(save_root, 'coco', task_name)
     if task_name == 'Nodule_Detection':
         category = 'Nodule'
     elif task_name == 'Malignancy':
@@ -119,47 +120,47 @@ def data_preprocess(dataset_names):
                 case_pids = [f'1m00{i}' for i in range(58, 60)]
                 case_pids = None
 
-            # # Merge mhd data
-            # asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
+            # Merge mhd data
+            asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
 
             # Convert medical 3d volume data to image format
-            # volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
-            # medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
+            volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
+            medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
             # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
             # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
-            # TMH base check
-            volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
-            TMH_nodule_base_check(volume_generator, save_path=stats_path)
+            # # TMH base check
+            # volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
+            # TMH_nodule_base_check(volume_generator, save_path=stats_path)
 
-            # # Build up coco-structure
-            # num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
-            # cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
+            # Build up coco-structure
+            num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
+            cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
                 
-            # for fold in cv_split_indices:
-            #     coco_split_path = os.path.join(coco_path, f'cv-{num_fold}', str(fold))
-            #     if not os.path.isdir(coco_split_path):
-            #         os.makedirs(coco_split_path)
+            for fold in cv_split_indices:
+                coco_split_path = os.path.join(coco_path, f'cv-{num_fold}', str(fold))
+                if not os.path.isdir(coco_split_path):
+                    os.makedirs(coco_split_path)
 
-            #     split_indices = cv_split_indices[fold]
-            #     build_coco.build_asus_nodule_coco(
-            #         data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
-            #         cat_ids=cat_ids, area_threshold=area_threshold, category=category)
+                split_indices = cv_split_indices[fold]
+                build_coco.build_asus_nodule_coco(
+                    data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
+                    cat_ids=cat_ids, area_threshold=area_threshold, category=category)
 
 
 def main():
-    # data_preprocess(DATASET_NAME)
-    TMH_merging_check()
+    data_preprocess(DATASET_NAME)
+    # TMH_merging_check()
 
 
 if __name__ == '__main__':
     main()
     # pass
 
-    from data.data_utils import load_itk
-    import matplotlib.pyplot as plt
-    x, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043raw mhd\1.2.826.0.1.3680043.2.1125.1.66267488139869463859646041266078917.mhd')
-    y, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043mask mhd\1.2.826.0.1.3680043.2.1125.1.20492007384673651600845318549231386.mhd')
+    # from data.data_utils import load_itk
+    # import matplotlib.pyplot as plt
+    # x, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043raw mhd\1.2.826.0.1.3680043.2.1125.1.66267488139869463859646041266078917.mhd')
+    # y, _, _, _ = load_itk(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\history\0418_problem_data\1m0043\1m0043mask mhd\1.2.826.0.1.3680043.2.1125.1.20492007384673651600845318549231386.mhd')
     # print(x.shape)
     # print(np.sum(y))
 
