@@ -1,5 +1,5 @@
 import slicerio
-from slicer.
+# from slicer
 import nrrd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -135,7 +135,8 @@ def main():
 
 
     # data, header = nrrd.read(os.path.join(path, rf'1m0038.seg.nrrd'))
-    data, header = nrrd.read(os.path.join(seg_path, rf'1m0038_14-label_1.nrrd'))
+    data, header = nrrd.read(os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\new_malignant\1m0035\1m0035raw', rf'2 No series description_2.nrrd'))
+    # data, header = nrrd.read(os.path.join(seg_path, rf'1m0038_14-label_1.nrrd'))
     print(np.max(data), np.min(data))
     print(np.sum(data)==0)
     import cc3d

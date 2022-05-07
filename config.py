@@ -73,13 +73,13 @@ class models_genesis_config:
 
 def nodule_dataset_config(name):
     TMH_Benign = {
-        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\raw',
-        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Benign\image\Lung_Mask_show'
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Benign\merge',
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Benign\image\Lung_Mask_show'
     }
 
     TMH_Malignant = {
-        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\raw',
-        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\ASUS-Malignant\image\Lung_Mask_show'
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant\merge',
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant\image\Lung_Mask_show'
     }
 
     LUNA16 = {
@@ -101,7 +101,7 @@ def build_train_config(config_path):
     train_cfg = build_custom_config(config_path)
     if train_cfg.MODEL.backend == 'd2':
         d2_cfg = build_d2_config()
-        d2_cfg.CV_FOLD = train_cfg.CV_FOLD
+        d2_cfg.CV_FOLD = train_cfg.CV.FOLD
         train_cfg['d2'] = d2_cfg
     return train_cfg
 
@@ -118,7 +118,7 @@ def build_d2_config():
 
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00005  
-    cfg.SOLVER.MAX_ITER = 6000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 8000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -152,7 +152,7 @@ def build_d2_config():
     # Size of crop in range (0, 1] if CROP.TYPE is "relative" or "relative_range" and in number of
     # pixels if CROP.TYPE is "absolute"
     cfg.INPUT.CROP.SIZE = [0.7, 0.7]
-    cfg.SOLVER.CHECKPOINT_PERIOD = 3000
+    cfg.SOLVER.CHECKPOINT_PERIOD = 2000
     # cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = "giou"
     # cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
@@ -171,6 +171,7 @@ def build_d2_config():
 
 
 def get_model_weight():
+    
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_015' 
     # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_032' 
     checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_037' 
@@ -192,6 +193,8 @@ def d2_register_coco(cfg, using_dataset):
             data_root = data_cfg.PATH.DATA_ROOT
             task_name = data_cfg.TASK_NAME
 
+            # TODO:
+            data_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant'
             train_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.CV_FOLD}', str(fold), "annotations_train.json")
             valid_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.CV_FOLD}', str(fold), "annotations_test.json")
             

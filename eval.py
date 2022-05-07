@@ -130,16 +130,13 @@ def cross_valid_eval():
     for fold in fold_indices:
         for dataset_name in dataset_names:
             paths = nodule_dataset_config(dataset_name)
-            cfg.RAW_DATA_PATH = paths['raw']
+            cfg.RAW_DATA_PATH= paths['raw']
             cfg.LUNG_MASK_PATH = paths['lung_mask']
 
-            
-            # cfg.RAW_DATA_PATH = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'merge')
-            # cfg.LUNG_MASK_PATH = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'image', 'Lung_Mask_show')
             cfg.DATASET_NAME = dataset_name
             cfg.FOLD = fold
             if cfg.MODEL_NAME in ['2D-Mask-RCNN']:
-                cfg.N_CLASS = cfg.MODEL.ROI_HEADS.NUM_CLASSES
+                cfg.N_CLASS = cfg['d2'].MODEL.ROI_HEADS.NUM_CLASSES
             else:
                 cfg.N_CLASS = cfg.DATA.N_CLASS
             cfg.SLICE_SHIFT = cfg.DATA.SLICE_SHIFT
@@ -149,9 +146,8 @@ def cross_valid_eval():
             if 'TMH' in dataset_name:
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
-                case_pids = case_pids[1:]
-                volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, 
-                                                                case_pids=case_pids)
+                case_pids = case_pids[7:]
+                volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]
                 # volume_generator = luna16_volume_generator.Build_DLP_luna16_volume_generator(
@@ -163,7 +159,7 @@ def cross_valid_eval():
             in_planes = 2*cfg.SLICE_SHIFT + 1
             if cfg.MODEL_NAME == '2D-Mask-RCNN':
                 data_converter = None
-                predictor = BatchPredictor(cfg)
+                predictor = BatchPredictor(cfg['d2'])
                 evaluator_gen = D2SegEvaluator
             elif cfg.MODEL_NAME in ['2D-FCN', '2D-Unet']:
                 data_converter = SimpleNoduleDataset
@@ -225,13 +221,13 @@ def cross_valid_eval():
                         malignant_rcorder.write_row(malignant_data)
 
 
-    benign_target_scatter_vis.show_scatter(save_path=os.path.join(cfg.OUTPUT_DIR, 'benign_target_nodule.png'), 
+    benign_target_scatter_vis.show_scatter(save_path=os.path.join(cfg.MODEL.OUTPUT_DIR, 'benign_target_nodule.png'), 
                                            title='Benign target nodule', xlabel='size (pixels)', ylabel='meanHU')
-    benign_pred_scatter_vis.show_scatter(save_path=os.path.join(cfg.OUTPUT_DIR, 'benign_pred_nodule.png'), 
+    benign_pred_scatter_vis.show_scatter(save_path=os.path.join(cfg.MODEL.OUTPUT_DIR, 'benign_pred_nodule.png'), 
                                          title='Benign predict nodule', xlabel='size (pixels)', ylabel='meanHU')
-    malignant_target_scatter_vis.show_scatter(save_path=os.path.join(cfg.OUTPUT_DIR, 'malignant_target_nodule.png'), 
+    malignant_target_scatter_vis.show_scatter(save_path=os.path.join(cfg.MODEL.OUTPUT_DIR, 'malignant_target_nodule.png'), 
                                               title='Malignant target nodule', xlabel='size (pixels)', ylabel='meanHU')
-    malignant_pred_scatter_vis.show_scatter(save_path=os.path.join(cfg.OUTPUT_DIR, 'malignant_pred_nodule.png'), 
+    malignant_pred_scatter_vis.show_scatter(save_path=os.path.join(cfg.MODEL.OUTPUT_DIR, 'malignant_pred_nodule.png'), 
                                             title='Malignant predict nodule', xlabel='size (pixels)', ylabel='meanHU')
     
     # TODO: file rename

@@ -7,6 +7,7 @@ import cc3d
 import SimpleITK as sitk
 
 
+
 def modify_array_in_itk(itkimage, new_array):
     img_preprocessed = sitk.GetImageFromArray(new_array)
     img_preprocessed.CopyInformation(itkimage)

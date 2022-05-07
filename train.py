@@ -57,8 +57,8 @@ def d2_model_train(train_cfg):
     
     output_dir = cfg.OUTPUT_DIR
     for fold in fold_indices:
-        train_dataset = tuple([f'{dataset_name}-train-cv{cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
-        valid_dataset = tuple([f'{dataset_name}-valid-cv{cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
+        train_dataset = tuple([f'{dataset_name}-train-cv{train_cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
+        valid_dataset = tuple([f'{dataset_name}-valid-cv{train_cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
 
         cfg.DATASETS.TRAIN = train_dataset
         cfg.DATASETS.VAL = valid_dataset

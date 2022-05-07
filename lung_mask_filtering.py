@@ -39,7 +39,7 @@ class FalsePositiveReducer():
                 for lung_mask_idx, lung_mask in enumerate(lung_mask_files): 
                     lung_mask_vol[lung_mask_idx] = cv2.imread(lung_mask)[...,0]
                 lung_mask_vol = lung_mask_vol / 255
-                lung_mask_vol = np.int32(lung_mask_vol)
+            lung_mask_vol = np.uint8(lung_mask_vol)
 
             if self.RUNLS:
                 pred_vol_category = remove_unusual_nodule_by_lung_size(pred_study, lung_mask_vol, threshold=self.lung_size_threshold)

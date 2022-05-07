@@ -51,7 +51,7 @@ def volumetric_data_preprocess(save_path, volume_generator):
     fig, ax = plt.subplots(1, 1, dpi=300)
     for vol_idx, (_, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx, subset = infos['pid'], infos['scan_idx'], infos['subset']
-        print(f'Patient {pid} Scan {vol_idx}')
+        print(f'Converting mhd to image patient {pid} scan {vol_idx}')
 
         # Create saving directry
         save_sub_dir = os.path.join(save_path, subset) if subset else save_path

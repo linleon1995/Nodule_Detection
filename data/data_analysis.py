@@ -11,18 +11,20 @@ from utils.utils import xyz2irc
 from data.data_utils import get_files, load_itk
 
 
-def TMH_merging_check():
-    benign_root = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Benign\raw'
-    malignant_root = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Malignant\raw'
-    benign_paths = get_files(benign_root, 'mhd')
-    malignant_paths = get_files(malignant_root, 'mhd')
-    total_paths = benign_paths + malignant_paths
+def TMH_merging_check(data_path, save_path):
+    # benign_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign\raw'
+    # malignant_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Malignant\raw'
+    # benign_paths = get_files(benign_root, 'mhd')
+    # malignant_paths = get_files(malignant_root, 'mhd')
+    # total_paths = benign_paths + malignant_paths
+
+    total_paths = get_files(data_path, 'mhd')
+    total_paths_temp = total_paths.copy()
 
     # remove mask path
-    for idx, path in enumerate(total_paths):
+    for idx, path in enumerate(total_paths_temp):
         if 'mask' in path:
             total_paths.remove(path)
-    total_paths.pop(3) # remove 1B0037 mask
     
     process_list =[]
     df = pd.DataFrame()
@@ -60,7 +62,7 @@ def TMH_merging_check():
         row_df = {f'case_{idx:03d}': pid for idx, pid in enumerate(same_list)}
         df = df.append(row_df, ignore_index=True)
         
-    df.to_csv(os.path.join(rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule', 'merge_table.csv'), index=False)
+    df.to_csv(os.path.join(save_path, 'merge_table.csv'), index=False)
 
 
 def build_nodule_metadata(volume):

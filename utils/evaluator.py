@@ -166,10 +166,9 @@ class NoudleSegEvaluator():
             # Model Inference
             pid, scan_idx = infos['pid'], infos['scan_idx']
             direction, origin, spacing = infos['direction'], infos['origin'], infos['spacing']
-            print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
             
             inference_start = time.time()
-            pred_vol = self.model_inference(vol, mask_vol)
+            pred_vol = self.model_inference(vol)
             inference_end = time.time()
 
             if self.quick_test:
@@ -177,6 +176,7 @@ class NoudleSegEvaluator():
             # Data post-processing
             # TODO: the target volume should reduce small area but 1 pixel remain in 1m0037 131
             pred_vol_category = self.post_processer(pred_vol)
+            print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
             print(f'Predict Nodules {np.unique(pred_vol_category).size-1}')
             print(f'Inference time {inference_end-inference_start:.2f}')
             # target_vol_category = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
@@ -190,16 +190,10 @@ class NoudleSegEvaluator():
             #         # plt.savefig(f'plot/cube-{idx}-{s}.png')
             #         plt.show()
 
-            
-            # Evaluation
-            target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
-            pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
 
             # nrrd_path = os.path.join(self.save_path, 'images', pid, 'nrrd')
             # os.makedirs(nrrd_path, exist_ok=True)
             # save_in_nrrd(vol, pred_vol_category, direction, origin, spacing, nrrd_path, pid)
-            # TODO
-            self.eval_metrics.calculate(target_study, pred_study)
 
             # False positive reducing
             if self.fp_reducer is not None:
@@ -210,15 +204,14 @@ class NoudleSegEvaluator():
                 pred_vol_category, pred_nodule_info = self.nodule_classifier.nodule_classify(vol, pred_vol_category, mask_vol)
             else:
                 pred_nodule_info = None
-
+            # TODO
+            
+            # Evaluation
+            target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
+            pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
+            self.eval_metrics.calculate(target_study, pred_study)
 
             # Visualize
-            # # TODO: repeat part
-            # origin_save_path = os.path.join(self.save_path, 'images', pid, 'origin')
-            # enlarge_save_path = os.path.join(self.save_path, 'images', pid, 'enlarge')
-            # _3d_save_path = os.path.join(self.save_path, 'images', pid, '3d')
-            # for path in [origin_save_path, enlarge_save_path, _3d_save_path]:
-            #     os.makedirs(path, exist_ok=True)
             if self.save_vis_condition(vol_idx):
                 nodule_visualize(self.save_path, pid, vol, mask_vol, pred_vol, target_vol_category, pred_vol_category, 
                                  pred_nodule_info, self.save_all_images)
@@ -433,17 +426,17 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
         mean_dsc = sum(total_dsc)/len(total_dsc)
         print(f'Mean cropping DSC {mean_dsc:.4f}')
 
-    def model_inference(self, vol, mask_vol):
+    def model_inference(self, vol):
         # TODO: remove mask_vol
         vol = np.float32(vol[...,0])
         vol = np.transpose(vol, (1, 2, 0))
-        mask_vol = np.transpose(mask_vol, (1, 2, 0))
+        # mask_vol = np.transpose(mask_vol, (1, 2, 0))
         vol /= 255
 
         pred_vol = torch.zeros(vol.shape)
         # TODO: dataloader takes long time
         dataset = self.data_converter(vol, (64,64,32), (0,0,0), overlapping=self.overlapping)
-        dataloder = DataLoader(dataset, batch_size=8, shuffle=False)
+        dataloder = DataLoader(dataset, batch_size=4, shuffle=False)
         pred_crops, pred_slices = [], []
         for idx, input_data in enumerate(dataloder):
             # if idx%20!=0:
@@ -460,8 +453,19 @@ class Pytorch3dSegEvaluator(NoudleSegEvaluator):
             data = data.to(torch.device('cuda:0'))
             pred = self.predictor(data)
             # print(data, bbox, bbox[0])
-            bbox = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in bbox]
-            pred_slices.append(bbox)
+            # bbox = [slice(*tuple(torch.tensor(s).cpu().detach().numpy())) for s in bbox]
+            batch_slices = []
+            for dim, dim_slice in enumerate(bbox):
+                start_indices = dim_slice[0].cpu().detach().numpy()
+                end_indices = dim_slice[1].cpu().detach().numpy()
+                for batch_idx, (start_idx, end_idx) in enumerate(zip(start_indices, end_indices)):
+                    if dim == 0:
+                        batch_slices.append([slice(start_idx, end_idx)])
+                    else:
+                        batch_slices[batch_idx].append(slice(start_idx, end_idx))
+
+            # pred_slices.append(bbox)
+            pred_slices.extend(batch_slices)
 
             pred_np = pred.cpu().detach().numpy()
             pred_crops.append(pred_np)

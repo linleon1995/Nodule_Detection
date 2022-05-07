@@ -8,7 +8,7 @@ from data import data_utils
 
 
 def merge_asus_data(data_path, save_dir, filekey='case'):
-    total_repeat_paths = get_merge_paths(data_path)
+    total_repeat_paths, repeat_simple = get_merge_paths(data_path)
     record_merging(total_repeat_paths, save_dir)
 
     for vol_idx, repeat_paths in enumerate(total_repeat_paths, 1):
@@ -78,20 +78,24 @@ def get_merge_paths(data_path):
         if raw_filenames[idx] != raw_filenames[idx-1]:
             unique_raw_filenames.append(raw_filenames[idx])
 
-    total_repeat_paths = []
+    total_repeat_paths, total_repeat_paths_simple = [], []
     for filename in unique_raw_filenames:
-        repeat_paths = []
-        repeat_path_pair = {}
+        repeat_paths, repeat_paths_simple = [], []
+        repeat_path_pair, repeat_path_pair_simple = {}, {}
         for raw_fullpath, mask_fullpath, compare_filename in zip(raw_fullpaths, mask_fullpaths, raw_filenames):
             if filename == compare_filename:
                 repeat_paths.append(mask_fullpath)
+                repeat_paths_simple.append(os.path.split(os.path.split(mask_fullpath)[0])[1])
                 if 'raw' not in repeat_path_pair:
                     repeat_path_pair['raw'] = raw_fullpath
+                    repeat_path_pair_simple['raw'] = os.path.split(os.path.split(raw_fullpath)[0])[1]
 
         repeat_path_pair['mask'] = repeat_paths
+        repeat_path_pair_simple['mask'] = repeat_paths_simple
         total_repeat_paths.append(repeat_path_pair)
+        total_repeat_paths_simple.append(repeat_path_pair_simple)
     # print(total_repeat_paths)
-    return total_repeat_paths
+    return total_repeat_paths, total_repeat_paths_simple
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import torch
 from detectron2.engine import DefaultPredictor
 
 

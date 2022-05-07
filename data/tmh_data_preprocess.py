@@ -1,6 +1,7 @@
 import os
 import numpy as np
-
+import cc3d
+import SimpleITK as sitk
 from data import medical_to_img
 from data import build_coco
 from data import asus_data_merge
@@ -12,8 +13,42 @@ from modules.utils import configuration
 # import warnings
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator
+from data.data_utils import load_itk, modify_array_in_itk
 
-DATASET_NAME = ['Malignant', 'Benign'] # Benign, Malignant, LUNA16, LUNA16-Round
+# DATASET_NAME = ['Malignant', 'Benign'] # Benign, Malignant, LUNA16, LUNA16-Round
+DATASET_NAME = ['Malignant'] # Benign, Malignant, LUNA16, LUNA16-Round
+
+
+def remove_1m0045_noise():
+    # load data
+    data_path = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Malignant\raw\1m0045\1m0045mask mhd\1.2.826.0.1.3680043.2.1125.1.34712572629822057263533271989332452.mhd'
+    itkimage = sitk.ReadImage(data_path)
+    ct_scan = sitk.GetArrayFromImage(itkimage)
+
+    # remove noise
+    ct_scan = cc3d.connected_components(ct_scan, 26)
+    nodule_ids = np.unique(ct_scan)[1:]
+    if nodule_ids.size > 1:
+        nodule_sizes = {}
+        for idx in nodule_ids:
+            nodule_sizes[np.sum(ct_scan==idx)] = idx
+        min_nodule_id = nodule_sizes[min(nodule_sizes.values())]
+        new_ct_scan = np.where(ct_scan==min_nodule_id, 0, ct_scan)
+        print(np.unique(new_ct_scan))
+
+        # save data
+        new_itk = modify_array_in_itk(itkimage, new_ct_scan)
+        writer = sitk.ImageFileWriter()
+        writer.SetFileName(data_path)
+        writer.Execute(new_itk)
+        print('-- 1m0045 successfully modified')    
+    else:
+        print('-- 1m0045 has been modified')
+
+
+
+
+
 
 
 def get_cv_split(num_fold, num_sample, shuffle=False):
@@ -121,17 +156,18 @@ def data_preprocess(dataset_names):
                 case_pids = None
 
             # Merge mhd data
-            asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
+            # asus_data_merge.merge_asus_data(raw_path, merge_path, filekey)
+            asus_data_merge.merge_asus_data(rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule', merge_path, filekey)
 
             # Convert medical 3d volume data to image format
-            volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
+            volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
             medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
             # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
             # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
-            # # TMH base check
-            # volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
-            # TMH_nodule_base_check(volume_generator, save_path=stats_path)
+            # # # TMH base check
+            # # volume_generator = asus_nodule_volume_generator(data_path=raw_path, case_pids=case_pids)
+            # # TMH_nodule_base_check(volume_generator, save_path=stats_path)
 
             # Build up coco-structure
             num_case = len(data_utils.get_files(merge_path, recursive=False, get_dirs=True))
@@ -149,12 +185,13 @@ def data_preprocess(dataset_names):
 
 
 def main():
+    # TMH_merging_check(data_path, save_path)
     data_preprocess(DATASET_NAME)
-    # TMH_merging_check()
 
 
 if __name__ == '__main__':
     main()
+    # remove_1m0045_noise()
     # pass
 
     # from data.data_utils import load_itk
