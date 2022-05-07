@@ -1,0 +1,14 @@
+TMH-Benign:
+  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Benign
+  COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Benign\coco\Nodule_Detection\cv-5\3
+
+      
+TMH-Malignant:
+  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Malignant
+  COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodule\TMH-Malignant\coco\Nodule_Detection\cv-5\4
+
+
+# TODO: wrong path
+LUNA16:
+  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\raw
+  COCO_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\Annotations\LUNA16

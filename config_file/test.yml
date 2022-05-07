@@ -1,0 +1,34 @@
+
+TASK_NAME: Nodule_Detection
+
+MODEL:
+  NAME: 2D-Mask-RCNN # 2D-Mask-RCNN, 2D-FCN, 3D-Unet
+  backend: d2
+  WEIGHTS: model_final.pth
+  OUTPUT_DIR: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_037
+  
+DATA:
+  N_CLASS: 2
+  SLICE_SHIFT: 0
+  NAMES: 
+    - TMH-Malignant
+    # - TMH-Benign
+    # - LUNA16
+  SPLIT: test
+  crop_row: 64
+  crop_col: 64
+  crop_index: 32
+
+PATH:
+  DATA_ROOT: 
+    TMH-Benign: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Benign
+    TMH-Malignant: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant
+
+EVAL:
+  CV_FOLD: 5
+  assign_fold: 4
+
+Inference:
+  overlapping: 0.5
+  reweight: True
+  reweight_sigma: 0.25

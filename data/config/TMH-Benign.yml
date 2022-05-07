@@ -1,0 +1,24 @@
+
+PATH:
+  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign
+  SAVE_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Benign
+  # DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign
+
+TASK_NAME: Nodule_Detection
+
+CATEGORY_ID:
+  Nodule_Detection:
+    Nodule: 1
+  
+  Malignancy:
+    Benign: 1
+    Malignant: 2
+
+AREA_THRESHOLD: 8
+
+SPLIT:
+  Train: 0.7
+  Valid: 0.1
+  Test: 0.2
+
+CROSS_VALID_FOLD: 5

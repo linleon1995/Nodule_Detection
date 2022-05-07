@@ -1,0 +1,44 @@
+DATA:
+  BATCH_SIZE: 8
+  DATA_PATH: 
+    LUNA16: C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop
+    ASUS-B: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign_merge\crop
+    ASUS-M: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant_merge\crop
+  CROP_RANGE:
+    index: 32
+    row: 64
+    column: 64
+  SHUFFLE: True
+  NPratio: 1
+  NPratio_test: 1
+  IS_DATA_AUGMENTATION: True
+  NAME:
+    - LUNA16
+    # - ASUS-B
+    # - ASUS-M
+
+MODEL:
+  # NAME: resnet50
+  ACTIVATION: softmax
+  NUM_CLASSES: 2
+  DEPTH: 50
+
+OPTIMIZER:
+  optimizer: Adam
+  learning_rate: 5.0e-6
+  weight_decay: 0
+  momemtum: 0
+  betas:
+    - 0.9
+    - 0.99
+
+TRAIN:
+  EPOCH: 100
+  LOSS: CrossEntropy
+  # SPLIT: 0.8
+  CHECKPOINT_SAVING_STEPS: 50
+  PROJECT_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection
+  manual_seed: 0
+
+OUTPUT: output
+
