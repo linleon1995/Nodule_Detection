@@ -66,11 +66,12 @@ def volumetric_data_preprocess(save_path, volume_generator):
             img = vol[img_idx]
             mask = mask_vol[img_idx]
             if np.sum(mask):
-                mask_show = np.where(mask>0, 255, 0)
+                # print(np.unique(mask))
+                # mask_show = np.where(mask>0, 255, 0)
                 
                 ax.cla()
                 ax.imshow(img, 'gray')
-                ax.imshow(mask_show, alpha=0.2)
+                ax.imshow(mask, alpha=0.2, vmin=0, vmax=2)
                 fig.savefig(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'))
                 # cv2.imwrite(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'), mask_show)
 

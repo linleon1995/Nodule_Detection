@@ -117,17 +117,24 @@ def build_coco_structure_split(input_paths_split, target_paths_split, cat_ids, a
     return coco_data_split
 
 
-def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold, category):
+def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
     coco_converter = coco_structure_converter(cat_ids)
 
     for img_path, mask_path in zip(input_paths, target_paths):
         mask = cv2.imread(mask_path)
+        mask = mask[...,0]
         image_id = os.path.split(img_path)[1][:-4]
-        splited_mask = split_individual_mask(mask[...,0])
-        splited_mask = merge_near_masks(splited_mask)
-        if len(splited_mask):
-            for i, mask in enumerate(splited_mask, 1):
-                if np.sum(mask) > area_threshold:
+        
+        split_mask_list = split_individual_mask(mask)
+        # TODO: merge_near_masks is for old LUNA16 labeling method (thresholding) which exist many splitt in single nodule
+        # splited_mask = merge_near_masks(splited_mask)
+        if len(split_mask_list):
+            for i, split_mask in enumerate(split_mask_list, 1):
+                if np.sum(split_mask) > area_threshold:
+                    if np.max(split_mask) == 2:
+                        category = 'Malignant'
+                    elif np.max(split_mask) == 1:
+                        category = 'Benign'
                     coco_converter.sample(img_path, mask, image_id, category)
 
     return coco_converter.create_coco_structure()
@@ -143,7 +150,7 @@ def merge_coco_structure(coco_group):
     return output_coco
         
     
-def build_asus_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold, category):
+def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold):
     coco_structures = {}
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
@@ -166,7 +173,7 @@ def build_asus_nodule_coco(data_path, save_path, split_indices, cat_ids, area_th
             # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
         
         coco_structure = build_coco_structure(
-            image_paths, target_paths, cat_ids, area_threshold, category=category)
+            image_paths, target_paths, cat_ids, area_threshold)
         
         if split_name in coco_structures:
             coco_structures[split_name].append(coco_structure)

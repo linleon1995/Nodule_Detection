@@ -15,7 +15,7 @@ raw_cache = getCache('part2segment')
 logging.basicConfig(level=logging.INFO)
 from data import data_utils
 
-# TODO: unifyinterface
+# TODO: unify interface
 def get_data_by_pid_asus(data_path, pid):
     raw_and_mask = data_utils.get_files(os.path.join(data_path, pid), recursive=False, get_dirs=True)
     for _dir in raw_and_mask:
@@ -34,13 +34,19 @@ def get_data_by_pid_asus(data_path, pid):
 
     vol_mask_path = data_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
     mask_vol, _, _, _ = data_utils.load_itk(vol_mask_path)
-    mask_vol = mask_preprocess(mask_vol)        
+    mask_vol = mask_preprocess(mask_vol, ignore_malignancy=False)        
     return raw_vol, vol, mask_vol, origin, spacing, direction    
 
 
 def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
     # nodule_type = os.path.split(data_path)[1]
-    case_list = data_utils.get_files(data_path, recursive=False, get_dirs=True)
+    if isinstance(data_path, list):
+        case_list = []
+        for path in data_path:
+            case_list.extend(data_utils.get_files(path, recursive=False, get_dirs=True))
+    elif isinstance(data_path, str):
+        case_list = data_utils.get_files(data_path, recursive=False, get_dirs=True)
+
     if case_pids is not None:
         sub_case_list = []
         for case_dir in case_list:
@@ -55,10 +61,16 @@ def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
     for case_dir in case_list:
         raw_and_mask = data_utils.get_files(case_dir, recursive=False, get_dirs=True)
         assert len(raw_and_mask) == 2
-           
         pid = os.path.split(case_dir)[1]
-        scan_idx = int(pid[2:])
-        raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path, pid)
+        scan_idx = int(pid[3:])
+           
+        # TODO: a bad implementation -> should keep the input output simple
+        if 'B' in pid:
+            raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path[0], pid)
+        elif 'm' in pid:
+            raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path[1], pid)
+        else:
+            raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path, pid)
 
         # TODO: what is scan_idx
         infos = {'pid': pid, 'scan_idx': scan_idx, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}

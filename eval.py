@@ -146,7 +146,7 @@ def cross_valid_eval():
             if 'TMH' in dataset_name:
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
-                case_pids = case_pids[7:]
+                # case_pids = case_pids[7:]
                 volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]

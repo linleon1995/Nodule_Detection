@@ -11,58 +11,6 @@ from utils.utils import xyz2irc
 from data.data_utils import get_files, load_itk
 
 
-def TMH_merging_check(data_path, save_path):
-    # benign_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign\raw'
-    # malignant_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Malignant\raw'
-    # benign_paths = get_files(benign_root, 'mhd')
-    # malignant_paths = get_files(malignant_root, 'mhd')
-    # total_paths = benign_paths + malignant_paths
-
-    total_paths = get_files(data_path, 'mhd')
-    total_paths_temp = total_paths.copy()
-
-    # remove mask path
-    for idx, path in enumerate(total_paths_temp):
-        if 'mask' in path:
-            total_paths.remove(path)
-    
-    process_list =[]
-    df = pd.DataFrame()
-    for idx, path in enumerate(total_paths):
-        folder, filename = os.path.split(path)
-        _, pid = os.path.split(os.path.split(folder)[0])
-        if path in process_list:
-            continue
-        else:
-            process_list.append(path)
-        compare_paths = total_paths.copy()
-        compare_paths = list(set(compare_paths)-set(process_list))
-        same_list = [pid]
-        for compare_path in compare_paths:
-            compare_folder, compare_filename = os.path.split(compare_path)
-            _, compare_pid = os.path.split(os.path.split(compare_folder)[0])
-            if filename == compare_filename:
-                same_name = True
-            else:
-                same_name = False
-
-            vol, _, _, _ = load_itk(path)
-            compare_vol, _, _, _ = load_itk(compare_path)
-            same_value = False
-            if vol.shape == compare_vol.shape:
-                if (vol == compare_vol).all():
-                    same_value = True
-
-            if same_name or same_value:
-                same_list.append(compare_pid)
-                process_list.append(compare_path)
-                print(f'pid {pid} compare_pid {compare_pid} name {same_name} value {same_value}')
-                
-        print(same_list)
-        row_df = {f'case_{idx:03d}': pid for idx, pid in enumerate(same_list)}
-        df = df.append(row_df, ignore_index=True)
-        
-    df.to_csv(os.path.join(save_path, 'merge_table.csv'), index=False)
 
 
 def build_nodule_metadata(volume):
@@ -136,8 +84,10 @@ def get_nodule_diameter(nodule_vol, origin_zyx, spacing_zyx, direction_zyx):
     max_dist = max(total_dist)
     min_nodule = total_dist.index(min_dist)
     max_nodule = total_dist.index(max_dist)
-    min_point_zyx = np.array((zs[min_nodule], ys[min_nodule], xs[min_nodule]))
-    max_point_zyx = np.array((zs[max_nodule], ys[max_nodule], xs[max_nodule]))
+    min_point_zyx = np.array((xs[min_nodule], ys[min_nodule], zs[min_nodule]))
+    max_point_zyx = np.array((xs[max_nodule], ys[max_nodule], zs[max_nodule]))
+    # min_point_zyx = np.array((zs[min_nodule], ys[min_nodule], xs[min_nodule]))
+    # max_point_zyx = np.array((zs[max_nodule], ys[max_nodule], xs[max_nodule]))
     min_point_irc = xyz2irc(min_point_zyx, origin_zyx, spacing_zyx, direction_zyx)
     max_point_irc = xyz2irc(max_point_zyx, origin_zyx, spacing_zyx, direction_zyx)
 
