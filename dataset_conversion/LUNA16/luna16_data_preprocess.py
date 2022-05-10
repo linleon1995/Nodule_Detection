@@ -17,6 +17,84 @@ DICOM_DIR = rf'D:\Leon\Datasets\LIDC-IDRI'
 
 
 
+def extract_luna16_mask_from_pylidc(luna16_root, save_path, num_radiologist=3, padding=512, mask_threshold=8):
+    df = pd.read_csv(os.path.join(luna16_root, 'annotations.csv'))
+    pid2subset = get_luna16_subset_mapping(luna16_root)
+
+    LIDC_IDRI_list= [f for f in os.listdir(DICOM_DIR) if f.startswith('LIDC-IDRI') and os.path.isdir(os.path.join(DICOM_DIR, f))]
+    LIDC_IDRI_list.sort()
+    # LIDC_IDRI_list = LIDC_IDRI_list[64:]
+    # LIDC_IDRI_list = ['LIDC-IDRI-0332', 'LIDC-IDRI-0340', 'LIDC-IDRI-0388', 'LIDC-IDRI-0404']
+
+    num = 0
+    scan_table = {}
+    freq = df['seriesuid'].value_counts()
+    unfit, ss = [], []
+    total_diff = []
+    for lidc_id in tqdm(LIDC_IDRI_list):
+        scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == lidc_id)
+        num_scan_in_one_patient = scans.count()
+        scan_list = scans.all()
+        # scan_list[0:3]
+        
+        num_for_scan = 0
+        for scan_idx, scan in enumerate(scan_list):
+            if scan.series_instance_uid in df['seriesuid'].values:
+                pid = scan.series_instance_uid
+                subset = pid2subset[pid]
+                short_pid = pid.split('.')[-1]
+                nodules_annotation = scan.cluster_annotations()
+                vol = scan.to_volume()
+                out_mask = np.zeros_like(vol, dtype=np.uint8)
+                # print(vol.shape)
+                
+                total_cmask = []
+                for nodule_idx, nodule in enumerate(nodules_annotation):
+                    # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
+                    # This current for loop iterates over total number of nodules in a single patient
+                    
+
+                    # if len(nodule) >= 3:
+                    cmask, cbbox, masks = radiologist_consensus(nodule, num_radiologist, 0)
+                    # print(np.sum(cmask))
+
+                    if np.sum(cmask):
+                        # We calculate the malignancy information
+                        malignancy, cancer_label = calculate_malignancy(nodule)
+
+                        # save in semantic label
+                        if  malignancy >= 3:
+                            classes = 2
+                        else:
+                            classes = 1
+
+                        out_mask[cbbox] = np.uint8(cmask) * classes
+                        num += 1
+                        num_for_scan += 1
+
+                #         total_cmask.append(cmask)
+                # total_cmask = sum(total_cmask)
+                total_cmask = out_mask
+                total_cmask = np.transpose(total_cmask, (2, 0, 1))
+                total_cmask = np.uint8(total_cmask)
+
+                subset_dir = os.path.join(save_path, subset)
+                os.makedirs(subset_dir, exist_ok=True)
+                np.save(os.path.join(subset_dir, f'{short_pid}.npy'), total_cmask)
+                        
+                scan_table[pid] = {'num_luna': freq[pid], 'num_lidc': num_for_scan}
+                if freq[pid] != num_for_scan:
+                    diff_str = f'lidc_id: {lidc_id} {pid} luna: {freq[pid]} lidc: {num_for_scan}'
+                    total_diff.append(diff_str)
+                    print(diff_str)
+                    ss.append(scan)
+                    unfit.append(nodules_annotation)
+    
+    for s in total_diff:
+        print(s)
+    print(num)
+
+    
 def radiologist_consensus(anns, num_radiologist=3, pad=None, ret_masks=True):
     """
     Change confidence consensus to radiologist consensus
@@ -39,6 +117,35 @@ def radiologist_consensus(anns, num_radiologist=3, pad=None, ret_masks=True):
         return cmask, cbbox, masks
     else:
         return cmask, cbbox
+
+
+def calculate_malignancy(nodule):
+    # Calculate the malignancy of a nodule with the annotations made by 4 doctors. Return median high of the annotated cancer, True or False label for cancer
+    # if median high is above 3, we return a label True for cancer
+    # if it is below 3, we return a label False for non-cancer
+    # if it is 3, we return ambiguous
+    list_of_malignancy =[]
+    for annotation in nodule:
+        list_of_malignancy.append(annotation.malignancy)
+
+    malignancy = median_high(list_of_malignancy)
+    if  malignancy > 3:
+        return malignancy, True
+    elif malignancy < 3:
+        return malignancy, False
+    else:
+        return malignancy, 'Ambiguous'
+
+
+def get_luna16_subset_mapping(root):
+    paths = get_files(root, 'mhd')
+    subset_mapping = {}
+    for path in paths:
+        folder, filename = os.path.split(path)
+        pid = filename[:-4]
+        subset  = os.path.split(folder)[1]
+        subset_mapping[pid] = subset
+    return subset_mapping
 
 
 def lidc_consensus():
@@ -126,127 +233,6 @@ def save_luna16_nodule_raw_npy(input_root, save_root):
         np.save(os.path.join(save_path, filename), mask_vol)
 
 
-def calculate_malignancy(nodule):
-    # Calculate the malignancy of a nodule with the annotations made by 4 doctors. Return median high of the annotated cancer, True or False label for cancer
-    # if median high is above 3, we return a label True for cancer
-    # if it is below 3, we return a label False for non-cancer
-    # if it is 3, we return ambiguous
-    list_of_malignancy =[]
-    for annotation in nodule:
-        list_of_malignancy.append(annotation.malignancy)
-
-    malignancy = median_high(list_of_malignancy)
-    if  malignancy > 3:
-        return malignancy, True
-    elif malignancy < 3:
-        return malignancy, False
-    else:
-        return malignancy, 'Ambiguous'
-
-
-def get_luna16_subset_mapping(root):
-    paths = get_files(root, 'mhd')
-    subset_mapping = {}
-    for path in paths:
-        folder, filename = os.path.split(path)
-        pid = filename[:-4]
-        subset  = os.path.split(folder)[1]
-        subset_mapping[pid] = subset
-    return subset_mapping
-
-
-def extract_luna16_mask_from_pylidc(luna16_root, save_path, num_radiologist=3, padding=512, mask_threshold=8):
-    df = pd.read_csv(os.path.join(luna16_root, 'annotations.csv'))
-    pid2subset = get_luna16_subset_mapping(luna16_root)
-
-    LIDC_IDRI_list= [f for f in os.listdir(DICOM_DIR) if f.startswith('LIDC-IDRI') and os.path.isdir(os.path.join(DICOM_DIR, f))]
-    LIDC_IDRI_list.sort()
-    # LIDC_IDRI_list = LIDC_IDRI_list[64:]
-    # LIDC_IDRI_list = ['LIDC-IDRI-0332', 'LIDC-IDRI-0340', 'LIDC-IDRI-0388', 'LIDC-IDRI-0404']
-
-    num = 0
-    scan_table = {}
-    freq = df['seriesuid'].value_counts()
-    nn, ss = [], []
-    num_1, num_2, num_3, num_4 = 0, 0, 0, 0,
-    total_diff = []
-    for lidc_id in tqdm(LIDC_IDRI_list):
-        scans = pl.query(pl.Scan).filter(pl.Scan.patient_id == lidc_id)
-        num_scan_in_one_patient = scans.count()
-        scan_list = scans.all()
-        # scan_list[0:3]
-        
-        num_for_scan = 0
-        for scan_idx, scan in enumerate(scan_list):
-            if scan.series_instance_uid in df['seriesuid'].values:
-                pid = scan.series_instance_uid
-                subset = pid2subset[pid]
-                short_pid = pid.split('.')[-1]
-                nodules_annotation = scan.cluster_annotations()
-                vol = scan.to_volume()
-                out_mask = np.zeros_like(vol, dtype=np.uint8)
-                # print(vol.shape)
-                
-                total_cmask = []
-                for nodule_idx, nodule in enumerate(nodules_annotation):
-                    # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
-                    # This current for loop iterates over total number of nodules in a single patient
-                    
-
-                    # if len(nodule) >= 3:
-                    cmask, cbbox, masks = radiologist_consensus(nodule, num_radiologist, 0)
-                    # print(np.sum(cmask))
-
-                    if np.sum(cmask):
-                        # We calculate the malignancy information
-                        malignancy, cancer_label = calculate_malignancy(nodule)
-
-                        # save in semantic label
-                        if  malignancy >= 3:
-                            classes = 2
-                        else:
-                            classes = 1
-
-                        out_mask[cbbox] = np.uint8(cmask) * classes
-                        # for nodule_slice in range(cmask.shape[2]):
-                        #     # This second for loop iterates over each single nodule.
-                        #     # There are some mask sizes that are too small. These may hinder training.
-                        #     if np.sum(cmask[:,:,nodule_slice]) <= mask_threshold:
-                        #         continue
-                            
-                        #     # save in semantic label
-                        #     if  malignancy >= 3:
-                        #         classes = 2
-                        #     else:
-                        #         classes = 1
-
-                        #     cmask[:,:,nodule_slice] = cmask[:,:,nodule_slice]*classes
-                        num += 1
-                        num_for_scan += 1
-
-                #         total_cmask.append(cmask)
-                # total_cmask = sum(total_cmask)
-                total_cmask = out_mask
-                total_cmask = np.transpose(total_cmask, (2, 0, 1))
-                total_cmask = np.uint8(total_cmask)
-
-                subset_dir = os.path.join(save_path, subset)
-                os.makedirs(subset_dir, exist_ok=True)
-                np.save(os.path.join(subset_dir, f'{short_pid}.npy'), total_cmask)
-                        
-                scan_table[pid] = {'num_luna': freq[pid], 'num_lidc': num_for_scan}
-                if freq[pid] != num_for_scan:
-                    diff_str = f'lidc_id: {lidc_id} {pid} luna: {freq[pid]} lidc: {num_for_scan}'
-                    total_diff.append(diff_str)
-                    print(diff_str)
-                    ss.append(scan)
-                    nn.append(nodules_annotation)
-    # print(num_1, num_2, num_3, num_4)
-    for s in total_diff:
-        print(s)
-    print(num)
-
-    
 
 def main():
     # input_root = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'

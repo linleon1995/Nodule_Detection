@@ -34,9 +34,9 @@ DATA:
     # TMH-Benign:
     #   # FOLD: 4
     #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign\coco\Nodule_Detection\cv-5\4
-    TMH-Malignant:
+    TMH-Nodule:
       # FOLD: 5
-      COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant\coco\Nodule_Detection\cv-5\4
+      COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Malignancy\cv-5\4
 
   # TODO: modify
   TRANSFORM:

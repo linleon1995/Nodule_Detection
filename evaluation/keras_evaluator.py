@@ -1,12 +1,12 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-# from utils.evaluator import NoudleSegEvaluator
-from data.crop_utils import crops_to_volume
-from data.data_structure import LungNoduleStudy
-from data.volume_generator import asus_nodule_volume_generator
-from utils.vis import save_mask, visualize, save_mask_in_3d
 import cv2
+
+from data.crop_utils import crops_to_volume
+from utils.nodule import LungNoduleStudy
+from data.volume_generator import asus_nodule_volume_generator
+from visualization.vis import save_mask, visualize, save_mask_in_3d
 
 
 def nodule_visualize(save_path, pid, vol, mask_vol, pred_vol, target_vol_category, pred_vol_category, pred_nodule_info, save_all_images=False):

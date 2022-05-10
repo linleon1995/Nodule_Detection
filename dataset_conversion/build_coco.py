@@ -1,7 +1,3 @@
-# import sys
-# from pprint import pprint
-# pprint(sys.path)
-
 from asyncio import sslproto
 import pandas as pd
 import numpy as np
@@ -11,9 +7,7 @@ import json, itertools
 import os
 import cv2
 
-from data.data_utils import cv2_imshow, split_individual_mask, merge_near_masks
-import site_path
-from modules.data import dataset_utils
+from data.data_utils import cv2_imshow, split_individual_mask, merge_near_masks, get_files
 
 
 
@@ -154,8 +148,8 @@ def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_thr
     coco_structures = {}
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
-    case_images = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
-    case_masks = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+    case_images = get_files(subset_image_path, recursive=False, get_dirs=True)
+    case_masks = get_files(subset_mask_path, recursive=False, get_dirs=True)
     
     # if not os.path.isdir(os.path.join(save_path, data_name)):
     #     os.makedirs(os.path.join(save_path, data_name))
@@ -168,8 +162,8 @@ def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_thr
 
         image_paths, target_paths = [], []
         for split_image, split_mask in zip(split_images, split_masks):
-            image_paths.extend(dataset_utils.get_files(split_image, 'png', recursive=False))
-            target_paths.extend(dataset_utils.get_files(split_mask, 'png', recursive=False))
+            image_paths.extend(get_files(split_image, 'png', recursive=False))
+            target_paths.extend(get_files(split_mask, 'png', recursive=False))
             # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
         
         coco_structure = build_coco_structure(
@@ -191,8 +185,8 @@ def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_thr
 def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_threshold=30):
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
-    subset_image_list = dataset_utils.get_files(subset_image_path, recursive=False, get_dirs=True)
-    subset_mask_list = dataset_utils.get_files(subset_mask_path, recursive=False, get_dirs=True)
+    subset_image_list = get_files(subset_image_path, recursive=False, get_dirs=True)
+    subset_mask_list = get_files(subset_mask_path, recursive=False, get_dirs=True)
 
     # subset_image_list = subset_image_list[::-1]
     # subset_mask_list = subset_mask_list[::-1]
@@ -213,8 +207,8 @@ def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_th
     
 
     for case_idx, (case_img_dir, case_mask_dir) in enumerate(tzip(subset_image_list, subset_mask_list)):
-        case_image_list = dataset_utils.get_files(case_img_dir, 'png', recursive=False)
-        case_mask_list = dataset_utils.get_files(case_mask_dir, 'png', recursive=False)
+        case_image_list = get_files(case_img_dir, 'png', recursive=False)
+        case_mask_list = get_files(case_mask_dir, 'png', recursive=False)
         assert len(case_image_list) == len(case_mask_list), f'Inconsitent slice number Raw {len(case_image_list)} Mask {len(case_mask_list)}'
         for img_path, mask_path in zip(case_image_list, case_mask_list):
             mask = cv2.imread(mask_path)
@@ -238,7 +232,7 @@ def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_th
 
 
 def luna16_to_coco_structure(data_path, label_type, split_rate=0.7, area_threshold=30):
-    subset_list = dataset_utils.get_files(data_path, recursive=False, get_dirs=True)
+    subset_list = get_files(data_path, recursive=False, get_dirs=True)
     cat_ids = cat_ids = {'nodule': 1}
     train_converter = coco_structure_converter(cat_ids)
     valid_converter = coco_structure_converter(cat_ids)
@@ -248,14 +242,14 @@ def luna16_to_coco_structure(data_path, label_type, split_rate=0.7, area_thresho
         subset = os.path.split(subset_path)[1]
         subset_image_dir = os.path.join(subset_path, 'Image')
         subset_mask_dir = os.path.join(subset_path, 'Mask')
-        subset_image_list = dataset_utils.get_files(subset_image_dir, recursive=False, get_dirs=True)
-        subset_mask_list = dataset_utils.get_files(subset_mask_dir, recursive=False, get_dirs=True)
+        subset_image_list = get_files(subset_image_dir, recursive=False, get_dirs=True)
+        subset_mask_list = get_files(subset_mask_dir, recursive=False, get_dirs=True)
         assert len(subset_image_list) == len(subset_mask_list), f'Inconsitent patient number Raw {len(subset_image_list)} Mask {len(subset_mask_list)}'
         state = 'train' if subset_idx <= 6 else 'valid'
         print(f'{state}-{subset}')
         for case_img_dir, case_mask_dir in tzip(subset_image_list, subset_mask_list):
-            case_image_list = dataset_utils.get_files(case_img_dir, 'png', recursive=False)
-            case_mask_list = dataset_utils.get_files(case_mask_dir, 'png', recursive=False)
+            case_image_list = get_files(case_img_dir, 'png', recursive=False)
+            case_mask_list = get_files(case_mask_dir, 'png', recursive=False)
             assert len(case_image_list) == len(case_mask_list), f'Inconsitent slice number Raw {len(case_image_list)} Mask {len(case_mask_list)}'
             for img_path, mask_path in zip(case_image_list, case_mask_list):
                 mask = cv2.imread(mask_path)

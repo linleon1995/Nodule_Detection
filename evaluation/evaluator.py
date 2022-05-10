@@ -5,10 +5,10 @@ import cv2
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
-from data.data_structure import LungNoduleStudy
-from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
-from utils.vis import plot_image_truth_prediction, show_mask_base
 from torch.utils.data import Dataset, DataLoader
+
+from utils.nodule import LungNoduleStudy
+from visualization.vis import plot_image_truth_prediction, visualize, save_mask_in_3d
 from data.crop_utils import crops_to_volume
 from utils.metrics import binary_dsc
 
@@ -233,8 +233,6 @@ class D2SegEvaluator(NoudleSegEvaluator):
     
     def model_inference(self, vol):
         pred_vol = np.zeros_like(vol[...,0])
-        # dataset = self.data_converter(vol, slice_shift=self.slice_shift)
-        # dataloder = DataLoader(dataset, batch_size=1, shuffle=False)
         for batch_start_index in range(0, vol.shape[0], self.batch_size):
         # for idx, input_data in enumerate(dataloder):
             start, end = batch_start_index, min(vol.shape[0], batch_start_index+self.batch_size)
@@ -255,6 +253,7 @@ class D2SegEvaluator(NoudleSegEvaluator):
             mask = np.where(mask>=1, 1, 0)
         mask = output_dtype(mask)
         return mask
+
 
 class Pytorch2dSegEvaluator(NoudleSegEvaluator):
     def __init__(self, predictor, volume_generator, save_path, data_converter, eval_metrics, slice_shift, save_vis_condition=True, 

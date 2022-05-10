@@ -1,5 +1,9 @@
 import argparse
 import yaml
+import torch
+from utils.train_utils import get_logger
+
+logger = get_logger('ConfigLoader')
 
 
 def _load_config_yaml(config_file):
@@ -32,3 +36,18 @@ def load_config(config_reference=None, dict_as_member=False):
     if dict_as_member:
         config = DictAsMember(config)
     return config
+
+
+def get_device(device_str=None):
+    # Get a device to train on
+    if device_str is not None:
+        logger.info(f"Device: '{device_str}'")
+        if device_str.startswith('cuda') and not torch.cuda.is_available():
+            logger.warn('CUDA not available, using CPU')
+            device_str = 'cpu'
+    else:
+        device_str = "cuda:0" if torch.cuda.is_available() else 'cpu'
+        logger.info(f"Using '{device_str}' device")
+
+    device = torch.device(device_str)
+    return device

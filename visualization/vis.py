@@ -21,7 +21,7 @@ import pandas as pd
 from tqdm import tqdm
 import cv2
 import cc3d
-from utils.volume_eval import volumetric_data_eval
+from postprocessing.data_postprocess import VolumePostProcessor
 logging.basicConfig(level=logging.INFO)
 
 
@@ -264,6 +264,7 @@ def show_mask_in_2d(cfg, vol_generator):
     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     fig, ax = plt.subplots(1, 1, figsize=(4,4))
+    volume_postprocessor = VolumePostProcessor(connectivity=26, area_threshold=30)
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         mask_vol = np.int32(mask_vol)
@@ -271,7 +272,7 @@ def show_mask_in_2d(cfg, vol_generator):
             if np.sum(mask_vol==0) == mask_vol.size:
                 print('No mask')
                 continue
-            mask_vol2 = volumetric_data_eval.volume_preprocess(mask_vol, connectivity=26, area_threshold=30)
+            mask_vol2 = volume_postprocessor(mask_vol)
             def plot_func(volume, name):
                 zs, ys, xs = np.where(volume)
                 # min_nonzero_slice, max_nonzero_slice = np.min(zs), np.max(zs)
