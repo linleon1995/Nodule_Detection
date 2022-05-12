@@ -6,7 +6,7 @@ import cc3d
 import os
 import pandas as pd
 from py import process
-from utils.vis import show_mask_base
+from visualization.vis import show_mask_base
 from utils.utils import xyz2irc
 from data.data_utils import get_files, load_itk
 

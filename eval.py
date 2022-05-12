@@ -18,7 +18,7 @@ from visualization.vis import save_mask, visualize, save_mask_in_3d, plot_scatte
 from evaluationScript import noduleCADEvaluationLUNA16
 from postprocessing.reduce_false_positive import NoduleClassifier
 from postprocessing.data_postprocess import VolumePostProcessor
-from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
+from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator, lidc_nodule_volume_generator
 from postprocessing.lung_mask_filtering import FalsePositiveReducer
 from utils.nodule import LungNoduleStudy
 from data.dataloader import GeneralDataset, SimpleNoduleDataset, CropNoduleDataset
@@ -117,7 +117,7 @@ def cross_valid_eval():
             if 'TMH' in dataset_name:
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
-                # case_pids = case_pids[7:]
+                case_pids = case_pids[:3]
                 volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]
@@ -126,6 +126,14 @@ def cross_valid_eval():
                 mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask'
                 volume_generator = luna16_volume_generator.Build_LIDC_luna16_volume_generator(
                     data_path=cfg.RAW_DATA_PATH, mask_path=mask_path, subset_indices=subset_indices)
+            elif dataset_name == 'LIDC':
+                # Convert data to image
+                raw_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+                mask_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3'
+                case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
+                volume_generator_builder = lidc_nodule_volume_generator(
+                    data_path=raw_vol_path, mask_path=mask_vol_path, case_indices=case_pids)
+                volume_generator = volume_generator_builder.build()
 
             in_planes = 2*cfg.SLICE_SHIFT + 1
             if cfg.MODEL_NAME == '2D-Mask-RCNN':

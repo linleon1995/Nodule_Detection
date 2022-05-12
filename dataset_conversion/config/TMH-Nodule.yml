@@ -1,6 +1,6 @@
 
 PATH:
-  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule
+  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
   SAVE_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
 
 TASK_NAME: Malignancy

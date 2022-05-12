@@ -28,14 +28,16 @@ class volumetric_data_eval():
         self.num_case += 1
         self.num_nodule += len(target_study.nodule_instances)
         assert np.shape(target_study.category_volume) == np.shape(pred_study.category_volume)
-        self._3D_evaluation(target_study, pred_study)
+        tp, fp, fn, doubleCandidatesIgnored = self._3D_evaluation(target_study, pred_study)
         self._2D_evaluation(target_study, pred_study)
+        return tp, fp, fn, doubleCandidatesIgnored
     
     def _3D_evaluation(self, target_study, pred_study):
         # TODO: Best slice IoU
         target_nodules = target_study.nodule_instances
         pred_nodules = pred_study.nodule_instances
-        pred_nodules2 = list(pred_nodules.keys())
+        pred_nodules_record = list(pred_nodules.keys())
+        pp = {nodule_id: 'fp' for nodule_id in pred_nodules}
         tp, fp, fn = 0, 0, 0
         doubleCandidatesIgnored = 0
 
@@ -68,13 +70,18 @@ class volumetric_data_eval():
                     found = True
                     nodule_matches.append(pred_nodule_id)
                     nodule_match_scores.append(dsc)
-                    if pred_nodule_id in pred_nodules2:
-                        pred_nodules2.remove(pred_nodule_id)
-                    else:
+                    pp[pred_nodule_id] = 'tp'
+                    # if pred_nodule_id in pred_nodules_record:
+                    #     pred_nodules_record.remove(pred_nodule_id)
+                    # else:
+                    #     print(f'This is strange: CAD mark {pred_nodule_id} detected two nodules! Check for overlapping nodule annotations, SeriesUID: {target_study.study_id}, nodule Annot ID: {target_nodule_id}')
+                    if 'tp' in pp[pred_nodule_id]:
                         print(f'This is strange: CAD mark {pred_nodule_id} detected two nodules! Check for overlapping nodule annotations, SeriesUID: {target_study.study_id}, nodule Annot ID: {target_nodule_id}')
 
-            if len(nodule_matches) > 1: # double detection
+            if len(nodule_matches) > 1: # double detection, single target be detected more than once
                 doubleCandidatesIgnored += (len(nodule_matches) - 1)
+                for n_id in nodule_matches:
+                    pp[n_id] = 'tp_double'
 
             if found:
                 tp += 1
@@ -84,21 +91,13 @@ class volumetric_data_eval():
                 fn += 1
                 target_study.nodule_evals[target_nodule_id] = 'fn'
 
-            # merge_nodule = sum([candidate.nodule_volume for candidate in match_candidates])
-            # merge_nodule = np.where(merge_nodule>0, 1, 0)
-            # NoduleIoU = self.BinaryIoU(target_nodule.nodule_volume, merge_nodule)
-            # NoduleDSC = self.BinaryDSC(target_nodule.nodule_volume, merge_nodule)
-            # target_nodule.set_score('IoU', max(nodule_match_scores))
-            # target_nodule.set_score('DSC', max(nodule_match_scores))
-            # if NoduleIoU >= self.match_threshold:
-            #     tp += 1
-            # else:
-            #     fn += 1
-
-        fp = len(pred_nodules2)
-        for pred_nodule_id in pred_nodules2:
-            pred_study.nodule_evals[pred_nodule_id] = 'fp'
-
+        # fp = len(pred_nodules_record)
+        # fp_num = list(pp.values()).count('fp')
+        # for pred_nodule_id in pred_nodules_record:
+        #     pred_study.nodule_evals[pred_nodule_id] = 'fp'
+        fp = list(pp.values()).count('fp')
+        pred_study.nodule_evals.update(pp)
+        # TODO: change name pp to pred_nodules_record
         target_study.set_score('NoduleTP', tp)
         target_study.set_score('NoduleFP', fp)
         target_study.set_score('NoduleFN', fn)
@@ -108,6 +107,7 @@ class volumetric_data_eval():
         self.VoxelFN.append(fn)
         self.DoubleDetections.append(doubleCandidatesIgnored)
         print(f'{target_study.study_id}: TP: {tp} FP: {fp} FN: {fn} Double Detected: {doubleCandidatesIgnored}')
+        return tp, fp, fn, doubleCandidatesIgnored
 
     def _2D_evaluation(self, target_study, pred_study):
         binary_target_vol = target_study.get_binary_volume()

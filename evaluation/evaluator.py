@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 
 from utils.nodule import LungNoduleStudy
+from utils.utils import DataFrameTool
 from visualization.vis import plot_image_truth_prediction, visualize, save_mask_in_3d
 from data.crop_utils import crops_to_volume
 from utils.metrics import binary_dsc
@@ -153,35 +154,64 @@ class NoudleSegEvaluator():
     def model_inference(self):
         raise NotImplementedError()
 
+    def reduce_fp(self, pred_study):
+        total_removal = []
+        for name, remove_nodule_ids in pred_study.remove_nodule_record.items():
+            tp, fp = 0, 0
+            total_removal.extend(remove_nodule_ids)
+            for n_id in remove_nodule_ids:
+                if 'tp' in pred_study.nodule_evals[n_id]:
+                    tp += 1
+                elif 'fp' in pred_study.nodule_evals[n_id]:
+                    fp += 1
+            print(f'-- {name} TP {tp} FP {fp}')
+
+        total_removal = list(set(total_removal))
+        print(f'Predict Nodules (post) {len(pred_study.nodule_evals)-len(total_removal)}')
+
+        pred_vol_category = pred_study.category_volume
+        for remove_nodule_id in total_removal:
+            pred_vol_category[pred_vol_category==remove_nodule_id] = 0
+        pred_study.category_volume = pred_vol_category
+        return pred_study
+    
     def run(self):
         if not os.path.isdir(self.save_path):
             os.makedirs(self.save_path)
 
         target_studys, pred_studys = [], []
+        case_eval = DataFrameTool(
+            ['pid', 'inference_time', 'pred_nodule_num', 'tp', 'fp', 'fn', 'double_detect'])
         for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(self.volume_generator):
+            one_case_eval = []
             if self.max_test_cases is not None:
                 if vol_idx >= self.max_test_cases:
                     break
 
             # Model Inference
             pid, scan_idx = infos['pid'], infos['scan_idx']
-            direction, origin, spacing = infos['direction'], infos['origin'], infos['spacing']
+            print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
             
             inference_start = time.time()
             pred_vol = self.model_inference(vol)
             inference_end = time.time()
+            inference_time = inference_end - inference_start
+            print(f'Inference time {inference_time:.2f}')
 
             if self.quick_test:
                 pred_vol *= mask_vol
+
             # Data post-processing
-            # TODO: the target volume should reduce small area but 1 pixel remain in 1m0037 131
             pred_vol_category = self.post_processer(pred_vol)
-            print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
-            print(f'Predict Nodules {np.unique(pred_vol_category).size-1}')
-            print(f'Inference time {inference_end-inference_start:.2f}')
-            # target_vol_category = post_processer.connect_components(mask_vol, connectivity=cfg.connectivity)
+            num_pred_nodule = np.unique(pred_vol_category).size-1
+            print(f'Predict Nodules (raw) {num_pred_nodule}')
             target_vol_category = self.post_processer(mask_vol)
 
+            
+            # Evaluation
+            target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
+            pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
+            tp, fp, fn, doubleCandidatesIgnored = self.eval_metrics.calculate(target_study, pred_study)
 
             # for s in range(mask_vol.shape[0]):
             #     if np.sum(mask_vol[s])>0:
@@ -195,21 +225,19 @@ class NoudleSegEvaluator():
             # os.makedirs(nrrd_path, exist_ok=True)
             # save_in_nrrd(vol, pred_vol_category, direction, origin, spacing, nrrd_path, pid)
 
-            # False positive reducing
-            if self.fp_reducer is not None:
-                pred_vol_category = self.fp_reducer(pred_study, raw_vol, self.lung_mask_path, pid)
+            if self.fp_reducer is not None or self.nodule_classifier is not None:
+                # False positive reducing
+                if self.fp_reducer is not None:
+                    pred_study = self.fp_reducer(pred_study, raw_vol, self.lung_mask_path, pid)
 
-            # Nodule classification
-            if self.nodule_classifier is not None:
-                pred_vol_category, pred_nodule_info = self.nodule_classifier.nodule_classify(vol, pred_vol_category, mask_vol)
-            else:
-                pred_nodule_info = None
-            # TODO
+                # Nodule classification
+                if self.nodule_classifier is not None:
+                    pred_vol_category, pred_nodule_info = self.nodule_classifier.nodule_classify(vol, pred_vol_category, mask_vol)
+                else:
+                    pred_nodule_info = None
             
-            # Evaluation
-            target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
-            pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
-            self.eval_metrics.calculate(target_study, pred_study)
+                pred_study = self.reduce_fp(pred_study)
+                pred_vol_category = pred_study.category_volume
 
             # Visualize
             if self.save_vis_condition(vol_idx):
@@ -218,15 +246,18 @@ class NoudleSegEvaluator():
 
             target_studys.append(target_study)
             pred_studys.append(pred_study)
+            one_case_eval = [pid, inference_time, num_pred_nodule, tp, fp, fn, doubleCandidatesIgnored]
+            case_eval.write_row(one_case_eval)
 
         _ = self.eval_metrics.evaluation(show_evaluation=True)
+        case_eval.save_data_frame(os.path.join(self.save_path, 'case_eval.csv'))
         return target_studys, pred_studys
 
 
 class D2SegEvaluator(NoudleSegEvaluator):
     def __init__(self, predictor, volume_generator, save_path, data_converter, eval_metrics, slice_shift, save_vis_condition=True, 
                  max_test_cases=None, post_processer=None, fp_reducer=None, nodule_classifier=None, lung_mask_path='./', 
-                 save_all_images=False, batch_size=1, *args, **kwargs):
+                 save_all_images=False, batch_size=4, *args, **kwargs):
         super().__init__(predictor, volume_generator, save_path, data_converter, eval_metrics, save_vis_condition, 
                          max_test_cases, post_processer, fp_reducer, nodule_classifier, lung_mask_path, save_all_images, batch_size)
         self.slice_shift = slice_shift
@@ -241,6 +272,10 @@ class D2SegEvaluator(NoudleSegEvaluator):
             outputs = self.predictor(img_list)
             for j, output in enumerate(outputs):
                 pred = output["instances"]._fields['pred_masks'].cpu().detach().numpy() 
+
+                # pred_classes = output["instances"]._fields['pred_classes'].cpu().detach().numpy() 
+                # pred_classes = np.reshape(pred_classes, (pred_classes.size, 1, 1))
+
                 pred = np.sum(pred, axis=0)
                 pred = self.mask_preprocess(pred)
                 pred_vol[batch_start_index+j] = pred

@@ -55,9 +55,9 @@ def common_config():
     cfg.nodule_cls = False
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_028\ckpt_best.pth'
-    cfg.lung_mask_filtering = False
-    cfg.remove_1_slice = False
-    cfg.remove_unusual_nodule_by_lung_size = False
+    cfg.lung_mask_filtering = True
+    cfg.remove_1_slice = True
+    cfg.remove_unusual_nodule_by_lung_size = True
     cfg.remove_unusual_nodule_by_ratio = False
     cfg.lung_size_threshold = 0.4
     cfg.pred_slice_threshold = 1
@@ -73,7 +73,7 @@ def common_config():
 
 
     cfg.connectivity = 26
-    cfg.area_threshold = 8
+    cfg.area_threshold = 0
     return cfg
 
 

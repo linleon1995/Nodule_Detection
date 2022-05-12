@@ -10,15 +10,10 @@ from skimage import measure
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils.utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess
-from utils.utils import raw_preprocess, compare_result, compare_result_enlarge, time_record
+from visualization.utils import compare_result, compare_result_enlarge
 # from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
-import time
-import pylidc as pl
-import pandas as pd
-from tqdm import tqdm
 import cv2
 import cc3d
 from postprocessing.data_postprocess import VolumePostProcessor
@@ -147,6 +142,7 @@ def crop_img(image, crop_parameters, keep_size=True):
         if keep_size:
             crop_image = cv2.resize(crop_image, dsize=(width, height))
         crop_images.append(crop_image)
+
     return crop_images
         
 # class SegVisualizer():
@@ -218,8 +214,11 @@ def visualize(input_vol, pred_vol, target_vol, pred_nodule_info, enlarge_crop_si
             ys, xs = np.where(candidate_slice==ccl_id)
             center = {'y': np.int16(np.mean(ys)), 'x': np.int16(np.mean(xs))}
             crop_parameter = {'center': center, 'height': enlarge_crop_size[0], 'width': enlarge_crop_size[1]}
-            crops = crop_img(draw_vol[z_idx], crop_parameter)
-        crop_draw_imgs[z_idx] = crops
+            crops = crop_img(draw_vol[z_idx], [crop_parameter])
+            if z_idx in crop_draw_imgs:
+                crop_draw_imgs[z_idx].extend(crops)
+            else:
+                crop_draw_imgs[z_idx] = crops
 
     return draw_vol, total_zs, crop_draw_imgs
 
@@ -264,7 +263,7 @@ def show_mask_in_2d(cfg, vol_generator):
     volume_generator = vol_generator(cfg.FULL_DATA_PATH, subset_indices=cfg.SUBSET_INDICES, case_indices=cfg.CASE_INDICES,
                                      only_nodule_slices=cfg.ONLY_NODULES)
     fig, ax = plt.subplots(1, 1, figsize=(4,4))
-    volume_postprocessor = VolumePostProcessor(connectivity=26, area_threshold=30)
+    post_processer = VolumePostProcessor(connectivity=26, area_threshold=30)
     for vol_idx, (vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx = infos['pid'], infos['scan_idx']
         mask_vol = np.int32(mask_vol)
@@ -272,7 +271,7 @@ def show_mask_in_2d(cfg, vol_generator):
             if np.sum(mask_vol==0) == mask_vol.size:
                 print('No mask')
                 continue
-            mask_vol2 = volume_postprocessor(mask_vol)
+            mask_vol2 = post_processer(mask_vol)
             def plot_func(volume, name):
                 zs, ys, xs = np.where(volume)
                 # min_nonzero_slice, max_nonzero_slice = np.min(zs), np.max(zs)

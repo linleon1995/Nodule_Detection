@@ -27,16 +27,17 @@ MODEL:
   backend: d2
   
 DATA:
-  N_CLASS: 2
+  N_CLASS: 1
   BATCH_SIZE: 4
   SLICE_SHIFT: 3
   NAMES: 
     # TMH-Benign:
     #   # FOLD: 4
     #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign\coco\Nodule_Detection\cv-5\4
-    TMH-Nodule:
-      # FOLD: 5
-      COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Malignancy\cv-5\4
+    LIDC:
+    # TMH-Nodule:
+    #   # FOLD: 5
+    #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Malignancy\cv-5\4
 
   # TODO: modify
   TRANSFORM:

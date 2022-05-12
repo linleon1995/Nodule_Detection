@@ -134,6 +134,21 @@ def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
     return coco_converter.create_coco_structure()
 
 
+def build_coco_structure_lidc(input_paths, target_paths, cat_ids, area_threshold):
+    coco_converter = coco_structure_converter(cat_ids)
+    for img_path, mask_path in zip(input_paths, target_paths):
+        mask = cv2.imread(mask_path)
+        mask = mask[...,0]
+        # TODO: mask_vol should be separated inbenign, malignant
+        mask = np.where(mask>0, 1, 0)
+        mask_list = split_individual_mask(mask)
+
+        for idx, instance_mask in enumerate(mask_list):
+            image_id = os.path.split(img_path)[1][:-4] + f'_{idx:04d}'
+            coco_converter.sample(img_path, instance_mask, image_id, category='Nodule')
+    return coco_converter.create_coco_structure()
+
+
 def merge_coco_structure(coco_group):
     output_coco = coco_group[0]
     for idx in range(1, len(coco_group)):
@@ -143,7 +158,45 @@ def merge_coco_structure(coco_group):
         output_coco['annotations'].extend(coco_group[idx]['annotations'])
     return output_coco
         
+
+def build_lidc_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold):
+    coco_structures = {}
+    subset_image_path = os.path.join(data_path, 'Image')
+    subset_mask_path = os.path.join(data_path, 'Mask')
+    case_images = get_files(subset_image_path, recursive=False, get_dirs=True)
+    case_masks = get_files(subset_mask_path, recursive=False, get_dirs=True)
     
+    # if not os.path.isdir(os.path.join(save_path, data_name)):
+    #     os.makedirs(os.path.join(save_path, data_name))
+        
+    for split_name, indices in split_indices.items():
+        indices_group = []
+        for index in indices:
+            indices_group.extend(index)
+        split_images, split_masks = np.take(case_images, indices_group).tolist(), np.take(case_masks, indices_group).tolist()
+
+        image_paths, target_paths = [], []
+        for split_image, split_mask in zip(split_images, split_masks):
+            image_paths.extend(get_files(split_image, 'png', recursive=False))
+            target_paths.extend(get_files(split_mask, 'png', recursive=False))
+            # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
+        
+        coco_structure = build_coco_structure_lidc(
+            image_paths, target_paths, cat_ids, area_threshold)
+        
+        if split_name in coco_structures:
+            coco_structures[split_name].append(coco_structure)
+        else:
+            coco_structures[split_name] = [coco_structure]
+                
+    for split_name in coco_structures:
+        merge_coco = merge_coco_structure(coco_structures[split_name])
+        save_name = os.path.join(save_path, f'annotations_{split_name}.json')
+        with open(save_name, 'w', encoding='utf-8') as jsonfile:
+            print(f'Saving coco in {save_name}')
+            json.dump(merge_coco, jsonfile, ensure_ascii=True, indent=4)
+
+
 def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold):
     coco_structures = {}
     subset_image_path = os.path.join(data_path, 'Image')

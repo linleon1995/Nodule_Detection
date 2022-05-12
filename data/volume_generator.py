@@ -222,6 +222,73 @@ class Ct_luna16_round_mask(dataset_seg.Ct):
         return mask_vol
 
 
+def generator_output(data_path, mask_path, pid):
+    raw_vol, orgin, spacing, direction = data_utils.load_itk(data_path)
+    vol = np.clip(raw_vol, -1000, 1000)
+    vol = raw_preprocess(vol, output_dtype=np.uint8)
+    mask_vol = np.load(mask_path)
+    mask_vol = mask_preprocess(mask_vol)
+
+    short_pid = pid.split('.')[-1]
+    infos = {'dataset': 'LUNA16', 'pid': short_pid, 'scan_idx': 0, 
+             'origin': orgin, 'spacing': spacing, 'direction': direction}
+    return raw_vol, vol, mask_vol, infos
+
+
+class lidc_nodule_volume_generator():
+    def __init__(self, data_path, mask_path, raw_format='mhd', mask_format='npy', subset_indices=None, case_indices=None):
+        self.data_path = data_path
+        self.mask_path = mask_path
+        self.raw_format = raw_format
+        self.mask_format = mask_format
+        self.subset_indices = subset_indices
+        self.case_indices = case_indices
+        self.pid_list, self.raw_path_mapping, self.mask_path_mapping = self.get_case_list()
+
+    def build(self):
+        for pid in self.pid_list:
+            raw_vol, _, _, _ = data_utils.load_itk(self.raw_path_mapping[pid])
+            vol = np.clip(raw_vol, -1000, 1000)
+            vol = raw_preprocess(vol, output_dtype=np.uint8)
+            mask_vol = np.load(self.mask_path_mapping[pid])
+            # print(raw_vol.shape==mask_vol.shape)
+            short_pid = pid.split('.')[-1]
+            info = {'pid': short_pid, 'subset': None, 'scan_idx': None}
+            yield raw_vol, vol, mask_vol, info
+                    
+    @classmethod
+    def get_path_list(cls, data_path, format, subset_indices=None, case_indices=None):
+        subset_list = data_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
+        if subset_indices:
+            subset_list = np.take(subset_list, subset_indices)
+
+        path_list = []
+        for subset_dir in subset_list:
+            case_list = data_utils.get_files(subset_dir, format, recursive=False)
+            if case_indices:
+                case_list = np.take(case_list, case_indices)
+            path_list.extend(case_list)
+        return path_list
+
+    def get_case_list(self):
+        raw_list = data_utils.get_files(self.data_path, self.raw_format)
+        mask_list = data_utils.get_files(self.mask_path, self.mask_format)
+
+        raw_pid_list = [os.path.split(path)[1][:-4] for path in raw_list]
+        mask_pid_list = [os.path.split(path)[1][:-4] for path in mask_list]
+        intersect_pid_list = list(set(raw_pid_list).intersection(set(mask_pid_list)))
+
+        raw_path_mapping, mask_path_mapping = {}, {}
+        for pid in intersect_pid_list:
+            for raw_path in raw_list:
+                if pid in raw_path:
+                    raw_path_mapping[pid] = raw_path
+            for mask_path in mask_list:
+                if pid in mask_path:
+                    mask_path_mapping[pid] = mask_path
+        
+        return intersect_pid_list, raw_path_mapping, mask_path_mapping
+
 class luna16_volume_generator():
     def __init__(self, data_path=None, subset_indices=None, case_indices=None):
         self.data_path = data_path

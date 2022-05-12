@@ -2,7 +2,8 @@
 import numpy as np
 import os, json, cv2, random
 import matplotlib.pyplot as plt
-import tensorboardX
+from torch.utils import tensorboard
+# import tensorboardX
 import torch
 
 from detectron2.engine import DefaultTrainer
@@ -131,23 +132,8 @@ def main():
         pytorch_model_train(train_cfg)
 
 
-
-
 if __name__ == '__main__':
     main()
 
-    # a = np.indices((8,64,64,32))
-    # b = [slice(64), slice(64), slice(32)]
-    # c = np.random.random((8,512,512,177))
-    # d = c[a[0], a[1]+32, a[2]+16, a[3]]
-    # print((d==c[:, 32:96, 16:80, :32]).all())
-    # print(3)
-
-    # a = np.indices((8,64,64,32))
-    # b = [slice(64), slice(64), slice(32)]
-    # c = np.random.random((8,512,512,177))
-    # d = c[a[0], a[1]+32, a[2]+16, a[3]]
-    # print((d==c[:, 32:96, 16:80, :32]).all())
-    # print(3)
 
     

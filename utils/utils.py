@@ -13,9 +13,9 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
+from data.data_utils import load_itk, get_files
 
 import site_path
-from modules.data import dataset_utils
 from modules.visualize import vis_utils
 
 
@@ -140,19 +140,19 @@ class Nodule_data_recording():
 def check_image():
     data_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
     save_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign\checked'
-    dir_list = dataset_utils.get_files(data_path, '1B', get_dirs=True, recursive=False)
+    dir_list = get_files(data_path, '1B', get_dirs=True, recursive=False)
     data_index = 0
     df = pd.DataFrame(columns=['Pid', 'Slice', 'Contour num', 'Slice mask size', 'Issue'])
     for _dir in dir_list:
-        raw_mask_dir = dataset_utils.get_files(_dir, get_dirs=True, recursive=False)
+        raw_mask_dir = get_files(_dir, get_dirs=True, recursive=False)
         for sub_dir in raw_mask_dir:
             if 'raw' in sub_dir:
-                raw_path = dataset_utils.get_files(sub_dir, 'mhd')[0]
-                raw_vol, _, _ = dataset_utils.load_itk(raw_path)
+                raw_path = get_files(sub_dir, 'mhd')[0]
+                raw_vol, _, _ = load_itk(raw_path)
                 raw_vol = raw_vol
             if 'mask' in sub_dir:
-                mask_path = dataset_utils.get_files(sub_dir, 'mhd')[0]
-                mask_vol, _, _ = dataset_utils.load_itk(mask_path)
+                mask_path = get_files(sub_dir, 'mhd')[0]
+                mask_vol, _, _ = load_itk(mask_path)
                 mask_vol = mask_vol
             
         if np.shape(raw_vol) != np.shape(mask_vol):
@@ -305,9 +305,6 @@ def segment_lung(img):
     return mask*img
 
 
-
-
-
 def raw_preprocess(img, lung_segment=False, norm=True, change_channel=True, output_dtype=np.int32):
     if lung_segment:
         assert img.ndim == 2
@@ -353,57 +350,8 @@ def enlarge_binary_image(binary_image, crop_range=30):
     return cv2.resize(binary_image[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
 
 
-def compare_result(image, label, pred, show_mask_size=False, **imshow_params):
-    if 'alpha' not in imshow_params: imshow_params['alpha'] = 0.2
-    fig, ax = plt.subplots(1,2, figsize=(8,4), tight_layout=True)
-    ax[0].imshow(image)
-    ax[0].imshow(label, **imshow_params)
-    ax[1].imshow(image)
-    ax[1].imshow(pred, **imshow_params)
-    ax[0].set_title(f'Label (Mask size: {np.sum(label)})' if show_mask_size else 'Label')
-    ax[1].set_title(f'Prediction (Mask size: {np.sum(pred)})' if show_mask_size else 'Prediction')
-    return fig, ax
-
-
-def compare_result_enlarge(image, label, pred, show_mask_size=False, **imshow_params):
-    crop_range = 30
-    if np.sum(label) > 0:
-        item = label
-    else:
-        if np.sum(pred) > 0:
-            item = pred
-        else:
-            item = None
-    
-    fig, ax = None, None
-    if item is not None:
-        if image.ndim == 2:
-            image = raw_preprocess(image, lung_segment=False, norm=False)
-        image = np.uint8(image)
-        h, w, c = image.shape
-        ys, xs = np.where(item)
-        x1, x2 = max(0, min(xs)-crop_range), min(max(xs)+crop_range, min(h,w))
-        y1, y2 = max(0, min(ys)-crop_range), min(max(ys)+crop_range, min(h,w))
-        bbox_size = np.max([np.abs(x1-x2), np.abs(y1-y2)])
-
-        image = cv2.resize(image[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_LINEAR)
-        label = cv2.resize(label[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
-        pred = cv2.resize(pred[y1:y1+bbox_size, x1:x1+bbox_size], (w, h), interpolation=cv2.INTER_NEAREST)
-
-        fig, ax = compare_result(image, label, pred, show_mask_size, **imshow_params)
-    return fig, ax
-
-
-def cv2_imshow(img, save_path=None):
-    # pass
-    cv2.imshow('My Image', img)
-    cv2.imwrite(save_path if save_path else 'sample.png', img)
-    # cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
 def convert_npy_to_png(src, dst, src_format, dst_format):
-    src_files = dataset_utils.get_files(src, src_format)
+    src_files = get_files(src, src_format)
     if not os.path.isdir(dst):
         os.makedirs(dst)
     for idx, f in enumerate(src_files):

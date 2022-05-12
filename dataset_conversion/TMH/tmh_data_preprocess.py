@@ -2,10 +2,10 @@ import os
 import numpy as np
 import cc3d
 import SimpleITK as sitk
-from data import medical_to_img
-from data.build_coco import build_tmh_nodule_coco
+from dataset_conversion import medical_to_img
+from dataset_conversion.build_coco import build_tmh_nodule_coco
 from dataset_conversion.TMH import tmh_data_merge
-from data.data_analysis import TMH_nodule_base_check
+from dataset_conversion.data_analysis import TMH_nodule_base_check
 from data.volume_generator import asus_nodule_volume_generator
 from data.data_utils import modify_array_in_itk, get_files
 

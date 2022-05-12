@@ -12,6 +12,7 @@ from data.data_utils import get_files
 
 
 # TODO: metaclass: register post-processing function
+# TODO: add time recording
 class FalsePositiveReducer():
     def __init__(self, _1SR, RUNLS, LMF, slice_threshold=1, lung_size_threshold=0.4):
         self._1SR = _1SR
@@ -24,7 +25,7 @@ class FalsePositiveReducer():
         # TODO: every removal results is based on last process result, check is this
         # the behavior we want.
         if self._1SR:
-            pred_vol_category = _1_slice_removal(pred_study, self.slice_threshold)
+            pred_study = _1_slice_removal(pred_study, self.slice_threshold)
 
         if self.LMF or self.RUNLS:
             lung_mask_case_path = os.path.join(lung_mask_path, pid)
@@ -35,34 +36,42 @@ class FalsePositiveReducer():
                     cv2.imwrite(os.path.join(lung_mask_case_path, f'{pid}-{lung_mask_idx:03d}.png'), 255*lung_mask)
             else:
                 lung_mask_files = get_files(lung_mask_case_path, 'png')
-                lung_mask_vol = np.zeros_like(pred_vol_category)
+                lung_mask_vol = np.zeros_like(pred_study.category_volume)
                 for lung_mask_idx, lung_mask in enumerate(lung_mask_files): 
                     lung_mask_vol[lung_mask_idx] = cv2.imread(lung_mask)[...,0]
                 lung_mask_vol = lung_mask_vol / 255
             lung_mask_vol = np.uint8(lung_mask_vol)
 
             if self.RUNLS:
-                pred_vol_category = remove_unusual_nodule_by_lung_size(pred_study, lung_mask_vol, threshold=self.lung_size_threshold)
-                
+                pred_study = remove_unusual_nodule_by_lung_size(
+                    pred_study, lung_mask_vol, min_lung_ration=self.lung_size_threshold)
+             
             if self.LMF:
-                pred_vol_category = lung_masking(pred_study, lung_mask_vol)
-
-            return pred_vol_category
+                pred_study = lung_masking(pred_study, lung_mask_vol)
+            return pred_study
 
                 
 def _1_slice_removal(pred_study, slice_threshold=1):
-    pred_vol_category = pred_study.category_volume
-    pred_category = np.unique(pred_vol_category)[1:]
+    # pred_vol_category = pred_study.category_volume
+    # pred_category = np.unique(pred_vol_category)[1:]
     
-    for pred_nodule_id in pred_category:
-        binary_mask = pred_vol_category==pred_nodule_id
-        zs, ys, xs = np.where(binary_mask)
-        if np.unique(zs).size <= slice_threshold:
-            pred_vol_category[pred_vol_category==pred_nodule_id] = 0
+    # for pred_nodule_id in pred_category:
+    #     binary_mask = pred_vol_category==pred_nodule_id
+    #     zs, ys, xs = np.where(binary_mask)
+    #     if np.unique(zs).size <= slice_threshold:
+    #         pred_vol_category[pred_vol_category==pred_nodule_id] = 0
+    # remove_nodule_ids = get_removing_nodule(pred_vol_category)
+    # pred_study.record_nodule_removal(name='_1SR', nodules_ids=remove_nodule_ids)
 
-    remove_nodule_id = get_removing_nodule(pred_vol_category)
-    pred_study.record_nodule_removal(name='_1SR', nodules_ids=remove_nodule_id)
-    return pred_vol_category
+    remove_nodule_ids = []
+    for nodule_id, nodule in pred_study.nodule_instances.items():
+        max_z = nodule.nodule_range['index']['max']
+        min_z = nodule.nodule_range['index']['min']
+        if max_z-min_z < slice_threshold:
+            remove_nodule_ids.append(nodule_id)
+
+    pred_study.record_nodule_removal(name='_1SR', nodules_ids=remove_nodule_ids)
+    return pred_study
 
 
 def remove_unusual_nodule_by_ratio(pred_study, lung_mask_vol, threshold=0.019):
@@ -75,30 +84,29 @@ def remove_unusual_nodule_by_ratio(pred_study, lung_mask_vol, threshold=0.019):
     mask = np.reshape(mask, [mask.size, 1, 1])
     pred_vol_category = pred_vol_category * mask
 
-    remove_nodule_id = get_removing_nodule(pred_vol_category)
-    pred_study.record_nodule_removal(name='RUNR', nodules_ids=remove_nodule_id)
+    remove_nodule_ids = get_removing_nodule(pred_vol_category)
+    pred_study.record_nodule_removal(name='RUNR', nodules_ids=remove_nodule_ids)
     return pred_vol_category
 
 
-def remove_unusual_nodule_by_lung_size(pred_study, lung_mask_vol, threshold=0.5):
-    pred_vol_category = pred_study.category_volume
+def remove_unusual_nodule_by_lung_size(pred_study, lung_mask_vol, min_lung_ration=0.5):
     lung_mask_pxiel_sum = np.sum(lung_mask_vol, axis=(1,2))
     ratio = lung_mask_pxiel_sum / np.max(lung_mask_pxiel_sum)
-    mask = np.where(ratio>=threshold, 1, 0)
-    mask = np.reshape(mask, [mask.size, 1, 1])
-    pred_vol_category = pred_vol_category * mask
+    remove_mask = np.where(ratio>=min_lung_ration, 0, 1)
+    remove_mask = np.reshape(remove_mask, [remove_mask.size, 1, 1])
 
-    remove_nodule_id = get_removing_nodule(pred_vol_category)
-    pred_study.record_nodule_removal(name='RUNLS', nodules_ids=remove_nodule_id)
-    return pred_vol_category
+    pred_vol_category = pred_study.category_volume * remove_mask
+
+    remove_nodule_ids = get_removing_nodule(pred_vol_category)
+    pred_study.record_nodule_removal(name='RUNLS', nodules_ids=remove_nodule_ids)
+    return pred_study
 
 
 def lung_masking(pred_study, lung_mask_vol):
-    pred_vol_category = pred_study.category_volume
-    pred_vol_category *= lung_mask_vol
-    remove_nodule_id = get_removing_nodule(pred_vol_category)
-    pred_study.record_nodule_removal('LMF', nodules_ids=remove_nodule_id)
-    return pred_vol_category
+    pred_vol_category = pred_study.category_volume * (np.ones_like(lung_mask_vol)-lung_mask_vol)
+    remove_nodule_ids = get_removing_nodule(pred_vol_category)
+    pred_study.record_nodule_removal('LMF', nodules_ids=remove_nodule_ids)
+    return pred_study
 
 
 def get_removing_nodule(pred_vol_category):

@@ -49,50 +49,53 @@ def extract_luna16_mask_from_pylidc(luna16_root, save_path, num_radiologist=3, p
                 # print(vol.shape)
                 
                 total_cmask = []
+                
                 for nodule_idx, nodule in enumerate(nodules_annotation):
                     # Call nodule images. Each Patient will have at maximum 4 annotations as there are only 4 doctors
                     # This current for loop iterates over total number of nodules in a single patient
-                    
+                    if len(nodule)>4:
+                        print(3)
+                    else:
+                        continue
 
                     # if len(nodule) >= 3:
                     cmask, cbbox, masks = radiologist_consensus(nodule, num_radiologist, 0)
-                    # print(np.sum(cmask))
 
-                    if np.sum(cmask):
-                        # We calculate the malignancy information
-                        malignancy, cancer_label = calculate_malignancy(nodule)
+                #     if np.sum(cmask):
+                #         # We calculate the malignancy information
+                #         malignancy, cancer_label = calculate_malignancy(nodule)
 
-                        # save in semantic label
-                        if  malignancy >= 3:
-                            classes = 2
-                        else:
-                            classes = 1
+                #         # save in semantic label
+                #         if  malignancy >= 3:
+                #             classes = 2
+                #         else:
+                #             classes = 1
 
-                        out_mask[cbbox] = np.uint8(cmask) * classes
-                        num += 1
-                        num_for_scan += 1
+                #         out_mask[cbbox] = np.uint8(cmask) * classes
+                #         num += 1
+                #         num_for_scan += 1
 
-                #         total_cmask.append(cmask)
-                # total_cmask = sum(total_cmask)
-                total_cmask = out_mask
-                total_cmask = np.transpose(total_cmask, (2, 0, 1))
-                total_cmask = np.uint8(total_cmask)
+                # #         total_cmask.append(cmask)
+                # # total_cmask = sum(total_cmask)
+                # total_cmask = out_mask
+                # total_cmask = np.transpose(total_cmask, (2, 0, 1))
+                # total_cmask = np.uint8(total_cmask)
 
-                subset_dir = os.path.join(save_path, subset)
-                os.makedirs(subset_dir, exist_ok=True)
-                np.save(os.path.join(subset_dir, f'{short_pid}.npy'), total_cmask)
+                # subset_dir = os.path.join(save_path, subset)
+                # os.makedirs(subset_dir, exist_ok=True)
+                # np.save(os.path.join(subset_dir, f'{short_pid}.npy'), total_cmask)
                         
-                scan_table[pid] = {'num_luna': freq[pid], 'num_lidc': num_for_scan}
-                if freq[pid] != num_for_scan:
-                    diff_str = f'lidc_id: {lidc_id} {pid} luna: {freq[pid]} lidc: {num_for_scan}'
-                    total_diff.append(diff_str)
-                    print(diff_str)
-                    ss.append(scan)
-                    unfit.append(nodules_annotation)
+                # scan_table[pid] = {'num_luna': freq[pid], 'num_lidc': num_for_scan}
+                # if freq[pid] != num_for_scan:
+                #     diff_str = f'lidc_id: {lidc_id} {pid} luna: {freq[pid]} lidc: {num_for_scan}'
+                #     total_diff.append(diff_str)
+                #     print(diff_str)
+                #     ss.append(scan)
+                #     unfit.append(nodules_annotation)
     
-    for s in total_diff:
-        print(s)
-    print(num)
+    # for s in total_diff:
+    #     print(s)
+    # print(num)
 
     
 def radiologist_consensus(anns, num_radiologist=3, pad=None, ret_masks=True):
@@ -111,6 +114,11 @@ def radiologist_consensus(anns, num_radiologist=3, pad=None, ret_masks=True):
 
     masks = [a.boolean_mask(bbox=cbbox) for a in anns]
     cmask = np.sum(masks, axis=0) >= num_radiologist
+
+    max_v = np.max(np.sum(masks, axis=0))
+    if max_v > 4:
+        print(max_v)
+        print('error code')
     cbbox = tuple(slice(cb[0], cb[1]+1, None) for cb in cbbox)
 
     if ret_masks:
