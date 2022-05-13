@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.INFO)
 
 def eval(cfg, volume_generator, data_converter, predictor, evaluator_gen):
     save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME, cfg.DATA_SPLIT)
-    save_vis_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
+    save_vis_condition = lambda x: True if cfg.SAVE_ALL_IMAGES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
 
     vol_metric = volumetric_data_eval(
         model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
@@ -117,7 +117,7 @@ def cross_valid_eval():
             if 'TMH' in dataset_name:
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
-                case_pids = case_pids[:3]
+                # case_pids = case_pids[:2]
                 volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]
@@ -130,6 +130,7 @@ def cross_valid_eval():
                 # Convert data to image
                 raw_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
                 mask_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3'
+                coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
                 volume_generator_builder = lidc_nodule_volume_generator(
                     data_path=raw_vol_path, mask_path=mask_vol_path, case_indices=case_pids)

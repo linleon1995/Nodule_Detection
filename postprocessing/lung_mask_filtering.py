@@ -52,17 +52,6 @@ class FalsePositiveReducer():
 
                 
 def _1_slice_removal(pred_study, slice_threshold=1):
-    # pred_vol_category = pred_study.category_volume
-    # pred_category = np.unique(pred_vol_category)[1:]
-    
-    # for pred_nodule_id in pred_category:
-    #     binary_mask = pred_vol_category==pred_nodule_id
-    #     zs, ys, xs = np.where(binary_mask)
-    #     if np.unique(zs).size <= slice_threshold:
-    #         pred_vol_category[pred_vol_category==pred_nodule_id] = 0
-    # remove_nodule_ids = get_removing_nodule(pred_vol_category)
-    # pred_study.record_nodule_removal(name='_1SR', nodules_ids=remove_nodule_ids)
-
     remove_nodule_ids = []
     for nodule_id, nodule in pred_study.nodule_instances.items():
         max_z = nodule.nodule_range['index']['max']

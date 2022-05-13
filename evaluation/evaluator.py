@@ -150,6 +150,7 @@ class NoudleSegEvaluator():
         self.batch_size = batch_size
         # TODO:
         self.quick_test = False
+        self.remove_result = {}
 
     def model_inference(self):
         raise NotImplementedError()
@@ -157,6 +158,24 @@ class NoudleSegEvaluator():
     def reduce_fp(self, pred_study):
         total_removal = []
         for name, remove_nodule_ids in pred_study.remove_nodule_record.items():
+            other_method = pred_study.remove_nodule_record.copy()
+            other_method.pop(name)
+            other_method_pred = []
+            for idx in other_method.values():
+                other_method_pred.extend(list(idx))
+            unique_pred = list(set(remove_nodule_ids)-set(other_method_pred))
+            unique_pred_num = len(unique_pred)
+            common_pred_num = len(remove_nodule_ids) - unique_pred_num
+            if name not in self.remove_result:
+                self.remove_result[name] = {}
+
+
+            if 'unique' in self.remove_result[name] and 'common' in self.remove_result[name]:
+                self.remove_result[name]['unique'] = self.remove_result[name]['unique'] + unique_pred_num
+                self.remove_result[name]['common'] = self.remove_result[name]['common'] + common_pred_num
+            else:
+                self.remove_result[name].update({'unique': unique_pred_num, 'common': common_pred_num})
+
             tp, fp = 0, 0
             total_removal.extend(remove_nodule_ids)
             for n_id in remove_nodule_ids:
@@ -165,21 +184,38 @@ class NoudleSegEvaluator():
                 elif 'fp' in pred_study.nodule_evals[n_id]:
                     fp += 1
             print(f'-- {name} TP {tp} FP {fp}')
+            if 'TP' in self.remove_result[name] and 'FP' in self.remove_result[name]:
+                self.remove_result[name]['TP'] = self.remove_result[name]['TP'] + tp
+                self.remove_result[name]['FP'] = self.remove_result[name]['FP'] + fp
+            else:
+                self.remove_result[name].update({'TP': tp, 'FP': fp})
 
         total_removal = list(set(total_removal))
-        print(f'Predict Nodules (post) {len(pred_study.nodule_evals)-len(total_removal)}')
+        post_nodule_num = len(pred_study.nodule_evals)-len(total_removal)
+        print(f'Predict Nodules (post) {post_nodule_num}')
 
         pred_vol_category = pred_study.category_volume
+        tp, fp = 0, 0
         for remove_nodule_id in total_removal:
+            if 'tp' in pred_study.nodule_evals[remove_nodule_id]:
+                tp += 1
+            elif 'fp' in pred_study.nodule_evals[remove_nodule_id]:
+                fp += 1
             pred_vol_category[pred_vol_category==remove_nodule_id] = 0
         pred_study.category_volume = pred_vol_category
-        return pred_study
+        if 'total' in self.remove_result:
+            self.remove_result['total']['TP'] = self.remove_result['total']['TP'] + tp
+            self.remove_result['total']['FP'] = self.remove_result['total']['FP'] + fp
+        else:
+            self.remove_result['total'] = {'TP': tp, 'FP': fp}
+        return pred_study, post_nodule_num
     
     def run(self):
         if not os.path.isdir(self.save_path):
             os.makedirs(self.save_path)
 
         target_studys, pred_studys = [], []
+        total_psot_nodule_Num = 0
         case_eval = DataFrameTool(
             ['pid', 'inference_time', 'pred_nodule_num', 'tp', 'fp', 'fn', 'double_detect'])
         for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(self.volume_generator):
@@ -225,6 +261,7 @@ class NoudleSegEvaluator():
             # os.makedirs(nrrd_path, exist_ok=True)
             # save_in_nrrd(vol, pred_vol_category, direction, origin, spacing, nrrd_path, pid)
 
+            pred_nodule_info = None
             if self.fp_reducer is not None or self.nodule_classifier is not None:
                 # False positive reducing
                 if self.fp_reducer is not None:
@@ -232,11 +269,12 @@ class NoudleSegEvaluator():
 
                 # Nodule classification
                 if self.nodule_classifier is not None:
-                    pred_vol_category, pred_nodule_info = self.nodule_classifier.nodule_classify(vol, pred_vol_category, mask_vol)
-                else:
-                    pred_nodule_info = None
+                    pred_study, pred_nodule_info = self.nodule_classifier.nodule_classify(vol, pred_study, mask_vol)
+                # else:
+                #     pred_nodule_info = None
             
-                pred_study = self.reduce_fp(pred_study)
+                pred_study, post_nodule_num = self.reduce_fp(pred_study)
+                total_psot_nodule_Num += post_nodule_num
                 pred_vol_category = pred_study.category_volume
 
             # Visualize
@@ -251,6 +289,31 @@ class NoudleSegEvaluator():
 
         _ = self.eval_metrics.evaluation(show_evaluation=True)
         case_eval.save_data_frame(os.path.join(self.save_path, 'case_eval.csv'))
+        print(f'Total post candidates {total_psot_nodule_Num}')
+        print(self.remove_result)
+
+        common_pred, unique_pred = [], []
+        for removal_info in self.remove_result.values():
+            if 'unique' in removal_info and 'common' in removal_info:
+                common_pred.append(removal_info['common'])
+                unique_pred.append(removal_info['unique'])
+        remove_method = list(self.remove_result.keys())
+        remove_method.remove('total')
+        
+        ind = np.arange(len(self.remove_result)-1) # the x locations for the groups
+        width = 0.35
+        fig, ax = plt.subplots(1, 1)
+        ax.bar(ind, common_pred, width, color='b')
+        ax.bar(ind, unique_pred, width, bottom=common_pred, color='r')
+        ax.set_xlabel('Method')
+        ax.set_ylabel('Nodule Num.')
+        ax.set_title('Comparision of unique FP removal')
+        ax.set_xticks(ind)
+        ax.set_xticklabels(remove_method)
+        ax.set_yticks(np.arange(0, max(unique_pred)+max(common_pred), (max(unique_pred)+max(common_pred))//10))
+        ax.legend(labels=['Common', 'Unique'])
+        fig.savefig(os.path.join(self.save_path, 'unique_FP_removal.png'))
+        # plt.show()
         return target_studys, pred_studys
 
 

@@ -190,11 +190,13 @@ def get_model_weight():
     # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_040' 
     # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_052' 
     # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_057' 
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_039\4' 
 
     # model_weight = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
     # # model_weight = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
+    model_weight = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
 
-    model_weight = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
+    # model_weight = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
     return model_weight
 
 

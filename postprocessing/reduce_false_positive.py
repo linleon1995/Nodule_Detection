@@ -12,8 +12,8 @@ class NoduleClassifier():
         self.classifier = self.build_classifier(checkpint_path, model_depth, num_class)
         self.prob_threshold = prob_threshold
 
-    def nodule_classify(self, raw_volume, pred_volume_category, target_volume):
-        pred_volume_category, pred_nodules = self.reduce_false_positive(raw_volume, pred_volume_category)
+    def nodule_classify(self, raw_volume, pred_study, target_volume):
+        pred_study, pred_nodules = self.reduce_false_positive(raw_volume, pred_study)
         for nodule_id in pred_nodules:
             crop_target_volume = LUNA16_CropRange_Builder.crop_volume(target_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
             target_class = np.where(np.sum(crop_target_volume)>0, 1, 0)
@@ -21,10 +21,12 @@ class NoduleClassifier():
             result = self.eval(target_class, pred_class)
             pred_nodules[nodule_id]['eval'] = result
         # print(np.unique(pred_volume_category))
-        return pred_volume_category, pred_nodules
+        return pred_study, pred_nodules
 
-    def reduce_false_positive(self, raw_volume, pred_volume_category):
+    def reduce_false_positive(self, raw_volume, pred_study):
+        pred_volume_category = pred_study.category_volume
         pred_nodules = self.get_nodule_center(pred_volume_category)
+        remove_nodule_ids = []
         for nodule_id in list(pred_nodules):
             crop_raw_volume = LUNA16_CropRange_Builder.crop_volume(raw_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
             crop_raw_volume = np.swapaxes(np.expand_dims(crop_raw_volume, (0, 1)), 1, 5)[...,0]
@@ -33,12 +35,14 @@ class NoduleClassifier():
             pred_class, pred_prob = self.inference(crop_raw_volume)
             # pred_class = pred_class.item()
             if pred_class == 0:
-                pred_volume_category[pred_volume_category==nodule_id] = 0
+                remove_nodule_ids.append(nodule_id)
                 pred_nodules.pop(nodule_id)
             else:
                 pred_nodules[nodule_id]['Nodule_pred_class'] = pred_class
                 pred_nodules[nodule_id]['Nodule_pred_prob'] = pred_prob.cpu().detach().numpy()[0]
-        return pred_volume_category, pred_nodules
+
+            pred_study.record_nodule_removal(name='NC', nodules_ids=remove_nodule_ids)
+        return pred_study, pred_nodules
 
     def inference(self, input_volume):
         logits = self.classifier(input_volume)

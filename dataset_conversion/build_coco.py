@@ -123,13 +123,13 @@ def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
         # TODO: merge_near_masks is for old LUNA16 labeling method (thresholding) which exist many splitt in single nodule
         # splited_mask = merge_near_masks(splited_mask)
         if len(split_mask_list):
-            for i, split_mask in enumerate(split_mask_list, 1):
+            for split_mask_idx, split_mask in enumerate(split_mask_list, 1):
                 if np.sum(split_mask) > area_threshold:
                     if np.max(split_mask) == 2:
                         category = 'Malignant'
                     elif np.max(split_mask) == 1:
                         category = 'Benign'
-                    coco_converter.sample(img_path, mask, image_id, category)
+                    coco_converter.sample(img_path, mask, f'{image_id}_{split_mask_idx:04d}', category)
 
     return coco_converter.create_coco_structure()
 

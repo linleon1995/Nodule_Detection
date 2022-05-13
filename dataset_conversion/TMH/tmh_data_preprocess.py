@@ -13,7 +13,8 @@ from utils.configuration import load_config
 # import warnings
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 
-DATASET_NAME = 'TMH-Nodule'
+# DATASET_NAME = 'TMH-Nodule'
+CONFIG_PATH = 'dataset_conversion/config/TMH-Nodule.yml'
     
 
 def data_preprocess(dataset_name):
@@ -35,20 +36,20 @@ def data_preprocess(dataset_name):
     for path in [merge_path, image_path, kc_image_path, stats_path]:
         os.makedirs(path, exist_ok=True)
     
-    # TMH base check
-    raw_paths = get_files(data_root, recursive=False, get_dirs=True)
-    volume_generator = asus_nodule_volume_generator(data_path=raw_paths, case_pids=case_pids)
-    TMH_nodule_base_check(volume_generator, save_path=stats_path)
+    # # TMH base check
+    # raw_paths = get_files(data_root, recursive=False, get_dirs=True)
+    # volume_generator = asus_nodule_volume_generator(data_path=raw_paths, case_pids=case_pids)
+    # TMH_nodule_base_check(volume_generator, save_path=stats_path)
 
-    # Merge mhd data
-    merge_mapping = tmh_data_merge.TMH_merging_check(data_root, merge_path)
-    tmh_data_merge.merge_data(merge_mapping, data_root, merge_path, filekey='TMH')
+    # # Merge mhd data
+    # merge_mapping = tmh_data_merge.TMH_merging_check(data_root, merge_path)
+    # tmh_data_merge.merge_data(merge_mapping, data_root, merge_path, filekey='TMH')
 
-    # Convert medical 3d volume data to image format
-    volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
-    medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
-    # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
-    # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
+    # # Convert medical 3d volume data to image format
+    # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
+    # medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
+    # # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
+    # # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
     # Build up coco-structure
     num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
@@ -65,8 +66,8 @@ def data_preprocess(dataset_name):
             cat_ids=cat_ids, area_threshold=area_threshold)
 
 
-def build_parameters(dataset_name):
-    cfg = load_config(f'data/config/{dataset_name}.yml', dict_as_member=True)
+def build_parameters(config_path):
+    cfg = load_config(config_path, dict_as_member=True)
     data_root = cfg.PATH.DATA_ROOT
     save_root = cfg.PATH.SAVE_ROOT
     task_name = cfg.TASK_NAME
@@ -85,7 +86,7 @@ def build_parameters(dataset_name):
     if task_name == 'Nodule_Detection':
         category = 'Nodule'
     elif task_name == 'Malignancy':
-        category = dataset_name
+        category = 'Nodule'
 
     split_indices = {}
     for split_idx, split_name in data_split.items():
@@ -165,7 +166,7 @@ def get_cv_split(num_fold, num_sample, shuffle=False):
 
 
 def main():
-    data_preprocess(DATASET_NAME)
+    data_preprocess(CONFIG_PATH)
 
 
 if __name__ == '__main__':

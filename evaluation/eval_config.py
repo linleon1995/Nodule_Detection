@@ -29,10 +29,10 @@ def d2_eval_config(checkpoint_path):
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     cfg.DATALOADER.NUM_WORKERS = 0
     
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.1  # set a custom testing threshold
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.3  # set a custom testing threshold
     
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   # faster, and good enough for this toy dataset (default: 512)
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
     cfg.INPUT.MASK_FORMAT = 'bitmask'
     cfg.INPUT.MIN_SIZE_TEST = 1120
     cfg.MODEL.WEIGHTS = checkpoint_path
@@ -52,7 +52,7 @@ def common_config():
 
     # False Positive reduction
     cfg.NODULE_CLS_PROB = 0.75
-    cfg.nodule_cls = False
+    cfg.nodule_cls = True
     cfg.crop_range = [48, 48, 48]
     cfg.FP_reducer_checkpoint = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_028\ckpt_best.pth'
     cfg.lung_mask_filtering = True
@@ -64,12 +64,12 @@ def common_config():
     cfg.MATCHING_THRESHOLD = 0.1
 
     # Exepriment
-    cfg.MAX_SAVE_IMAGE_CASES = 100
+    cfg.MAX_SAVE_IMAGE_CASES = 2
     cfg.MAX_TEST_CASES = None
     # cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = True
     cfg.TEST_BATCH_SIZE = 2
-    cfg.SAVE_ALL_IMAGES = True
+    cfg.SAVE_ALL_IMAGES = False
 
 
     cfg.connectivity = 26
