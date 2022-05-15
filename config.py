@@ -87,10 +87,22 @@ def nodule_dataset_config(name):
         'lung_mask': None
     }
 
+    LIDC = {
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data',
+        'lung_mask': None
+    }
+
+    TMH_Nodule = {
+        'raw': rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\merge',
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\image\Lung_Mask_show'
+    }
+
     dataset_config = {
         'TMH-Benign': TMH_Benign,
         'TMH-Malignant': TMH_Malignant,
+        'TMH-Nodule': TMH_Nodule,
         'LUNA16': LUNA16,
+        'LIDC': LIDC,
     }
     assert name in dataset_config, 'Unknown dataset.'
 
@@ -118,7 +130,7 @@ def build_d2_config():
 
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00005  
-    cfg.SOLVER.MAX_ITER = 8000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 80000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -172,32 +184,34 @@ def build_d2_config():
 
 def get_model_weight():
     
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_015' 
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_032' 
-    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_037' 
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_040' 
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_052' 
-    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_057' 
+    # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_015' 
+    # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_032' 
+    # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_037' 
+    # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_040' 
+    # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_052' 
+    # # checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_057' 
+    checkpoint_path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_039\4' 
 
+    # model_weight = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
+    # # model_weight = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
     model_weight = os.path.join(checkpoint_path, "model_0015999.pth")  # path to the model we just trained
-    # model_weight = os.path.join(checkpoint_path, "model_final.pth")  # path to the model we just trained
 
     # model_weight = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")  # Let training initialize from model zoo
     return model_weight
 
 
-def d2_register_coco(cfg, using_dataset):
-    for fold in range(cfg.CV_FOLD):
+def d2_register_coco(num_fold, fold_indices, using_dataset):
+    for fold in fold_indices:
         for dataset_name in using_dataset:
-            data_cfg = configuration.load_config(f'data/config/{dataset_name}.yml', dict_as_member=True)
+            data_cfg = configuration.load_config(f'dataset_conversion/config/{dataset_name}.yml', dict_as_member=True)
             data_root = data_cfg.PATH.DATA_ROOT
+            image_root = os.path.join(data_root, 'image')
+            coco_root = os.path.join(data_root, 'coco')
             task_name = data_cfg.TASK_NAME
 
-            # TODO:
-            data_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant'
-            train_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.CV_FOLD}', str(fold), "annotations_train.json")
-            valid_json = os.path.join(data_root, "coco", task_name, f'cv-{cfg.CV_FOLD}', str(fold), "annotations_test.json")
+            train_json = os.path.join(coco_root, task_name, f'cv-{num_fold}', str(fold), "annotations_train.json")
+            valid_json = os.path.join(coco_root, task_name, f'cv-{num_fold}', str(fold), "annotations_test.json")
             
             # Prepare the dataset
-            register_coco_instances(f"{dataset_name}-train-cv{cfg.CV_FOLD}-{fold}", {}, train_json, data_root)
-            register_coco_instances(f"{dataset_name}-valid-cv{cfg.CV_FOLD}-{fold}", {}, valid_json, data_root)
+            register_coco_instances(f"{dataset_name}-train-cv{num_fold}-{fold}", {}, train_json, image_root)
+            register_coco_instances(f"{dataset_name}-valid-cv{num_fold}-{fold}", {}, valid_json, image_root)

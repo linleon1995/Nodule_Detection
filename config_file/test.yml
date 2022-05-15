@@ -1,17 +1,18 @@
 
-TASK_NAME: Nodule_Detection
+TASK_NAME: Malignancy
 
 MODEL:
   NAME: 2D-Mask-RCNN # 2D-Mask-RCNN, 2D-FCN, 3D-Unet
   backend: d2
-  WEIGHTS: model_final.pth
-  OUTPUT_DIR: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_037
+  WEIGHTS: model_0005999.pth
+  OUTPUT_DIR: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_039\4
   
 DATA:
   N_CLASS: 2
   SLICE_SHIFT: 0
   NAMES: 
-    - TMH-Malignant
+    # - TMH-Nodule
+    - LIDC
     # - TMH-Benign
     # - LUNA16
   SPLIT: test
@@ -21,8 +22,10 @@ DATA:
 
 PATH:
   DATA_ROOT: 
-    TMH-Benign: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Benign
-    TMH-Malignant: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant
+    # TMH-Benign: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Benign
+    # TMH-Malignant: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\TMH-Malignant
+    TMH-Nodule: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
+    LIDC: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess
 
 EVAL:
   CV_FOLD: 5

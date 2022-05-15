@@ -8,8 +8,31 @@ import torch
 import torch.nn as nn  
 import torch.optim as optim
 import json
+import logging
 
 from utils import loss
+
+
+
+loggers = {}
+def get_logger(name, level=logging.INFO):
+    global loggers
+    if loggers.get(name) is not None:
+        return loggers.get(name)
+    else:
+        logger = logging.getLogger(name)
+        logger.setLevel(level)
+        # Logging to console
+        stream_handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(message)s')
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+
+        # TODO: Understand why "logger.propagate = False" can prevent duplicate logging inforamtion
+        logger.propagate = False
+        loggers[name] = logger
+        return logger
 
 
 class DictAsMember(dict):

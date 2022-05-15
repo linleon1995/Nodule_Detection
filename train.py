@@ -1,19 +1,17 @@
 
-# import some common libraries
 import numpy as np
 import os, json, cv2, random
 import matplotlib.pyplot as plt
-import tensorboardX
+from torch.utils import tensorboard
+# import tensorboardX
+import torch
 
 from detectron2.engine import DefaultTrainer
 from detectron2.engine import HookBase
 from detectron2.data import build_detection_train_loader
 import detectron2.utils.comm as comm
-import torch
 
-import site_path
-from modules.utils import configuration
-from utils.utils import cv2_imshow
+from utils.configuration import get_device
 from config import build_d2_config, d2_register_coco, build_train_config
 from model import build_model
 from utils.trainer import Trainer
@@ -47,13 +45,12 @@ class ValidationLoss(HookBase):
 
 def d2_model_train(train_cfg):
     cfg = train_cfg['d2']
-    d2_register_coco(cfg, train_cfg.DATA.NAMES.keys())
-
     if train_cfg.CV.ASSIGN_FOLD is not None:
         assert train_cfg.CV.ASSIGN_FOLD < train_cfg.CV.FOLD, 'Assign fold out of range'
         fold_indices = [train_cfg.CV.ASSIGN_FOLD]
     else:
         fold_indices = list(range(train_cfg.CV.FOLD))
+    d2_register_coco(train_cfg.CV.FOLD, fold_indices, train_cfg.DATA.NAMES.keys())
     
     output_dir = cfg.OUTPUT_DIR
     for fold in fold_indices:
@@ -81,7 +78,7 @@ def pytorch_model_train(cfg):
     exp_path = train_utils.create_training_path('checkpoints')
     checkpoint_path = cfg.TRAIN.CHECKPOINT_PATH
     in_planes = 2*cfg.DATA.SLICE_SHIFT + 1
-    model = build_model.build_seg_model(model_name=cfg.MODEL.NAME, in_planes=in_planes, n_class=cfg.DATA.N_CLASS, device=configuration.get_device())
+    model = build_model.build_seg_model(model_name=cfg.MODEL.NAME, in_planes=in_planes, n_class=cfg.DATA.N_CLASS, device=get_device())
     transform_config = cfg.DATA.TRANSFORM
 
     # TODO: annotation json and cv
@@ -114,7 +111,7 @@ def pytorch_model_train(cfg):
                       train_dataloader=train_dataloader,
                       valid_dataloader=valid_dataloader,
                       logger=logger,
-                      device=configuration.get_device(),
+                      device=get_device(),
                       n_class=cfg.DATA.N_CLASS,
                       exp_path=exp_path,
                       train_epoch=cfg.TRAIN.EPOCH,
@@ -135,23 +132,8 @@ def main():
         pytorch_model_train(train_cfg)
 
 
-
-
 if __name__ == '__main__':
     main()
 
-    # a = np.indices((8,64,64,32))
-    # b = [slice(64), slice(64), slice(32)]
-    # c = np.random.random((8,512,512,177))
-    # d = c[a[0], a[1]+32, a[2]+16, a[3]]
-    # print((d==c[:, 32:96, 16:80, :32]).all())
-    # print(3)
-
-    # a = np.indices((8,64,64,32))
-    # b = [slice(64), slice(64), slice(32)]
-    # c = np.random.random((8,512,512,177))
-    # d = c[a[0], a[1]+32, a[2]+16, a[3]]
-    # print((d==c[:, 32:96, 16:80, :32]).all())
-    # print(3)
 
     

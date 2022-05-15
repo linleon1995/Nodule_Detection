@@ -2,7 +2,7 @@ import torch
 import os
 from model import unet3d
 from config import models_genesis_config
-from data import build_dataset
+from data import build_3d_dataset
 from utils.train_utils import create_training_path
 from config import models_genesis_config
 
@@ -70,7 +70,7 @@ def main():
     # ]
 
 
-    train_loader, valid_loader = build_dataset.build_dataloader_mhd(
+    train_loader, valid_loader = build_3d_dataset.build_dataloader_mhd(
         input_roots, target_roots, train_cases, config.annot_path, valid_cases, train_batch_size=config.batch_size, 
         class_balance=config.class_balance, remove_empty_sample=config.remove_empty_sample)
 

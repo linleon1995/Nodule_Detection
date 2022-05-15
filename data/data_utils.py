@@ -126,11 +126,16 @@ def cv2_imshow(img, save_path=None):
     
     
 def split_individual_mask(mask):
-    individual_mask = cc3d.connected_components(mask, connectivity=8)
+    individual_mask = mask.copy()
+    # if max(np.unique(mask)) > 1:
+    #     print(3)
+    individual_mask = cc3d.connected_components(individual_mask, connectivity=8)
     if np.max(individual_mask) > 1:
         mask_list = []
-        for mask_label in range(1, np.max(individual_mask)):
-            mask_list.append(np.uint8(individual_mask==mask_label))
+        for mask_label in range(1, np.max(individual_mask)+1):
+            # mask_list.append(np.uint8(individual_mask==mask_label))
+            mask_list.append(np.uint8(mask*np.uint8(individual_mask==mask_label)))
+            # print(np.unique(mask_list[0]))
         return mask_list
     else:
         return [mask]

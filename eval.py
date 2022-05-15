@@ -1,75 +1,46 @@
 
 
 import os
-import cv2
-import random
 import numpy as np
 import matplotlib as mpl
-import argparse
-from zmq import device
-
-from data import volume_generator
-import config
-
-# from data.luna16_crop_preprocess import LUNA16_CropRange_Builder
 mpl.use('TkAgg')
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-# from skimage import measure
-# from numpy.lib.npyio import save
-# from pylidc.utils import consensus
-# from pathlib import Path
-# from statistics import median_high
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from utils.utils import cv2_imshow, calculate_malignancy, segment_lung, mask_preprocess
-from utils.utils import raw_preprocess, compare_result, compare_result_enlarge, time_record
-# from convert_to_coco_structure import lidc_to_datacatlog_valid
 import logging
 from sklearn.metrics import confusion_matrix
-# import time
-# import pylidc as pl
-import pandas as pd
-# from tqdm import tqdm
-# import json
-from utils.volume_eval import volumetric_data_eval
+from evaluation.volume_eval import volumetric_data_eval
 from utils.utils import Nodule_data_recording, DataFrameTool, SubmissionDataFrame, irc2xyz, get_nodule_center
-from utils.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
+from visualization.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
 # import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
-from reduce_false_positive import NoduleClassifier
-from data.data_postprocess import VolumePostProcessor
-from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator
-from inference import model_inference, d2_model_inference, pytorch_model_inference
-from lung_mask_filtering import FalsePositiveReducer
-from data.data_structure import LungNoduleStudy
+from postprocessing.reduce_false_positive import NoduleClassifier
+from postprocessing.data_postprocess import VolumePostProcessor
+from data.volume_generator import luna16_volume_generator, asus_nodule_volume_generator, build_pred_generator, lidc_nodule_volume_generator
+from postprocessing.lung_mask_filtering import FalsePositiveReducer
+from utils.nodule import LungNoduleStudy
 from data.dataloader import GeneralDataset, SimpleNoduleDataset, CropNoduleDataset
 from data.data_utils import get_pids_from_coco
-from utils.evaluator import Pytorch2dSegEvaluator, Pytorch3dSegEvaluator, D2SegEvaluator
-from utils.keras_evaluator import Keras3dSegEvaluator
+from evaluation.evaluator import Pytorch2dSegEvaluator, Pytorch3dSegEvaluator, D2SegEvaluator
+from evaluation.keras_evaluator import Keras3dSegEvaluator
 from data.volume_to_3d_crop import CropVolume
 from model import build_model
 
 from model.d2_model import BatchPredictor
-from eval_config import get_eval_config
+from evaluation.eval_config import get_eval_config
 from config import nodule_dataset_config
+from utils.configuration import get_device
 
 logging.basicConfig(level=logging.INFO)
-
-import site_path
-from modules.utils import configuration
-
-from Liwei.LUNA16_test import util
-from Liwei.FTP1m_test import test
-# import cc3d
 
 # TODO: modify the name of lung_mask_filtering and reduce_false_p
 
 
 def eval(cfg, volume_generator, data_converter, predictor, evaluator_gen):
     save_path = os.path.join(cfg.SAVE_PATH, cfg.DATASET_NAME, cfg.DATA_SPLIT)
-    save_vis_condition = lambda x: True if cfg.SAVE_ALL_COMPARES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
+    save_vis_condition = lambda x: True if cfg.SAVE_ALL_IMAGES else True if x < cfg.MAX_SAVE_IMAGE_CASES else False
 
     vol_metric = volumetric_data_eval(
         model_name=cfg.MODEL_NAME, save_path=save_path, dataset_name=cfg.DATASET_NAME, match_threshold=cfg.MATCHING_THRESHOLD)
@@ -146,7 +117,7 @@ def cross_valid_eval():
             if 'TMH' in dataset_name:
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
-                case_pids = case_pids[7:]
+                # case_pids = case_pids[:2]
                 volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]
@@ -155,6 +126,15 @@ def cross_valid_eval():
                 mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask'
                 volume_generator = luna16_volume_generator.Build_LIDC_luna16_volume_generator(
                     data_path=cfg.RAW_DATA_PATH, mask_path=mask_path, subset_indices=subset_indices)
+            elif dataset_name == 'LIDC':
+                # Convert data to image
+                raw_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
+                mask_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3'
+                coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
+                case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
+                volume_generator_builder = lidc_nodule_volume_generator(
+                    data_path=raw_vol_path, mask_path=mask_vol_path, case_indices=case_pids)
+                volume_generator = volume_generator_builder.build()
 
             in_planes = 2*cfg.SLICE_SHIFT + 1
             if cfg.MODEL_NAME == '2D-Mask-RCNN':
@@ -164,14 +144,14 @@ def cross_valid_eval():
             elif cfg.MODEL_NAME in ['2D-FCN', '2D-Unet']:
                 data_converter = SimpleNoduleDataset
                 predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
-                                                        device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=checkpoint_path)
-                # predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=3, n_class=2, device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=checkpoint_path)
+                                                        device=get_device(), pytorch_pretrained=True, checkpoint_path=checkpoint_path)
+                # predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=3, n_class=2, device=get_device(), pytorch_pretrained=True, checkpoint_path=checkpoint_path)
                 evaluator_gen = Pytorch2dSegEvaluator
             elif cfg.MODEL_NAME in ['Model_Genesis', '3D-Unet']:
                 # TODO: make the difference between 3D unet nad model_genensis
                 data_converter = CropNoduleDataset
                 predictor = build_model.build_seg_model(model_name=cfg.MODEL_NAME, in_planes=in_planes, n_class=cfg.N_CLASS, 
-                                                        device=configuration.get_device(), pytorch_pretrained=True, checkpoint_path=checkpoint_path)
+                                                        device=get_device(), pytorch_pretrained=True, checkpoint_path=checkpoint_path)
                 evaluator_gen = Pytorch3dSegEvaluator
             elif cfg.MODEL_NAME in ['k_Model_Genesis', 'k_3D-Unet']:
                 data_converter = CropVolume((64,64,32), (0,0,0), convert_dtype=np.float32, overlapping=0.5)

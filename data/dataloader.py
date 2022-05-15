@@ -6,11 +6,11 @@ import numpy as np
 import os
 
 from data.volume_generator import TMHNoduleVolumeGenerator, luna16_volume_generator, asus_nodule_volume_generator
-from data.build_coco import rle_decode
 from data.data_utils import get_files, get_shift_index
 from data.data_transformer import ImageDataTransformer
 from data.volume_to_3d_crop import CropVolume
 from data.crop_utils import CropVolumeOP
+from dataset_conversion.build_coco import rle_decode
 
 class GeneralDataset():
     def __init__(self, input_path_list, target_path_list, input_load_func, target_load_func, data_transformer=None):
