@@ -279,7 +279,9 @@ class lidc_nodule_volume_generator():
         intersect_pid_list = list(set(raw_pid_list).intersection(set(mask_pid_list)))
 
         raw_path_mapping, mask_path_mapping = {}, {}
-        for pid in intersect_pid_list:
+        # TODO:
+        # for pid in intersect_pid_list:
+        for pid in self.case_indices:
             for raw_path in raw_list:
                 if pid in raw_path:
                     raw_path_mapping[pid] = raw_path
@@ -287,7 +289,7 @@ class lidc_nodule_volume_generator():
                 if pid in mask_path:
                     mask_path_mapping[pid] = mask_path
         
-        return intersect_pid_list, raw_path_mapping, mask_path_mapping
+        return self.case_indices, raw_path_mapping, mask_path_mapping
 
 class luna16_volume_generator():
     def __init__(self, data_path=None, subset_indices=None, case_indices=None):

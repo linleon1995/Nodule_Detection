@@ -8,6 +8,7 @@ from dataset_conversion.TMH import tmh_data_merge
 from dataset_conversion.data_analysis import TMH_nodule_base_check
 from data.volume_generator import asus_nodule_volume_generator
 from data.data_utils import modify_array_in_itk, get_files
+from utils.train_utils import set_deterministic
 
 from utils.configuration import load_config
 # import warnings
@@ -15,12 +16,11 @@ from utils.configuration import load_config
 
 # DATASET_NAME = 'TMH-Nodule'
 CONFIG_PATH = 'dataset_conversion/config/TMH-Nodule.yml'
-    
+
 
 def data_preprocess(dataset_name):
     dataset_parameter = build_parameters(dataset_name)
 
-    data_root = dataset_parameter['data_root']
     raw_path = dataset_parameter['raw_path']
     stats_path = dataset_parameter['stats_path']
     merge_path = dataset_parameter['merge_path']
@@ -28,75 +28,81 @@ def data_preprocess(dataset_name):
     coco_path = dataset_parameter['coco_path']
     cat_ids = dataset_parameter['cat_ids']
     area_threshold = dataset_parameter['area_threshold']
-    category = dataset_parameter['category']
+    # category = dataset_parameter['category']
     num_fold = dataset_parameter['num_fold']
     shuffle = dataset_parameter['shuffle']
     case_pids = dataset_parameter['case_pids']
+    n_class = dataset_parameter['n_class']
+    height = dataset_parameter['height']
+    width = dataset_parameter['width']
     kc_image_path = image_path.replace('image', 'kc_image')
     for path in [merge_path, image_path, kc_image_path, stats_path]:
         os.makedirs(path, exist_ok=True)
     
     # # TMH base check
-    # raw_paths = get_files(data_root, recursive=False, get_dirs=True)
+    # raw_paths = get_files(raw_path, recursive=False, get_dirs=True)
     # volume_generator = asus_nodule_volume_generator(data_path=raw_paths, case_pids=case_pids)
     # TMH_nodule_base_check(volume_generator, save_path=stats_path)
 
     # # Merge mhd data
-    # merge_mapping = tmh_data_merge.TMH_merging_check(data_root, merge_path)
-    # tmh_data_merge.merge_data(merge_mapping, data_root, merge_path, filekey='TMH')
+    # merge_mapping = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
+    # tmh_data_merge.merge_data(merge_mapping, raw_path, merge_path, filekey='TMH')
 
     # # Convert medical 3d volume data to image format
     # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
-    # medical_to_img.volumetric_data_preprocess(save_path=image_path, volume_generator=volume_generator)
+    # medical_to_img.volumetric_data_preprocess(
+    #     save_path=image_path, volume_generator=volume_generator, n_class=n_class)
     # # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
     # # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
     # Build up coco-structure
-    num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
-    cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
-        
-    for fold in cv_split_indices:
-        coco_split_path = os.path.join(coco_path, f'cv-{num_fold}', str(fold))
-        if not os.path.isdir(coco_split_path):
-            os.makedirs(coco_split_path)
+    for task_name in cat_ids:
+        task_cat_ids = cat_ids[task_name]
+        task_coco_path = os.path.join(coco_path, task_name)
 
-        split_indices = cv_split_indices[fold]
-        build_tmh_nodule_coco(
-            data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
-            cat_ids=cat_ids, area_threshold=area_threshold)
+        num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
+        cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
+        for fold in cv_split_indices:
+            coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
+            os.makedirs(coco_split_path, exist_ok=True)
+
+            split_indices = cv_split_indices[fold]
+            build_tmh_nodule_coco(
+                data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
+                cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
+            )
 
 
 def build_parameters(config_path):
     cfg = load_config(config_path, dict_as_member=True)
-    data_root = cfg.PATH.DATA_ROOT
+    raw_path = cfg.PATH.DATA_ROOT
     save_root = cfg.PATH.SAVE_ROOT
-    task_name = cfg.TASK_NAME
-    cat_ids = cfg.CATEGORY_ID[task_name]
+    # task_name = cfg.TASK_NAME
+    cat_ids = cfg.CATEGORY_ID
     area_threshold = cfg.AREA_THRESHOLD
-    data_split = cfg.SPLIT
+    # data_split = cfg.SPLIT
     num_fold = cfg.CROSS_VALID_FOLD
     shuffle = True
     case_pids = None
+    set_deterministic(cfg.SEED)
 
-    raw_path = os.path.join(data_root, 'raw')
     stats_path = os.path.join(save_root, 'stats_path')
     merge_path = os.path.join(save_root, 'merge')
     image_path = os.path.join(save_root, 'image')
-    coco_path = os.path.join(save_root, 'coco', task_name)
-    if task_name == 'Nodule_Detection':
-        category = 'Nodule'
-    elif task_name == 'Malignancy':
-        category = 'Nodule'
+    coco_path = os.path.join(save_root, 'coco')
+    # if task_name == 'Nodule_Detection':
+    #     category = 'Nodule'
+    # elif task_name == 'Malignancy':
+    #     category = 'Nodule'
 
-    split_indices = {}
-    for split_idx, split_name in data_split.items():
-        if split_name in split_indices:
-            split_indices[split_name].append(split_idx)
-        else:
-            split_indices[split_name] = [split_idx]
+    # split_indices = {}
+    # for split_idx, split_name in data_split.items():
+    #     if split_name in split_indices:
+    #         split_indices[split_name].append(split_idx)
+    #     else:
+    #         split_indices[split_name] = [split_idx]
 
     data_parameters = {
-        'data_root': data_root,
         'raw_path': raw_path,
         'cat_ids': cat_ids,
         'area_threshold': area_threshold,
@@ -104,10 +110,13 @@ def build_parameters(config_path):
         'merge_path': merge_path,
         'image_path': image_path,
         'coco_path': coco_path,
-        'category': category,
+        # 'category': category,
         'num_fold': num_fold,
         'shuffle': shuffle,
         'case_pids': case_pids,
+        'n_class': cfg.N_CLASS,
+        'height': cfg.HEIGHT,
+        'width': cfg.WIDTH,
     }
     return data_parameters
 

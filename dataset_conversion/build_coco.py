@@ -1,4 +1,5 @@
 from asyncio import sslproto
+from matplotlib.cbook import flatten
 import pandas as pd
 import numpy as np
 from tqdm.notebook import tqdm
@@ -12,16 +13,18 @@ from data.data_utils import cv2_imshow, split_individual_mask, merge_near_masks,
 
 
 class coco_structure_converter():
-    def __init__(self, cat_ids):
+    def __init__(self, cat_ids, height, width):
         self.images = []
         self.annotations = []
         self.cat_ids = cat_ids
-        self.cats =[{'name':name, 'id':id} for name, id in self.cat_ids.items()]
+        self.cats =[{'name': name, 'id': id} for name, id in self.cat_ids.items()]
+        self.height = height
+        self.width = width
         self.idx = 0
 
     def sample(self, img_path, mask, image_id, category):
         if np.sum(mask):
-            image = {'id': image_id, 'width':512, 'height':512, 'file_name': f'{img_path}'}
+            image = {'id': image_id, 'width':self.width, 'height':self.height, 'file_name': f'{img_path}'}
             self.images.append(image)
 
             ys, xs = np.where(mask)
@@ -53,11 +56,16 @@ def rle_decode(mask_rle, shape):
     Returns numpy array, 1 - mask, 0 - background
 
     '''
+    # TODO:
+    # s = mask_rle
     s = mask_rle.split()
     starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
     starts -= 1
     ends = starts + lengths
-    img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
+    flatten_shape = 1
+    for dim in range(len(shape)):
+        flatten_shape *= shape[dim]
+    img = np.zeros(flatten_shape, dtype=np.uint8)
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
     return img.reshape(shape)  # Needed to align to RLE direction
@@ -111,8 +119,8 @@ def build_coco_structure_split(input_paths_split, target_paths_split, cat_ids, a
     return coco_data_split
 
 
-def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
-    coco_converter = coco_structure_converter(cat_ids)
+def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold, height, width):
+    coco_converter = coco_structure_converter(cat_ids, height, width)
 
     for img_path, mask_path in zip(input_paths, target_paths):
         mask = cv2.imread(mask_path)
@@ -125,17 +133,22 @@ def build_coco_structure(input_paths, target_paths, cat_ids, area_threshold):
         if len(split_mask_list):
             for split_mask_idx, split_mask in enumerate(split_mask_list, 1):
                 if np.sum(split_mask) > area_threshold:
-                    if np.max(split_mask) == 2:
-                        category = 'Malignant'
-                    elif np.max(split_mask) == 1:
-                        category = 'Benign'
-                    coco_converter.sample(img_path, mask, f'{image_id}_{split_mask_idx:04d}', category)
+                    if len(cat_ids) > 1:
+                        if np.max(split_mask) == 2:
+                            category = 'Malignant'
+                        elif np.max(split_mask) == 1:
+                            category = 'Benign'
+                    else:
+                        category = 'Nodule'
+
+                    binary_split_mask = np.where(split_mask>0, 1, 0)
+                    coco_converter.sample(img_path, binary_split_mask, f'{image_id}_{split_mask_idx:04d}', category)
 
     return coco_converter.create_coco_structure()
 
 
-def build_coco_structure_lidc(input_paths, target_paths, cat_ids, area_threshold):
-    coco_converter = coco_structure_converter(cat_ids)
+def build_coco_structure_lidc(input_paths, target_paths, cat_ids, area_threshold, height, width):
+    coco_converter = coco_structure_converter(cat_ids, height, width)
     for img_path, mask_path in zip(input_paths, target_paths):
         mask = cv2.imread(mask_path)
         mask = mask[...,0]
@@ -197,7 +210,7 @@ def build_lidc_nodule_coco(data_path, save_path, split_indices, cat_ids, area_th
             json.dump(merge_coco, jsonfile, ensure_ascii=True, indent=4)
 
 
-def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold):
+def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold, height, width):
     coco_structures = {}
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
@@ -220,7 +233,7 @@ def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_thr
             # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
         
         coco_structure = build_coco_structure(
-            image_paths, target_paths, cat_ids, area_threshold)
+            image_paths, target_paths, cat_ids, area_threshold, height, width)
         
         if split_name in coco_structures:
             coco_structures[split_name].append(coco_structure)
@@ -235,6 +248,7 @@ def build_tmh_nodule_coco(data_path, save_path, split_indices, cat_ids, area_thr
             json.dump(merge_coco, jsonfile, ensure_ascii=True, indent=4)
                 
 
+# Old ------------------------------
 def asus_nodule_to_coco_structure(data_path, split_rate=[0.7, 0.1, 0.2], area_threshold=30):
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')

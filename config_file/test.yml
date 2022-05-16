@@ -1,10 +1,10 @@
 
-TASK_NAME: Malignancy
+TASK_NAME: Nodule_Detection
 
 MODEL:
   NAME: 2D-Mask-RCNN # 2D-Mask-RCNN, 2D-FCN, 3D-Unet
   backend: d2
-  WEIGHTS: model_0005999.pth
+  WEIGHTS: model_0015999.pth
   OUTPUT_DIR: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_039\4
   
 DATA:

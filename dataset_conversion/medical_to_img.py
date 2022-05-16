@@ -48,7 +48,7 @@ def volumetric_data_preprocess_KC(data_split, save_path, volume_generator):
     print('Complete converting process of mhd to image (KC)!')
 
 
-def volumetric_data_preprocess(save_path, volume_generator):
+def volumetric_data_preprocess(save_path, volume_generator, n_class):
     fig, ax = plt.subplots(1, 1, dpi=300)
     for vol_idx, (_, vol, mask_vol, infos) in enumerate(volume_generator):
         pid, scan_idx, subset = infos['pid'], infos['scan_idx'], infos['subset']
@@ -62,20 +62,15 @@ def volumetric_data_preprocess(save_path, volume_generator):
         save_sub_dir = os.path.join(save_path, subset) if subset else save_path
         os.makedirs(os.path.join(save_sub_dir, 'Image', pid), exist_ok=True)
         os.makedirs(os.path.join(save_sub_dir, 'Mask', pid), exist_ok=True)
-        os.makedirs(os.path.join(save_sub_dir, 'Mask_semantic', pid), exist_ok=True)
         os.makedirs(os.path.join(save_sub_dir, 'Mask_show', pid), exist_ok=True)
-        os.makedirs(os.path.join(save_sub_dir, 'Mask_instance', pid), exist_ok=True)
         
         for img_idx in range(vol.shape[0]):
             img = vol[img_idx]
             mask = mask_vol[img_idx]
             if np.sum(mask):
-                # print(np.unique(mask))
-                # mask_show = np.where(mask>0, 255, 0)
-                
                 ax.cla()
                 ax.imshow(img, 'gray')
-                ax.imshow(mask, alpha=0.2, vmin=0, vmax=2)
+                ax.imshow(mask, alpha=0.2, vmin=0, vmax=n_class-1)
                 fig.savefig(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'))
                 # cv2.imwrite(os.path.join(save_sub_dir, 'Mask_show', pid, f'{pid}_{img_idx:04d}.png'), mask_show)
 

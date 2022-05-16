@@ -89,7 +89,7 @@ def nodule_dataset_config(name):
 
     LIDC = {
         'raw': rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data',
-        'lung_mask': None
+        'lung_mask': rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\image\Lung_Mask'
     }
 
     TMH_Nodule = {
@@ -130,7 +130,7 @@ def build_d2_config():
 
     cfg.SOLVER.IMS_PER_BATCH = 1
     cfg.SOLVER.BASE_LR = 0.00005  
-    cfg.SOLVER.MAX_ITER = 80000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
+    cfg.SOLVER.MAX_ITER = 30000  # 300 iterations seems good enough for this toy dataset; you will need to train longer for a practical dataset
     cfg.SOLVER.STEPS = []        # do not decay learning rate
     # cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512   # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (ballon). (see https://detectron2.readthedocs.io/tutorials/datasets.html#update-the-config-for-new-datasets)
@@ -200,18 +200,19 @@ def get_model_weight():
     return model_weight
 
 
-def d2_register_coco(num_fold, fold_indices, using_dataset):
+def d2_register_coco(num_fold, fold_indices, dataset_name, data_root, task_name):
     for fold in fold_indices:
-        for dataset_name in using_dataset:
-            data_cfg = configuration.load_config(f'dataset_conversion/config/{dataset_name}.yml', dict_as_member=True)
-            data_root = data_cfg.PATH.DATA_ROOT
-            image_root = os.path.join(data_root, 'image')
-            coco_root = os.path.join(data_root, 'coco')
-            task_name = data_cfg.TASK_NAME
+        # for dataset_name in using_dataset:
+        # data_cfg = configuration.load_config(f'dataset_conversion/config/{dataset_name}.yml', dict_as_member=True)
+        # data_root = data_cfg.PATH.DATA_ROOT
+        image_root = os.path.join(data_root, 'image')
+        coco_root = os.path.join(data_root, 'coco')
+        # task_name = data_cfg.TASK_NAME
+        
 
-            train_json = os.path.join(coco_root, task_name, f'cv-{num_fold}', str(fold), "annotations_train.json")
-            valid_json = os.path.join(coco_root, task_name, f'cv-{num_fold}', str(fold), "annotations_test.json")
-            
-            # Prepare the dataset
-            register_coco_instances(f"{dataset_name}-train-cv{num_fold}-{fold}", {}, train_json, image_root)
-            register_coco_instances(f"{dataset_name}-valid-cv{num_fold}-{fold}", {}, valid_json, image_root)
+        train_json = os.path.join(coco_root, task_name, f'cv-{num_fold}', str(fold), "annotations_train.json")
+        valid_json = os.path.join(coco_root, task_name, f'cv-{num_fold}', str(fold), "annotations_test.json")
+        
+        # Prepare the dataset
+        register_coco_instances(f"{dataset_name}-train-cv{num_fold}-{fold}", {}, train_json, image_root)
+        register_coco_instances(f"{dataset_name}-valid-cv{num_fold}-{fold}", {}, valid_json, image_root)

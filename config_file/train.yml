@@ -1,3 +1,5 @@
+SEED: 1
+
 CV:
   FOLD: 5
   ASSIGN_FOLD: 4
@@ -34,11 +36,18 @@ DATA:
     # TMH-Benign:
     #   # FOLD: 4
     #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign\coco\Nodule_Detection\cv-5\4
-    LIDC:
-    # TMH-Nodule:
+    # LIDC:
+    TMH_Nodule:
     #   # FOLD: 5
     #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Malignancy\cv-5\4
 
   # TODO: modify
   TRANSFORM:
     r: 5
+
+  TMH_Nodule:
+    DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
+    TASK_NAME: Nodule_Detection
+  LIDC:
+    DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess
+    TASK_NAME: Nodule_Detection

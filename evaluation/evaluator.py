@@ -219,6 +219,8 @@ class NoudleSegEvaluator():
         case_eval = DataFrameTool(
             ['pid', 'inference_time', 'pred_nodule_num', 'tp', 'fp', 'fn', 'double_detect'])
         for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(self.volume_generator):
+            # if vol.shape[0]<=500:
+            #     continue
             one_case_eval = []
             if self.max_test_cases is not None:
                 if vol_idx >= self.max_test_cases:
@@ -282,8 +284,8 @@ class NoudleSegEvaluator():
                 nodule_visualize(self.save_path, pid, vol, mask_vol, pred_vol, target_vol_category, pred_vol_category, 
                                  pred_nodule_info, self.save_all_images)
 
-            target_studys.append(target_study)
-            pred_studys.append(pred_study)
+            # target_studys.append(target_study)
+            # pred_studys.append(pred_study)
             one_case_eval = [pid, inference_time, num_pred_nodule, tp, fp, fn, doubleCandidatesIgnored]
             case_eval.write_row(one_case_eval)
 
@@ -314,6 +316,9 @@ class NoudleSegEvaluator():
         ax.legend(labels=['Common', 'Unique'])
         fig.savefig(os.path.join(self.save_path, 'unique_FP_removal.png'))
         # plt.show()
+        # TODO:
+        target_studys = [target_study]
+        pred_studys = [pred_study]
         return target_studys, pred_studys
 
 

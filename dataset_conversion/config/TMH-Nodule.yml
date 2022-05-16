@@ -3,21 +3,24 @@ PATH:
   DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
   SAVE_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
 
-TASK_NAME: Malignancy
+N_CLASS: 3
+HEIGHT: 512
+WIDTH: 512
 
 CATEGORY_ID:
   Nodule_Detection:
     Nodule: 1
-  
   Malignancy:
     Benign: 1
     Malignant: 2
 
 AREA_THRESHOLD: 8  
 
-SPLIT:
-  Train: 0.7
-  Valid: 0.1
-  Test: 0.2
+SEED: 1
+
+# SPLIT:
+#   Train: 0.7
+#   Valid: 0.1
+#   Test: 0.2
 
 CROSS_VALID_FOLD: 5

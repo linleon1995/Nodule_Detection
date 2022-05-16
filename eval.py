@@ -30,6 +30,7 @@ from model import build_model
 
 from model.d2_model import BatchPredictor
 from evaluation.eval_config import get_eval_config
+# TODO:
 from config import nodule_dataset_config
 from utils.configuration import get_device
 
@@ -132,6 +133,7 @@ def cross_valid_eval():
                 mask_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3'
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
+                # case_pids = case_pids[21:]
                 volume_generator_builder = lidc_nodule_volume_generator(
                     data_path=raw_vol_path, mask_path=mask_vol_path, case_indices=case_pids)
                 volume_generator = volume_generator_builder.build()

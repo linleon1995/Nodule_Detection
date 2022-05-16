@@ -5,7 +5,7 @@ from data.volume_generator import lidc_nodule_volume_generator
 from data.data_utils import get_files
 from dataset_conversion.medical_to_img import volumetric_data_preprocess
 from dataset_conversion.build_coco import build_lidc_nodule_coco
-from dataset_conversion.TMH.tmh_data_preprocess import get_cv_split
+from dataset_conversion.TMH.tmh_data_conversion import get_cv_split
 
 
 def main():

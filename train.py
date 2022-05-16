@@ -12,6 +12,7 @@ from detectron2.data import build_detection_train_loader
 import detectron2.utils.comm as comm
 
 from utils.configuration import get_device
+from utils.train_utils import set_deterministic
 from config import build_d2_config, d2_register_coco, build_train_config
 from model import build_model
 from utils.trainer import Trainer
@@ -50,12 +51,23 @@ def d2_model_train(train_cfg):
         fold_indices = [train_cfg.CV.ASSIGN_FOLD]
     else:
         fold_indices = list(range(train_cfg.CV.FOLD))
-    d2_register_coco(train_cfg.CV.FOLD, fold_indices, train_cfg.DATA.NAMES.keys())
+
+    for dataset_name in train_cfg.DATA.NAMES.keys():
+        data_root = train_cfg.DATA[dataset_name]['DATA_ROOT']
+        task_name = train_cfg.DATA[dataset_name]['TASK_NAME']
+        d2_register_coco(
+            train_cfg.CV.FOLD, fold_indices, dataset_name, data_root, task_name)
     
     output_dir = cfg.OUTPUT_DIR
     for fold in fold_indices:
-        train_dataset = tuple([f'{dataset_name}-train-cv{train_cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
-        valid_dataset = tuple([f'{dataset_name}-valid-cv{train_cfg.CV.FOLD}-{fold}' for dataset_name in train_cfg.DATA.NAMES.keys()])
+        train_dataset = tuple(
+            [f'{dataset_name}-train-cv{train_cfg.CV.FOLD}-{fold}' 
+            for dataset_name in train_cfg.DATA.NAMES.keys()]
+        )
+        valid_dataset = tuple(
+            [f'{dataset_name}-valid-cv{train_cfg.CV.FOLD}-{fold}' 
+            for dataset_name in train_cfg.DATA.NAMES.keys()]
+        )
 
         cfg.DATASETS.TRAIN = train_dataset
         cfg.DATASETS.VAL = valid_dataset
@@ -125,6 +137,7 @@ def pytorch_model_train(cfg):
 def main():
     config_path = f'config_file/train.yml'
     train_cfg = build_train_config(config_path)
+    set_deterministic(train_cfg.SEED)
 
     if train_cfg.MODEL.backend == 'd2':
         d2_model_train(train_cfg)

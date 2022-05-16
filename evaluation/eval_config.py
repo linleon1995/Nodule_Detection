@@ -64,7 +64,7 @@ def common_config():
     cfg.MATCHING_THRESHOLD = 0.1
 
     # Exepriment
-    cfg.MAX_SAVE_IMAGE_CASES = 2
+    cfg.MAX_SAVE_IMAGE_CASES = 5
     cfg.MAX_TEST_CASES = None
     # cfg.ONLY_NODULES = True
     cfg.SAVE_ALL_COMPARES = True

@@ -59,20 +59,17 @@ def minmax_norm(data):
     return data
 
 
-def set_deterministic(manual_seed, python_lib, numpy_lib, pytorch_lib):
+def set_deterministic(manual_seed):
     # see https://pytorch.org/docs/stable/notes/randomness.html
-    if python_lib:
-        random.seed(manual_seed)
+    random.seed(manual_seed)
 
-    if numpy_lib:
-        np.random.seed(manual_seed)
+    np.random.seed(manual_seed)
 
-    if pytorch_lib:
-        torch.manual_seed(manual_seed)
-        torch.cuda.manual_seed(manual_seed)
-        torch.cuda.manual_seed_all(manual_seed)
-        torch.backends.cudnn.benchmark = False
-        torch.backends.cudnn.deterministic = True
+    torch.manual_seed(manual_seed)
+    torch.cuda.manual_seed(manual_seed)
+    torch.cuda.manual_seed_all(manual_seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
 
 
 def create_training_path(train_logdir):
