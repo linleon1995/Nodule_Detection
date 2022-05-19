@@ -153,7 +153,8 @@ class ResNet(nn.Module):
         # TODO: Set shape automatically
         # self.fc = nn.Linear(block_inplanes[3] * block.expansion, n_classes)
 
-        self.fc1 = nn.Linear(block_inplanes[3] * block.expansion, 256)
+        # self.fc1 = nn.Linear(block_inplanes[3] * block.expansion, 256)
+        self.fc1 = nn.Linear(4096, 256)
         self.fc2 = nn.Linear(256, 128)
         self.fc3 = nn.Linear(128, n_classes)
         # self.fc = nn.Linear(block_inplanes[3] * block.expansion * 8, n_classes)
@@ -203,7 +204,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
         
         x = self.conv1(x)
         x = self.bn1(x)
@@ -214,7 +215,7 @@ class ResNet(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
+        # x = self.layer4(x)
 
         # x = self.avgpool(x)
         x = self.final_maxpool(x)

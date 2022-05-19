@@ -172,13 +172,12 @@ def merge_coco_structure(coco_group):
     return output_coco
         
 
-def build_lidc_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold):
+def build_lidc_nodule_coco(data_path, save_path, split_indices, cat_ids, area_threshold, height, width):
     coco_structures = {}
     subset_image_path = os.path.join(data_path, 'Image')
     subset_mask_path = os.path.join(data_path, 'Mask')
     case_images = get_files(subset_image_path, recursive=False, get_dirs=True)
     case_masks = get_files(subset_mask_path, recursive=False, get_dirs=True)
-    
     # if not os.path.isdir(os.path.join(save_path, data_name)):
     #     os.makedirs(os.path.join(save_path, data_name))
         
@@ -186,7 +185,8 @@ def build_lidc_nodule_coco(data_path, save_path, split_indices, cat_ids, area_th
         indices_group = []
         for index in indices:
             indices_group.extend(index)
-        split_images, split_masks = np.take(case_images, indices_group).tolist(), np.take(case_masks, indices_group).tolist()
+        split_images = np.take(case_images, indices_group).tolist()
+        split_masks = np.take(case_masks, indices_group).tolist()
 
         image_paths, target_paths = [], []
         for split_image, split_mask in zip(split_images, split_masks):
@@ -195,7 +195,7 @@ def build_lidc_nodule_coco(data_path, save_path, split_indices, cat_ids, area_th
             # assert len(image_paths) == len(target_paths), f'Inconsitent slice number Raw {len(image_paths)} Mask {len(target_paths)}'
         
         coco_structure = build_coco_structure_lidc(
-            image_paths, target_paths, cat_ids, area_threshold)
+            image_paths, target_paths, cat_ids, area_threshold, height, width)
         
         if split_name in coco_structures:
             coco_structures[split_name].append(coco_structure)

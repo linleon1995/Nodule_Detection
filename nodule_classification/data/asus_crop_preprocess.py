@@ -21,7 +21,7 @@ CONNECTIVITY = 26
 CENTER_SHIFT = False
 SHIFT_STEP = 0
 
-class ASUS_CropRange_Builder():
+class TMH_CropRange_Builder():
     @staticmethod 
     def build_random_sample_subset(data_path, 
                                    crop_range, 
@@ -31,7 +31,7 @@ class ASUS_CropRange_Builder():
                                    negative_positive_ratio=1.0,
                                    center_shift=True,
                                    shift_step=2):
-        file_name_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio, center_shift, shift_step)
+        file_name_key = TMH_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio, center_shift, shift_step)
         save_path = os.path.join(vol_data_path, f'{file_name_key}')
         positive_path = os.path.join(save_path, f'positive_IRC_{file_name_key}.csv') 
         negative_path = os.path.join(save_path, f'negative_IRC_{file_name_key}.csv') 
@@ -39,8 +39,10 @@ class ASUS_CropRange_Builder():
         # Get cropping samples
         if not os.path.isfile(positive_path) or not os.path.isfile(negative_path):
             tmh_annotations = pd.read_csv(annotation_path)
-            ASUS_CropRange_Builder.save_tmh_cropping_samples(
-                tmh_annotations, crop_range, save_path, volume_generator, negative_positive_ratio, center_shift, shift_step)
+            TMH_CropRange_Builder.save_sample_list(
+                tmh_annotations, crop_range, save_path, volume_generator, 
+                negative_positive_ratio, center_shift, shift_step
+            )
         positive_crop_range = pd.read_csv(positive_path)
         negative_crop_range = pd.read_csv(negative_path)
 
@@ -48,6 +50,7 @@ class ASUS_CropRange_Builder():
         num_positive_sample = positive_crop_range.shape[0]
         num_negative_sample = int(negative_positive_ratio*num_positive_sample)
         num_negative_sample = np.clip(num_negative_sample, 0, negative_crop_range.shape[0])
+        # TODO: seed problem
         negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample)
         # data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
         data_samples = pd.concat([positive_crop_range, negative_crop_range_subset])
@@ -56,10 +59,6 @@ class ASUS_CropRange_Builder():
         total_raw_path, total_file_name = [], []
         for index, data_info in data_samples.iterrows():
             short_pid = data_info['seriesuid'].split('.')[-1]
-            # if short_pid[1] == 'B':
-            #     nodule_type = 'benign_merge'
-            # elif short_pid[1] == 'm':
-            #     nodule_type = 'malignant_merge'
             file_name = f'asus-{index:04d}-{short_pid}'
             file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
             total_file_name.append(file_name)
@@ -98,11 +97,11 @@ class ASUS_CropRange_Builder():
                 crop_center = {'index': data_info['center_i'], 'row': data_info['center_r'], 'column': data_info['center_c']}
 
                 if not os.path.isfile(raw_file):
-                    raw_chunk = ASUS_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
+                    raw_chunk = TMH_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
                     np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk[...,0])
 
                 if not os.path.isfile(target_file):
-                    target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
+                    target_chunk = TMH_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
                     np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
                 
                 # if center_shift and shift_step>0:
@@ -115,24 +114,24 @@ class ASUS_CropRange_Builder():
                 #             target_file = os.path.join(target_path, f'{file_name}_{_dim}_{shift}.npy')
                             
                 #             if not os.path.isfile(raw_file):
-                #                 raw_chunk = ASUS_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
+                #                 raw_chunk = TMH_CropRange_Builder.crop_volume(input_volume, crop_range, crop_center)
                 #                 np.save(raw_file, raw_chunk[...,0])
 
                 #             if not os.path.isfile(target_file):
-                #                 target_chunk = ASUS_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
+                #                 target_chunk = TMH_CropRange_Builder.crop_volume(target_volume, crop_range, crop_center)
                 #                 np.save(target_file, target_chunk)
                                 
         data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
     @staticmethod
-    def save_tmh_cropping_samples(tmh_annotations,
+    def save_sample_list(tmh_annotations,
                                      crop_range, 
                                      save_path, 
                                      volume_generator,
                                      negative_positive_ratio, 
                                      center_shift, 
                                      shift_step):
-        # e.g., ASUS_CropRange_Builder.save_tmh_cropping_samples({'index': 64, 'row': 64, 'column': 64}, 'the path
+        # e.g., TMH_CropRange_Builder.save_sample_list({'index': 64, 'row': 64, 'column': 64}, 'the path
         # where dataset save')
         total_positive, total_negative = None, None
         
@@ -142,7 +141,7 @@ class ASUS_CropRange_Builder():
 
             nodule_annotation = tmh_annotations.loc[tmh_annotations['seriesuid'].isin([volume_info['pid']])]
             nodule_center_xyz = nodule_annotation[['coordX', 'coordY', 'coordZ']].to_numpy()
-            positive, negative = ASUS_CropRange_Builder.get_tmh_cropping_sample(
+            positive, negative = TMH_CropRange_Builder.get_tmh_cropping_sample(
                 target_volume, crop_range, nodule_center_xyz, volume_info['origin'], volume_info['spacing'], 
                 volume_info['direction'], center_shift, shift_step)
             
@@ -162,7 +161,7 @@ class ASUS_CropRange_Builder():
             if negative is not None:
                 total_negative = add_data_sample(total_negative, negative, volume_info, category_key='negative')
 
-        filename_key = ASUS_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio, center_shift, shift_step)
+        filename_key = TMH_CropRange_Builder.get_filename_key(crop_range, negative_positive_ratio, center_shift, shift_step)
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
         total_positive.to_csv(os.path.join(save_path, f'positive_IRC_{filename_key}.csv'), index=False)
@@ -175,7 +174,7 @@ class ASUS_CropRange_Builder():
         positive_sample, negative_samples = None, None
 
         # nodule centers in voxel coord.
-        voxel_nodule_center_list = [ASUS_CropRange_Builder.xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+        voxel_nodule_center_list = [TMH_CropRange_Builder.xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
 
         index_begin, row_begin, column_begin = crop_range['index']//2, crop_range['row']//2, crop_range['column']//2
         index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
@@ -286,7 +285,7 @@ def get_nodule_center_from_volume(volume, connectivity, origin_xyz, vxSize_xyz, 
     return total_nodule_center
 
 
-def save_asus_center_info(volume_generator, connectivity, save_path):
+def save_center_info(volume_generator, connectivity, save_path):
     center_df = DataFrameTool(['seriesuid', 'coordX', 'coordY', 'coordZ'])
     for vol_idx, (_, raw_volume, target_volume, volume_info) in enumerate(volume_generator):
         # if vol_idx > 2: break
@@ -297,8 +296,7 @@ def save_asus_center_info(volume_generator, connectivity, save_path):
             center_df.write_row([volume_info['pid']] + list(nodule_center))
 
     save_dir = os.path.split(save_path)[0]
-    if not os.path.isdir(save_dir):
-        os.makedirs(save_dir)
+    os.makedirs(save_dir, exist_ok=True)
     center_df.save_data_frame(save_path)
 
 
@@ -312,10 +310,11 @@ def main():
         ANNOTATION_PATH = os.path.join(DATA_PATH, 'annotations.csv')
 
         if not os.path.isfile(ANNOTATION_PATH):
-            save_asus_center_info(volume_generator=VOLUME_GENERATOR, connectivity=CONNECTIVITY, save_path=ANNOTATION_PATH)
+            save_asus_center_info(
+                volume_generator=VOLUME_GENERATOR, connectivity=CONNECTIVITY, save_path=ANNOTATION_PATH)
         VOLUME_GENERATOR = asus_nodule_volume_generator(DATA_PATH)
         # TODO: data_path & voluume generator are repeat info, should only input one
-        ASUS_CropRange_Builder.build_random_sample_subset(data_path=DATA_PATH,
+        TMH_CropRange_Builder.build_random_sample_subset(data_path=DATA_PATH,
                                                           crop_range=CROP_RANGE, 
                                                           vol_data_path=vol_data_path, 
                                                           volume_generator=VOLUME_GENERATOR, 
@@ -325,51 +324,5 @@ def main():
                                                           shift_step=SHIFT_STEP)
   
 
-def check_data_repeat():
-    from modules.data import dataset_utils
-    from pprint import pprint
-    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules\benign'
-    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant'
-    img_list = dataset_utils.get_files(img_path, 'mhd')
-    raw_list = [path for path in img_list if 'raw' in path]
-
-    total_same = []
-    for main_idx, path in enumerate(raw_list):
-        main_vol, _, _, _ = dataset_utils.load_itk(path)
-        raw_list.pop(main_idx)
-        same = []
-        print(main_idx)
-        for side_idx, path2 in enumerate(raw_list):
-            side_vol, _, _, _ = dataset_utils.load_itk(path2)
-            if np.sum(main_vol==side_vol) == main_vol.size:
-                raw_list.pop(side_idx)
-                same.append(path)
-                same.append(path2)
-        total_same.append(list(set(same)))
-
-    pprint(total_same)
-
 if __name__ == '__main__':
-    # check_data_repeat()
-
-    # img_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant\1m0053\1m0053\1m0053raw mhd\1.2.826.0.1.3680043.2.1125.1.7616989327429453559913038648123144.mhd'
-    # # mask_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-10\positive\Mask\asus-0001-1m0002.npy'
-    # img2_path = rf'C:\Users\test\Desktop\Leon\Datasets\Original_NN_data\Malignant\1m0054\1m0054\1m0054raw mhd\1.2.826.0.1.3680043.2.1125.1.7616989327429453559913038648123144.mhd'
-    # # mask2_path = rf'C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant\crop\48x48x48-200\positive\Mask\asus-0057-1m0056.npy'
-    # from modules.data import dataset_utils
-    # vol, _, _, _ = dataset_utils.load_itk(img_path)
-    # vol2, _, _, _ = dataset_utils.load_itk(img2_path)
-    # print(np.sum(vol==vol2)/512/512)
-
-    # vol = np.load(img_path)
-    # vol2 = np.load(img2_path)
-    # mask_vol = np.load(mask_path)
-
-    # import matplotlib.pyplot as plt
-    # for idx, (img, m) in enumerate(zip(vol, mask_vol)):
-    #     if np.sum(m) > 0:
-    #         plt.imshow(img, 'gray')
-    #         plt.imshow(m, alpha=0.2)
-    #         plt.title(str(idx))
-    #         plt.show()
     main()

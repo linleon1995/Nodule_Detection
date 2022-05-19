@@ -7,7 +7,7 @@ import os
 import pandas as pd
 from py import process
 from visualization.vis import show_mask_base
-from utils.utils import xyz2irc
+from dataset_conversion.coord_transform import xyz2irc
 from data.data_utils import get_files, load_itk
 
 
@@ -75,6 +75,7 @@ def multi_nodule_distribution(train_volumes, test_volumes):
 
 
 def get_nodule_diameter(nodule_vol, origin_zyx, spacing_zyx, direction_zyx):
+    # TODO: need to check the result
     zs, ys, xs = np.where(nodule_vol)
     total_dist = []
     for idx, (z, y, x) in enumerate(zip(zs, ys, xs)):

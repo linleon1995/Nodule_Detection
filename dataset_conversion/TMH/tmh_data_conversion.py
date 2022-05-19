@@ -2,10 +2,13 @@ import os
 import numpy as np
 import cc3d
 import SimpleITK as sitk
+import pandas as pd
+
 from dataset_conversion import medical_to_img
 from dataset_conversion.build_coco import build_tmh_nodule_coco
 from dataset_conversion.TMH import tmh_data_merge
-from dataset_conversion.data_analysis import TMH_nodule_base_check
+from dataset_conversion.data_analysis import get_nodule_diameter
+# from dataset_conversion.data_analysis import TMH_nodule_base_check
 from data.volume_generator import asus_nodule_volume_generator
 from data.data_utils import modify_array_in_itk, get_files
 from utils.train_utils import set_deterministic
@@ -44,9 +47,9 @@ def data_preprocess(dataset_name):
     # volume_generator = asus_nodule_volume_generator(data_path=raw_paths, case_pids=case_pids)
     # TMH_nodule_base_check(volume_generator, save_path=stats_path)
 
-    # # Merge mhd data
-    # merge_mapping = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
-    # tmh_data_merge.merge_data(merge_mapping, raw_path, merge_path, filekey='TMH')
+    # Merge mhd data
+    merge_mapping = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
+    tmh_data_merge.merge_data(merge_mapping, raw_path, merge_path, filekey='TMH')
 
     # # Convert medical 3d volume data to image format
     # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
@@ -55,22 +58,22 @@ def data_preprocess(dataset_name):
     # # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
     # # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
-    # Build up coco-structure
-    for task_name in cat_ids:
-        task_cat_ids = cat_ids[task_name]
-        task_coco_path = os.path.join(coco_path, task_name)
+    # # Build up coco-structure
+    # for task_name in cat_ids:
+    #     task_cat_ids = cat_ids[task_name]
+    #     task_coco_path = os.path.join(coco_path, task_name)
 
-        num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
-        cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
-        for fold in cv_split_indices:
-            coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
-            os.makedirs(coco_split_path, exist_ok=True)
+    #     num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
+    #     cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
+    #     for fold in cv_split_indices:
+    #         coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
+    #         os.makedirs(coco_split_path, exist_ok=True)
 
-            split_indices = cv_split_indices[fold]
-            build_tmh_nodule_coco(
-                data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
-                cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
-            )
+    #         split_indices = cv_split_indices[fold]
+    #         build_tmh_nodule_coco(
+    #             data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
+    #             cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
+    #         )
 
 
 def build_parameters(config_path):
@@ -172,6 +175,72 @@ def get_cv_split(num_fold, num_sample, shuffle=False):
             train_indices.extend(indices[train_slice])
         cv_split[fold] = {'train': train_indices, 'test': indices[test_slice]}
     return cv_split
+
+
+
+def TMH_nodule_base_check(volume_generator, save_path=None):
+    total_size, total_infos, total_diameters = {}, {}, []
+    check_path = os.path.join(save_path, 'checked')
+    for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(volume_generator):
+        cat_vol = cc3d.connected_components(mask_vol, connectivity=26) # category volume
+        nodule_ids = np.unique(cat_vol)[1:]
+        pid = infos['pid']
+        origin, spacing, direction = infos['origin'], infos['spacing'], infos['direction']
+
+        for n_id in nodule_ids:
+            nodule_vol = np.int32(cat_vol==n_id)
+            nodule_size = np.sum(nodule_vol)
+            nodule_id = f'{pid}_{n_id:03d}'
+            total_size[nodule_id] = nodule_size
+
+            zs, ys, xs = np.where(nodule_vol)
+            unique_zs = np.unique(zs)
+            min_z, max_z = np.min(unique_zs), np.max(unique_zs)
+
+            nodule_diameter = get_nodule_diameter(nodule_vol, origin, spacing, direction)
+            total_diameters.append(nodule_diameter)
+
+            if vol_idx == 0 and n_id == 1:
+                total_infos['seriesuid'] = [pid]
+                total_infos['nodule_id'] = [n_id]
+                total_infos['nodule_start'] = [min_z]
+                total_infos['nodule_end'] = [max_z]
+                total_infos['slice_num'] = [max_z-min_z+1]
+                total_infos['nodule_size'] = [nodule_size]
+                total_infos['nodule_diameter'] = [nodule_diameter]
+            else:
+                total_infos['seriesuid'].append(pid)
+                total_infos['nodule_id'].append(n_id)
+                total_infos['nodule_start'].append(min_z)
+                total_infos['nodule_end'].append(max_z)
+                total_infos['slice_num'].append(max_z-min_z+1)
+                total_infos['nodule_size'].append(nodule_size)
+                total_infos['nodule_diameter'].append(nodule_diameter)
+
+            # for z_idx in unique_zs:
+            #     img_save_path = os.path.join(check_path, pid)
+            #     os.makedirs(img_save_path, exist_ok=True)
+            #     show_mask_base(vol[z_idx], mask_vol[z_idx], save_path=os.path.join(img_save_path, f'img_{z_idx:03d}'))
+        
+            print(f'{vol_idx} Nodule {nodule_id}  size {nodule_size} pixels   diameter {nodule_diameter} mm')
+
+
+    print(20*'-')
+    df = pd.DataFrame(total_infos)
+    os.makedirs(check_path, exist_ok=True)
+    df.to_csv(os.path.join(check_path, 'TMH_nodule_check.csv'), index=False)
+    nodule_sizes = list(total_size.values())
+    max_size_nodule = list(total_size.keys())[list(total_size.values()).index(max(nodule_sizes))]
+    min_size_nodule = list(total_size.keys())[list(total_size.values()).index(min(nodule_sizes))]
+    print(f'Nodule number {len(nodule_sizes)}')
+    print(f'Max size: {max_size_nodule} {max(nodule_sizes)}')
+    print(f'Min size: {min_size_nodule} {min(nodule_sizes)}')
+    print(f'Mean size: {sum(nodule_sizes)/len(nodule_sizes)}')
+
+    print(f'Max diameter: {max(total_diameters)}')
+    print(f'Min diameter: {min(total_diameters)}')
+    print('\n')
+
 
 
 def main():

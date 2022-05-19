@@ -7,10 +7,48 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 import random
 from data.volume_generator import luna16_volume_generator
-from modules.data import dataset_utils
+from nodule_classification.data.tranaform_3d import image_3d_cls_transform
 
 
 # TODO: simple factory
+
+
+class BaseCropClsDataset(Dataset):
+    def __init__(self, data_path, crop_range, seriesuid, data_augmentation=False):
+        self.data_path = data_path
+        self.crop_range = crop_range
+        self.seriesuid = seriesuid
+        self.data_augmentation = data_augmentation
+
+        # input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
+        # TODO: 
+        input_files = pd.read_csv(rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\data_samples.csv')
+        self.input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
+
+    def __len__(self):
+        return self.input_files.shape[0]
+    
+    def __getitem__(self, idx):
+        row_df = self.input_files.iloc[idx]
+        volume_data_path = row_df['path']
+
+        # volume_data_path = self.input_files['path'].iloc[idx]
+        
+        raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
+        if self.data_augmentation:
+            raw_chunk = self.transform(raw_chunk)
+        raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
+        # target = np.array([0, 1]) if row_df['category'] == 'positive' else np.array([1, 0])
+        target = 1 if row_df['category'] == 'positive' else 0
+        target = np.array(target, dtype='float')[np.newaxis]
+        return {'input':raw_chunk, 'target': target}
+
+    def transform(self, img):
+        img, _ = image_3d_cls_transform(img)
+        return img
+
+    # def transform(self):
+    #     raise NotImplementedError
 
 
 class ASUSCropDataset(Dataset):

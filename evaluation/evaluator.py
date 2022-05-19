@@ -192,7 +192,7 @@ class NoudleSegEvaluator():
 
         total_removal = list(set(total_removal))
         post_nodule_num = len(pred_study.nodule_evals)-len(total_removal)
-        print(f'Predict Nodules (post) {post_nodule_num}')
+        
 
         pred_vol_category = pred_study.category_volume
         tp, fp = 0, 0
@@ -216,6 +216,7 @@ class NoudleSegEvaluator():
 
         target_studys, pred_studys = [], []
         total_psot_nodule_Num = 0
+        total_eval_time = 0
         case_eval = DataFrameTool(
             ['pid', 'inference_time', 'pred_nodule_num', 'tp', 'fp', 'fn', 'double_detect'])
         for vol_idx, (raw_vol, vol, mask_vol, infos) in enumerate(self.volume_generator):
@@ -241,23 +242,21 @@ class NoudleSegEvaluator():
 
             # Data post-processing
             pred_vol_category = self.post_processer(pred_vol)
-            num_pred_nodule = np.unique(pred_vol_category).size-1
-            print(f'Predict Nodules (raw) {num_pred_nodule}')
             target_vol_category = self.post_processer(mask_vol)
-
-            
+            num_pred_nodule = np.unique(pred_vol_category).size-1
+ 
             # Evaluation
+            eval_start = time.time()
             target_study = LungNoduleStudy(pid, target_vol_category, raw_volume=raw_vol)
             pred_study = LungNoduleStudy(pid, pred_vol_category, raw_volume=raw_vol)
             tp, fp, fn, doubleCandidatesIgnored = self.eval_metrics.calculate(target_study, pred_study)
+            eval_end = time.time()
+            eval_time = eval_end - eval_start
+            print(f'Eval time {eval_time:.2f}')
+            total_eval_time += eval_time
 
-            # for s in range(mask_vol.shape[0]):
-            #     if np.sum(mask_vol[s])>0:
-            #         plt.imshow(vol[s], 'gray')
-            #         plt.imshow(mask_vol[s]+pred_vol[s]*2, alpha=0.2)
-            #         # plt.savefig(f'plot/cube-{idx}-{s}.png')
-            #         plt.show()
 
+            print(f'Predict Nodules (raw) {num_pred_nodule}')
 
             # nrrd_path = os.path.join(self.save_path, 'images', pid, 'nrrd')
             # os.makedirs(nrrd_path, exist_ok=True)
@@ -276,6 +275,7 @@ class NoudleSegEvaluator():
                 #     pred_nodule_info = None
             
                 pred_study, post_nodule_num = self.reduce_fp(pred_study)
+                print(f'Predict Nodules (post) {post_nodule_num}')
                 total_psot_nodule_Num += post_nodule_num
                 pred_vol_category = pred_study.category_volume
 
@@ -289,7 +289,13 @@ class NoudleSegEvaluator():
             one_case_eval = [pid, inference_time, num_pred_nodule, tp, fp, fn, doubleCandidatesIgnored]
             case_eval.write_row(one_case_eval)
 
+        eval_start = time.time()
         _ = self.eval_metrics.evaluation(show_evaluation=True)
+        eval_end = time.time()
+        eval_time = eval_end - eval_start
+        total_eval_time += eval_time
+        print(f'Total Eval time {total_eval_time:.2f}')
+
         case_eval.save_data_frame(os.path.join(self.save_path, 'case_eval.csv'))
         print(f'Total post candidates {total_psot_nodule_Num}')
         print(self.remove_result)

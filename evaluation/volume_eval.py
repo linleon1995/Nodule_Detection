@@ -23,15 +23,93 @@ class volumetric_data_eval():
         self.num_case = 0
         os.makedirs(self.save_path, exist_ok=True)
         self.eval_file = open(os.path.join(self.save_path, 'evaluation.txt'), 'w+')
+        self.mean_iou, self.mean_dsc = None, None
 
     def calculate(self, target_study, pred_study):
         self.num_case += 1
         self.num_nodule += len(target_study.nodule_instances)
         assert np.shape(target_study.category_volume) == np.shape(pred_study.category_volume)
-        tp, fp, fn, doubleCandidatesIgnored = self._3D_evaluation(target_study, pred_study)
-        self._2D_evaluation(target_study, pred_study)
+        tp, fp, fn, doubleCandidatesIgnored = self._3D_evaluation_2(target_study, pred_study)
+        # self._2D_evaluation(target_study, pred_study)
         return tp, fp, fn, doubleCandidatesIgnored
     
+    def test(self, labels, y_pred):
+        true_objects = len(np.unique(labels))
+        pred_objects = len(np.unique(y_pred))
+        print("Number of true objects:", true_objects-1)
+        print("Number of predicted objects:", pred_objects-1)
+
+        # Compute intersection between all objects
+        intersection = np.histogram2d(labels.flatten(), y_pred.flatten(), bins=(true_objects, pred_objects))[0]
+
+        # Compute areas (needed for finding the union between all objects)
+        area_true = np.histogram(labels, bins = true_objects)[0]
+        area_pred = np.histogram(y_pred, bins = pred_objects)[0]
+        area_true = np.expand_dims(area_true, -1)
+        area_pred = np.expand_dims(area_pred, 0)
+
+        # Compute union
+        union = area_true + area_pred - intersection
+
+        # Exclude background from the analysis
+        intersection = intersection[1:,1:]
+        union = union[1:,1:]
+        union[union == 0] = 1e-9
+
+        # Compute the intersection over union
+        iou = intersection / union
+        dice = 2 * intersection / (union + intersection)
+        return iou, dice
+        
+    def _3D_evaluation_2(self, target_study, pred_study):
+        # TODO: double detected
+        # target_nodules = target_study.nodule_instances
+        pred_nodules = pred_study.nodule_instances
+        pred_nodules_record = list(pred_nodules.keys())
+        pred_nodules_record = {nodule_id: 'fp' for nodule_id in pred_nodules}
+        tp, fp, fn = 0, 0, 0
+        doubleCandidatesIgnored = 0
+
+        iou, dsc = self.test(target_study.category_volume, pred_study.category_volume)
+        max_dsc = np.max(dsc, axis=1)
+        max_iou = np.max(iou, axis=1)
+        if self.mean_iou is not None or self.mean_dsc is not None:
+            self.mean_iou = np.concatenate((self.mean_iou, max_iou), axis=0)
+            self.mean_dsc = np.concatenate((self.mean_dsc, max_dsc), axis=0)
+        else:
+            self.mean_iou = max_iou
+            self.mean_dsc = max_dsc
+
+        matchs = np.uint8(dsc>self.match_threshold)
+        match_for_gt = np.sum(matchs, axis=1)
+        tp = np.sum(np.where(match_for_gt>0, 1, 0))
+        doubleCandidatesIgnored = np.sum(match_for_gt) - tp
+        fp = matchs.shape[1] - tp - doubleCandidatesIgnored
+        fn = np.sum(np.where(match_for_gt==0, 1, 0))
+
+        for idx, num_match in enumerate(np.sum(matchs, axis=0)):
+            if num_match > 1:
+                pred_nodules_record[idx] = 'tp_double'
+            elif num_match == 0:
+                pred_nodules_record[idx] = 'fp'
+            elif num_match == 1:
+                pred_nodules_record[idx] = 'tp'
+
+        # print(iou, dsc, np.max(dsc, axis=1))
+        pred_study.nodule_evals.update(pred_nodules_record)
+
+        target_study.set_score('NoduleTP', tp)
+        target_study.set_score('NoduleFP', fp)
+        target_study.set_score('NoduleFN', fn)
+
+        self.VoxelTP.append(tp)
+        self.VoxelFP.append(fp)
+        self.VoxelFN.append(fn)
+        self.DoubleDetections.append(doubleCandidatesIgnored)
+        print(f'{target_study.study_id}: TP: {tp} FP: {fp} FN: {fn} Double Detected: {doubleCandidatesIgnored}')
+        return tp, fp, fn, doubleCandidatesIgnored
+
+
     def _3D_evaluation(self, target_study, pred_study):
         # TODO: Best slice IoU
         target_nodules = target_study.nodule_instances
@@ -41,6 +119,9 @@ class volumetric_data_eval():
         tp, fp, fn = 0, 0, 0
         doubleCandidatesIgnored = 0
 
+        iou, dsc = self.test(target_study.category_volume, pred_study.category_volume)
+        print(iou, dsc, np.max(dsc, axis=1))
+        
         for target_nodule_id in target_nodules:
             target_nodule = target_nodules[target_nodule_id]
             # NoduleIoU, NoduleDSC = [], []
@@ -196,6 +277,9 @@ class volumetric_data_eval():
             self.write_and_print(f'Pixel Precision: {self.Slice_Precision:.4f}')
             self.write_and_print(f'Pixel Recall: {self.Slice_Recall:.4f}')
             self.write_and_print(f'Pixel F1: {self.Slice_F1:.4f}')
+            self.write_and_print(f'mean IoU: {np.mean(self.mean_iou):.4f}')
+            self.write_and_print(f'mean DSC: {np.mean(self.mean_dsc):.4f}')
+            print('Mean DSC', self.mean_dsc)
             self.eval_file.close()
         
         return self.VoxelTP, self.VoxelFP, self.VoxelFN, self.Volume_Precisiion, self.Volume_Recall

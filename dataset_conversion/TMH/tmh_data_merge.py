@@ -9,19 +9,21 @@ from data.data_utils import load_itk, get_files, modify_array_in_itk
 
 def merge_data(merge_mapping, data_path, save_dir, filekey='case'):
     # merge_mapping = TMH_merging_check(data_path, save_dir)
+    total_nodule = 0
     for vol_idx, repeat_paths in enumerate(merge_mapping, 1):
-        raw_path, mask_paths = repeat_paths['raw'], repeat_paths['mask']
+        if vol_idx not in [2, 42, 78]:
+            continue
+        raw_path, mask_paths, filename = repeat_paths['raw'], repeat_paths['mask'], repeat_paths['filename']
         repeat_masks_binary, repeat_masks_semantic, repeat_malignancy = [], [], []
-        dirname = f'{filekey}{vol_idx:04d}'
-        case_raw_dir = os.path.join(save_dir, dirname, 'raw')
-        case_mask_dir = os.path.join(save_dir, dirname, 'mask')
+        case_raw_dir = os.path.join(save_dir, filename, 'raw')
+        case_mask_dir = os.path.join(save_dir, filename, 'mask')
         os.makedirs(case_raw_dir, exist_ok=True)
         os.makedirs(case_mask_dir, exist_ok=True)
 
         output_image_filename = os.path.join(case_raw_dir, '.'.join(os.path.split(raw_path)[1].split('.')[-2:]))
         # Use the first filename of merging files as the new filename
         output_mask_filename = os.path.join(case_mask_dir, '.'.join(os.path.split(mask_paths[0]['path'])[1].split('.')[-2:]))
-        print(f'Merge and Generate new file {dirname}')
+        print(f'Merge and Generate new file {filename}')
         # print(f'Saving merging volume {outputMaskFileName}')
 
         for mask_path in mask_paths:
@@ -34,8 +36,9 @@ def merge_data(merge_mapping, data_path, save_dir, filekey='case'):
         binary_mask_vol = sum(repeat_masks_binary)
         semantic_mask_vol = sum(repeat_masks_semantic)
 
-        if np.sum(binary_mask_vol>1) > 0:
-            print('Warning: overlapping among nodules', dirname)
+        overlapping = np.sum(binary_mask_vol>1)
+        if overlapping > 0:
+            print('Warning: overlapping among nodules', filename)
             repeat_area = np.where(binary_mask_vol>1, 1, 0)
             if 2 in repeat_malignancy:
                 repeat_area_malignancy = 2
@@ -44,11 +47,15 @@ def merge_data(merge_mapping, data_path, save_dir, filekey='case'):
             semantic_mask_vol[repeat_area==1] = repeat_area_malignancy
         semantic_mask_vol = np.uint8(semantic_mask_vol)
 
-        new_itkimage = modify_array_in_itk(mask_itkimage, semantic_mask_vol)
-        sitk.WriteImage(new_itkimage, output_mask_filename)
+        import cc3d
+        nodule_num = np.unique(cc3d.connected_components(semantic_mask_vol, connectivity=26)).size-1
+        total_nodule += nodule_num
 
-        itkimage = sitk.ReadImage(raw_path)
-        sitk.WriteImage(itkimage, output_image_filename)
+        # new_itkimage = modify_array_in_itk(mask_itkimage, semantic_mask_vol)
+        # sitk.WriteImage(new_itkimage, output_mask_filename)
+
+        # itkimage = sitk.ReadImage(raw_path)
+        # sitk.WriteImage(itkimage, output_image_filename)
     print('Merging process complete!\n')
 
 
@@ -70,7 +77,7 @@ def TMH_merging_check(data_path, save_path):
     df = pd.DataFrame()
     merge_mapping = []
     row_df_list = []
-    merge_idx = 0
+    merge_idx = 1
     
     print('Checking TMH data merging cases')
     for idx, (raw_path, mask_path) in enumerate(zip(raw_paths, mask_paths)):
@@ -104,12 +111,13 @@ def TMH_merging_check(data_path, save_path):
                     same_mask_paths.append({'path': mask_path, 'malignancy': malignancy})
                     break 
         
+        filename = f'TMH{merge_idx:04d}'
         print(f'{merge_idx} {same_list}')
-        merge_mapping.append({'raw': raw_path, 'mask': same_mask_paths})
+        merge_mapping.append({'filename': filename, 'raw': raw_path, 'mask': same_mask_paths})
         # row_df = {f'output': f'TMH{merge_idx:03d}'}
         # row_df.update({f'merge_case_{same_idx:03d}': pid for same_idx, pid in enumerate(same_list)})
         row_df = OrderedDict()
-        row_df['output'] = f'TMH{merge_idx:03d}'
+        row_df['output'] = filename
         for same_idx, pid in enumerate(same_list):
             row_df[f'merge_case_{same_idx:03d}'] = pid
         # df = df.append(row_df, ignore_index=True)

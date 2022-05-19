@@ -234,7 +234,8 @@ def generator_output(data_path, mask_path, pid):
              'origin': orgin, 'spacing': spacing, 'direction': direction}
     return raw_vol, vol, mask_vol, infos
 
-
+# TODO: sync volume generator input output
+# TODO: think about the structure
 class lidc_nodule_volume_generator():
     def __init__(self, data_path, mask_path, raw_format='mhd', mask_format='npy', subset_indices=None, case_indices=None):
         self.data_path = data_path
@@ -247,15 +248,19 @@ class lidc_nodule_volume_generator():
 
     def build(self):
         for pid in self.pid_list:
-            raw_vol, _, _, _ = data_utils.load_itk(self.raw_path_mapping[pid])
-            vol = np.clip(raw_vol, -1000, 1000)
-            vol = raw_preprocess(vol, output_dtype=np.uint8)
-            mask_vol = np.load(self.mask_path_mapping[pid])
-            # print(raw_vol.shape==mask_vol.shape)
-            short_pid = pid.split('.')[-1]
-            info = {'pid': short_pid, 'subset': None, 'scan_idx': None}
+            raw_vol, vol, mask_vol, info = self.get_data_by_pid(pid)
             yield raw_vol, vol, mask_vol, info
                     
+    def get_data_by_pid(self, short_pid):
+        raw_vol, origin, spacing, direction = data_utils.load_itk(self.raw_path_mapping[short_pid])
+        vol = np.clip(raw_vol, -1000, 1000)
+        vol = raw_preprocess(vol, output_dtype=np.uint8)
+        mask_vol = np.load(self.mask_path_mapping[short_pid])
+        # print(raw_vol.shape==mask_vol.shape)
+        # short_pid = pid.split('.')[-1]
+        info = {'pid': short_pid, 'subset': None, 'scan_idx': None}
+        return raw_vol, vol, mask_vol, origin, spacing, direction, info
+
     @classmethod
     def get_path_list(cls, data_path, format, subset_indices=None, case_indices=None):
         subset_list = data_utils.get_files(data_path, 'subset', recursive=False, get_dirs=True)
@@ -282,12 +287,13 @@ class lidc_nodule_volume_generator():
         # TODO:
         # for pid in intersect_pid_list:
         for pid in self.case_indices:
+            short_pid = pid.split('.')[-1]
             for raw_path in raw_list:
                 if pid in raw_path:
-                    raw_path_mapping[pid] = raw_path
+                    raw_path_mapping[short_pid] = raw_path
             for mask_path in mask_list:
                 if pid in mask_path:
-                    mask_path_mapping[pid] = mask_path
+                    mask_path_mapping[short_pid] = mask_path
         
         return self.case_indices, raw_path_mapping, mask_path_mapping
 
@@ -428,7 +434,7 @@ def build_pred_generator(data_generator, predictor, batch_size=1):
 
         for img_idx in range(0, vol.shape[0], batch_size):
             if img_idx == 0:
-                print(f'\n{print(time.ctime(time.time()))} Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
+                print(f'\n{time.ctime(time.time())} Volume {vol_idx} Patient {pid} Scan {scan_idx} Slice {img_idx}')
             start, end = img_idx, min(vol.shape[0], img_idx+batch_size)
             img = vol[start:end]
             img_list = np.split(img, img.shape[0], axis=0)

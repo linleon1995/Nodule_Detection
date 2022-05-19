@@ -59,7 +59,23 @@ def minmax_norm(data):
     return data
 
 
-def set_deterministic(manual_seed):
+def create_optimizer_temp(optimizer_config, model):
+    # TODO: add SGD
+    learning_rate = optimizer_config['learning_rate']
+    weight_decay = optimizer_config.get('weight_decay', 0)
+    momentum = optimizer_config.get('momentum', 0)
+    betas = tuple(optimizer_config.get('betas', (0.9, 0.999)))
+    optimizer_name = optimizer_config['optimizer']
+    if optimizer_name == 'Adam':
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas, weight_decay=weight_decay)
+    elif optimizer_name == 'SGD':
+        optimizer = optim.SGD(model.parameters(), lr=learning_rate, betas=betas, momentum=momentum, weight_decay=weight_decay)
+    else:
+        raise ValueError('Unknown optimizer name.')
+    return optimizer
+
+
+def set_deterministic(manual_seed, random, np, torch):
     # see https://pytorch.org/docs/stable/notes/randomness.html
     random.seed(manual_seed)
 
@@ -136,6 +152,7 @@ def config_logging(path, config, access_mode):
 #     return optimizer
 
 
+
 def create_optimizer(lr, optimizer_config, model):
     weight_decay = optimizer_config.get('weight_decay', 0)
     momentum = optimizer_config.get('momentum', 0)
@@ -150,15 +167,21 @@ def create_optimizer(lr, optimizer_config, model):
     return optimizer
 
 
-def create_lr_scheduler(lr_config, optimizer):
-    if lr_config is None:
-        return None
-    class_name = lr_config.pop('name')
-    m = importlib.import_module('torch.optim.lr_scheduler')
-    clazz = getattr(m, class_name)
-    # add optimizer to the config
-    lr_config['optimizer'] = optimizer
-    return clazz(**lr_config)
+
+def create_lr_scheduler(optimizer, step_size: int, gamma: float):
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size, gamma)
+    return scheduler
+
+
+# def create_lr_scheduler(lr_config, optimizer):
+#     if lr_config is None:
+#         return None
+#     class_name = lr_config.pop('name')
+#     m = importlib.import_module('torch.optim.lr_scheduler')
+#     clazz = getattr(m, class_name)
+#     # add optimizer to the config
+#     lr_config['optimizer'] = optimizer
+#     return clazz(**lr_config)
 
 
 def create_criterion(name, n_class):

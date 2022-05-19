@@ -80,7 +80,7 @@ def cross_valid_eval():
     save_path = cfg.SAVE_PATH
     cfg.MODEL_NAME = model_name
     # TODO: move to config
-    assign_fold = 4
+    assign_fold = cfg.EVAL.assign_fold
 
     if assign_fold is not None:
         assert assign_fold < cfg.EVAL.CV_FOLD, 'Assign fold out of range'
@@ -118,7 +118,7 @@ def cross_valid_eval():
             if 'TMH' in dataset_name:
                 coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
-                # case_pids = case_pids[:2]
+                # case_pids = case_pids[-3:]
                 volume_generator = asus_nodule_volume_generator(cfg.RAW_DATA_PATH, case_pids=case_pids)
             elif dataset_name == 'LUNA16':
                 subset_indices = [1]
@@ -131,7 +131,7 @@ def cross_valid_eval():
                 # Convert data to image
                 raw_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'
                 mask_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3'
-                coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(fold))
+                coco_path = os.path.join(cfg.PATH.DATA_ROOT[dataset_name], 'coco', cfg.TASK_NAME, f'cv-{cfg.EVAL.CV_FOLD}', str(cfg.EVAL.assign_fold))
                 case_pids = get_pids_from_coco(os.path.join(coco_path, f'annotations_{cfg.DATA.SPLIT}.json'))
                 # case_pids = case_pids[21:]
                 volume_generator_builder = lidc_nodule_volume_generator(
@@ -219,6 +219,14 @@ def cross_valid_eval():
 
 def main():
     cross_valid_eval()
+
+    # from data.data_utils import load_itk
+    # f = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\seg-lungs-LUNA16\1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208.mhd'
+    # ct, _, _, _ = load_itk(f)
+    # for ii, i in enumerate(ct):
+    #     if np.sum(i):
+    #         plt.imshow(i)
+    #         plt.savefig(f'{ii}.png')
     
 
 if __name__ == '__main__':
