@@ -14,7 +14,7 @@ import cc3d
 def build_crop_data(data_path, 
                     crop_range, 
                     vol_data_path, 
-                    volume_generator, 
+                    volume_generator_builder, 
                     annotation_path,
                     negative_positive_ratio=1.0,
                     center_shift=True,
@@ -26,6 +26,8 @@ def build_crop_data(data_path,
     save_path = os.path.join(vol_data_path, f'{filename_key}')
     pos_csv_path = os.path.join(save_path, f'positive_IRC_{filename_key}.csv')
     neg_csv_pat = os.path.join(save_path, f'negative_IRC_{filename_key}.csv')
+    # volume_generator = volume_generator_builder
+    volume_generator = volume_generator_builder.build()
 
     # Get cropping samples
     annotations = pd.read_csv(annotation_path)
@@ -66,10 +68,11 @@ def build_crop_data(data_path,
 
     drop_index = []
     num_sample = data_samples.shape[0]
-    total_raw_path = []
+    total_raw_path, total_malignancy = [], []
     for sample_idx, (index, data_info) in enumerate(data_samples.iterrows(), 1):
-        # if sample_idx >= 126: break
-        short_pid = data_info['seriesuid'].split('.')[-1]
+        # if sample_idx >= 10: break
+        pid = data_info['seriesuid']
+        short_pid = pid.split('.')[-1]
 
         # TODO:
         file_name = f'{index:04d}-{short_pid}'
@@ -86,7 +89,7 @@ def build_crop_data(data_path,
         if not os.path.isfile(raw_file) or not os.path.isfile(target_file):
             print(f'{sample_idx}/{num_sample} Saving TMH nodule volume {index:04d} with shape {crop_range}')
             # _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(data_path, short_pid)
-            _, input_volume, target_volume, _ = volume_generator.get_data_by_pid(short_pid)
+            _, input_volume, target_volume, _ = volume_generator_builder.get_data_by_pid(pid)
             crop_center = {'index': data_info['center_i'], 
                            'row': data_info['center_r'], 
                            'column': data_info['center_c']}
@@ -98,6 +101,8 @@ def build_crop_data(data_path,
                 is_rich = True
 
             if is_rich:
+                malignancy = is_malignancy(target_chunk)
+                total_malignancy.append(malignancy)
                 if not os.path.isfile(raw_file):
                     np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk)
 
@@ -110,6 +115,7 @@ def build_crop_data(data_path,
 
     # data_samples.drop(list(np.arange(1172)), inplace=True)
     data_samples['path'] = total_raw_path        
+    data_samples['malignancy'] = total_malignancy        
     data_samples.drop(drop_index, inplace=True)
     data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
@@ -129,8 +135,8 @@ def save_crop_info(annotations,
     total_positive, total_negative = None, None
     total_positive = []   
     total_negative = []   
-    for vol_idx, (_, raw_volume, target_volume, _, _, _, volume_info) in enumerate(volume_generator):
-        # if vol_idx >= 3: break
+    for vol_idx, (_, raw_volume, target_volume, volume_info) in enumerate(volume_generator):
+        # if vol_idx >= 10: break
         print(f'Saving cropping information {vol_idx+1} {volume_info["pid"]}')
 
         nodule_annotation = annotations.loc[annotations['seriesuid'].isin([volume_info['pid']])]
@@ -184,8 +190,11 @@ def get_crop_info(volum_shape, crop_range, nodule_center_xyz, origin_xyz, spacin
     positive_sample, negative_samples = None, None
 
     # nodule centers in voxel coord.
+    # TODO: 
     voxel_nodule_center_list = [
-        xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+        xyz2irc(nodule_center[::-1], origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+    # voxel_nodule_center_list = [
+    #     xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz)[::-1] for nodule_center in nodule_center_xyz]
 
     index_begin, row_begin, column_begin = crop_range['index']//2, crop_range['row']//2, crop_range['column']//2
     index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
@@ -285,7 +294,7 @@ def crop_volume(volume, crop_range, crop_center):
     row_slice = get_interval(crop_range['row'], crop_center['row'], volume.shape[1])
     column_slice = get_interval(crop_range['column'], crop_center['column'], volume.shape[2])
 
-    return volume[index_slice][::,row_slice][:,:,column_slice]
+    return volume[index_slice][:,row_slice][:,:,column_slice]
 
 
 def is_rich_context(data, threshold=0.5, return_ratio=True):
@@ -307,6 +316,18 @@ def is_rich_context(data, threshold=0.5, return_ratio=True):
         return (is_rich, ratio)   
     else:
         return is_rich
+
+
+def is_malignancy(data):
+    max_label = data.max
+    if max_label == 1:
+        status = 'malignancy'
+    elif max_label == 1:
+        status = 'benign'
+    elif max_label == 0:
+        status = 'null'
+    else:
+        raise ValueError(f'Unknown target class {max_label}')
 
 def get_nodule_center_from_volume(volume, connectivity, origin_xyz, vxSize_xyz, direction):
     volume = cc3d.connected_components(volume, connectivity=connectivity)

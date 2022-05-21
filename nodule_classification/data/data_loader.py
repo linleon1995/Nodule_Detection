@@ -1,3 +1,4 @@
+from torch import positive
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import os
@@ -14,16 +15,20 @@ from nodule_classification.data.tranaform_3d import image_3d_cls_transform
 
 
 class BaseCropClsDataset(Dataset):
-    def __init__(self, data_path, crop_range, seriesuid, data_augmentation=False):
+    def __init__(self, data_path, crop_range, seriesuid, cls_balance=True, data_augmentation=False):
         self.data_path = data_path
         self.crop_range = crop_range
         self.seriesuid = seriesuid
         self.data_augmentation = data_augmentation
 
-        # input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
+        input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
+        input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
+        if cls_balance:
+            input_files = self.class_balance(input_files)
+        self.input_files = input_files
         # TODO: 
-        input_files = pd.read_csv(rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\data_samples.csv')
-        self.input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
+        # input_files = pd.read_csv(rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\data_samples.csv')
+        # self.input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
 
     def __len__(self):
         return self.input_files.shape[0]
@@ -47,8 +52,30 @@ class BaseCropClsDataset(Dataset):
         img, _ = image_3d_cls_transform(img)
         return img
 
+    def class_balance(self, input_files):
+        positive_pd = input_files[input_files.category == 'positive']
+        negative_pd = input_files[input_files.category == 'negative']
+        negative_pd = negative_pd.sample(n=positive_pd.shape[0], random_state=1)
+        input_files = pd.concat([positive_pd, negative_pd])
+        return input_files
+
     # def transform(self):
     #     raise NotImplementedError
+
+    # def class_balance(self, input_files):
+    #     positive_pd = input_files[input_files.category == 'positive']
+    #     negative_pd = input_files[input_files.category == 'negative']
+    #     pid_seq = input_files.seriesuid.unique()
+    #     negative_list = []
+    #     for pid in pid_seq:
+    #         row_df = negative_pd[negative_pd.seriesuid == pid]
+    #         # TODO: why no negative exist in some cases?
+    #         if row_df.shape[0] > 0:
+    #             row_df = row_df.sample(n=1)
+    #             negative_list.append(row_df)
+    #     total_pd = [positive_pd] + negative_list
+    #     input_files = pd.concat(total_pd)
+    #     return input_files
 
 
 class ASUSCropDataset(Dataset):

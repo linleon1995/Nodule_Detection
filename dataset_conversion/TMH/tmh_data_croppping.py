@@ -27,7 +27,7 @@ def main():
     build_crop_data(data_path=DATA_PATH,
                     crop_range=CROP_RANGE, 
                     vol_data_path=vol_data_path, 
-                    volume_generator=VOLUME_GENERATOR, 
+                    volume_generator_builder=VOLUME_GENERATOR, 
                     annotation_path=ANNOTATION_PATH, 
                     negative_positive_ratio=NEGATIVE_POSITIVE_RATIO,
                     center_shift=CENTER_SHIFT,

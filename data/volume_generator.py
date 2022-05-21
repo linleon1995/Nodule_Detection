@@ -251,15 +251,16 @@ class lidc_nodule_volume_generator():
             raw_vol, vol, mask_vol, info = self.get_data_by_pid(pid)
             yield raw_vol, vol, mask_vol, info
                     
-    def get_data_by_pid(self, short_pid):
-        raw_vol, origin, spacing, direction = data_utils.load_itk(self.raw_path_mapping[short_pid])
+    def get_data_by_pid(self, pid):
+        raw_vol, origin, spacing, direction = data_utils.load_itk(self.raw_path_mapping[pid])
         vol = np.clip(raw_vol, -1000, 1000)
         vol = raw_preprocess(vol, output_dtype=np.uint8)
-        mask_vol = np.load(self.mask_path_mapping[short_pid])
+        mask_vol = np.load(self.mask_path_mapping[pid])
         # print(raw_vol.shape==mask_vol.shape)
         # short_pid = pid.split('.')[-1]
-        info = {'pid': short_pid, 'subset': None, 'scan_idx': None}
-        return raw_vol, vol, mask_vol, origin, spacing, direction, info
+        # info = {'pid': pid, 'subset': None, 'scan_idx': None}
+        info = {'pid': pid, 'scan_idx': 0, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
+        return raw_vol, vol, mask_vol, info
 
     @classmethod
     def get_path_list(cls, data_path, format, subset_indices=None, case_indices=None):
@@ -284,18 +285,20 @@ class lidc_nodule_volume_generator():
         intersect_pid_list = list(set(raw_pid_list).intersection(set(mask_pid_list)))
 
         raw_path_mapping, mask_path_mapping = {}, {}
-        # TODO:
-        # for pid in intersect_pid_list:
-        for pid in self.case_indices:
-            short_pid = pid.split('.')[-1]
+        # TODO: case_indices
+        # TODO: short pid
+        for pid in intersect_pid_list:
+        # for pid in self.case_indices:
+            # short_pid = pid.split('.')[-1]
             for raw_path in raw_list:
                 if pid in raw_path:
-                    raw_path_mapping[short_pid] = raw_path
+                    raw_path_mapping[pid] = raw_path
             for mask_path in mask_list:
                 if pid in mask_path:
-                    mask_path_mapping[short_pid] = mask_path
+                    mask_path_mapping[pid] = mask_path
         
-        return self.case_indices, raw_path_mapping, mask_path_mapping
+        # return self.case_indices, raw_path_mapping, mask_path_mapping
+        return intersect_pid_list, raw_path_mapping, mask_path_mapping
 
 class luna16_volume_generator():
     def __init__(self, data_path=None, subset_indices=None, case_indices=None):
