@@ -17,24 +17,29 @@ CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_
 # CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_022\ckpt_best.pth
 # CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_023\ckpt_best.pth
 CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_027\ckpt_best.pth
-CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\detectron2\checkpoints\run_033\ckpt_best.pth
+CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_057\ckpt_best.pth
+CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\checkpoints\run_073\ckpt_best.pth
 DATA:
   BATCH_SIZE: 1
   DATA_PATH: 
     LUNA16: C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop
     ASUS-B: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\benign_merge\crop
     ASUS-M: C:\Users\test\Desktop\Leon\Datasets\ASUS_Nodules-preprocess\malignant_merge\crop
+    TMH_Nodule: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10
+  COCO_PATH:
+    TMH_Nodule: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Nodule_Detection\cv-5\4
   CROP_RANGE:
-    index: 48
-    row: 48
-    column: 48
+    index: 32
+    row: 64
+    column: 64
   SHUFFLE: False
   NPratio: 10
   NPratio_test: 10
   NAME:
     # - LUNA16
-    - ASUS-B
-    - ASUS-M
+    # - ASUS-B
+    # - ASUS-M
+    TMH_Nodule
 MODEL:
   # NAME: resnet50
   ACTIVATION: softmax

@@ -1,11 +1,11 @@
 
-TASK_NAME: Nodule_Detection
+TASK_NAME: NoduleNet
 
 MODEL:
   NAME: 2D-Mask-RCNN # 2D-Mask-RCNN, 2D-FCN, 3D-Unet
   backend: d2
-  WEIGHTS: model_0015999.pth
-  OUTPUT_DIR: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_039\4
+  WEIGHTS: model_0019999.pth
+  OUTPUT_DIR: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\output\run_042\0
   
 DATA:
   N_CLASS: 2
@@ -28,8 +28,8 @@ PATH:
     LIDC: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess
 
 EVAL:
-  CV_FOLD: 5
-  assign_fold: 4
+  CV_FOLD: 6
+  assign_fold: 0
 
 Inference:
   overlapping: 0.5

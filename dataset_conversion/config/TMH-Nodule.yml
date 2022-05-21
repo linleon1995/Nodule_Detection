@@ -1,6 +1,6 @@
 
 PATH:
-  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
+  DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule
   SAVE_ROOT: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess
 
 N_CLASS: 3

@@ -1,8 +1,8 @@
 SEED: 1
 
 CV:
-  FOLD: 5
-  ASSIGN_FOLD: 4
+  FOLD: 6
+  ASSIGN_FOLD: 0
 
 TRAIN:
   # PROJECT_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection
@@ -36,8 +36,8 @@ DATA:
     # TMH-Benign:
     #   # FOLD: 4
     #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule\TMH-Benign\coco\Nodule_Detection\cv-5\4
-    # LIDC:
-    TMH_Nodule:
+    LIDC:
+    # TMH_Nodule:
     #   # FOLD: 5
     #   COCO_PATH: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Malignancy\cv-5\4
 
@@ -50,4 +50,4 @@ DATA:
     TASK_NAME: Nodule_Detection
   LIDC:
     DATA_ROOT: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess
-    TASK_NAME: Nodule_Detection
+    TASK_NAME: NoduleNet
