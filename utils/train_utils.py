@@ -88,7 +88,7 @@ def set_deterministic(manual_seed, random, np, torch):
     torch.backends.cudnn.deterministic = True
 
 
-def create_training_path(train_logdir):
+def create_training_path(train_logdir, make_dir=True):
     idx = 0
     path = os.path.join(train_logdir, "run_{:03d}".format(idx))
     while os.path.exists(path):
@@ -97,7 +97,8 @@ def create_training_path(train_logdir):
         idx += 1
         path = os.path.join(train_logdir, "run_{:03d}".format(idx))
     
-    os.makedirs(path, exist_ok=True)
+    if make_dir:
+        os.makedirs(path, exist_ok=True)
     return path
 
 

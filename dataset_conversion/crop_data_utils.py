@@ -26,8 +26,8 @@ def build_crop_data(data_path,
     save_path = os.path.join(vol_data_path, f'{filename_key}')
     pos_csv_path = os.path.join(save_path, f'positive_IRC_{filename_key}.csv')
     neg_csv_pat = os.path.join(save_path, f'negative_IRC_{filename_key}.csv')
-    # volume_generator = volume_generator_builder
-    volume_generator = volume_generator_builder.build()
+    volume_generator = volume_generator_builder
+    # volume_generator = volume_generator_builder.build()
 
     # Get cropping samples
     annotations = pd.read_csv(annotation_path)
@@ -45,18 +45,6 @@ def build_crop_data(data_path,
     num_negative_sample = np.clip(num_negative_sample, 0, negative_crop_range.shape[0])
     negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample, random_state=df_random_seed)
     data_samples = pd.concat([positive_crop_range, negative_crop_range_subset], ignore_index=True)
-
-    # # Add 'path' in DataFrame
-    # total_raw_path, total_file_name = [], []
-    # for index, data_info in data_samples.iterrows():
-    #     short_pid = data_info['seriesuid'].split('.')[-1]
-    #     crop_idx = data_info['crop_idx']
-    #     file_name = f'{index:04d}-{short_pid}-{crop_idx}'
-    #     file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
-    #     total_file_name.append(file_name)
-    #     total_raw_path.append(file_path)
-    # data_samples['path'] = total_raw_path
-    # data_samples.to_csv(os.path.join(save_path, f'data_samples.csv'))
 
     # Make directory
     positive_raw_path = os.path.join(save_path, 'positive', 'Image')
@@ -77,7 +65,6 @@ def build_crop_data(data_path,
         # TODO:
         file_name = f'{index:04d}-{short_pid}'
         file_path = os.path.join(data_info['category'], 'Image', f'{file_name}.npy')
-        total_raw_path.append(file_path)
         
         if data_info['category'] == 'positive':
             raw_path, target_path = positive_raw_path, positive_target_path
@@ -88,8 +75,8 @@ def build_crop_data(data_path,
         target_file = os.path.join(target_path, f'{file_name}.npy')
         if not os.path.isfile(raw_file) or not os.path.isfile(target_file):
             print(f'{sample_idx}/{num_sample} Saving TMH nodule volume {index:04d} with shape {crop_range}')
-            # _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(data_path, short_pid)
-            _, input_volume, target_volume, _ = volume_generator_builder.get_data_by_pid(pid)
+            _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(data_path, short_pid)
+            # _, input_volume, target_volume, _ = volume_generator_builder.get_data_by_pid(pid)
             crop_center = {'index': data_info['center_i'], 
                            'row': data_info['center_r'], 
                            'column': data_info['center_c']}
@@ -101,19 +88,22 @@ def build_crop_data(data_path,
                 is_rich = True
 
             if is_rich:
-                malignancy = is_malignancy(target_chunk)
-                total_malignancy.append(malignancy)
                 if not os.path.isfile(raw_file):
-                    np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk)
+                    # np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk)
+                    pass
 
                 if not os.path.isfile(target_file):
                     target_chunk = crop_volume(target_volume, crop_range, crop_center)
-                    np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
+                    # np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
             else:
                 print(f'-- Drop out index {index} context_rich {rich_ratio} category {data_info["category"]}\n')
                 drop_index.append(index)
+        
+        total_raw_path.append(file_path)
+        malignancy = calculate_malignancy(target_chunk)
+        total_malignancy.append(malignancy)
 
-    # data_samples.drop(list(np.arange(1172)), inplace=True)
+
     data_samples['path'] = total_raw_path        
     data_samples['malignancy'] = total_malignancy        
     data_samples.drop(drop_index, inplace=True)
@@ -191,10 +181,12 @@ def get_crop_info(volum_shape, crop_range, nodule_center_xyz, origin_xyz, spacin
 
     # nodule centers in voxel coord.
     # TODO: 
-    voxel_nodule_center_list = [
-        xyz2irc(nodule_center[::-1], origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+    # LIDC
     # voxel_nodule_center_list = [
-    #     xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz)[::-1] for nodule_center in nodule_center_xyz]
+    #     xyz2irc(nodule_center[::-1], origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+    # TMH
+    voxel_nodule_center_list = [
+        xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz)[::-1] for nodule_center in nodule_center_xyz]
 
     index_begin, row_begin, column_begin = crop_range['index']//2, crop_range['row']//2, crop_range['column']//2
     index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
@@ -318,16 +310,18 @@ def is_rich_context(data, threshold=0.5, return_ratio=True):
         return is_rich
 
 
-def is_malignancy(data):
-    max_label = data.max
-    if max_label == 1:
-        status = 'malignancy'
+def calculate_malignancy(data):
+    max_label = data.max()
+    if max_label == 2:
+        status = 'malignant'
     elif max_label == 1:
         status = 'benign'
     elif max_label == 0:
         status = 'null'
     else:
         raise ValueError(f'Unknown target class {max_label}')
+    return status
+
 
 def get_nodule_center_from_volume(volume, connectivity, origin_xyz, vxSize_xyz, direction):
     volume = cc3d.connected_components(volume, connectivity=connectivity)

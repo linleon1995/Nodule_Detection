@@ -9,7 +9,8 @@ from pprint import pprint
 import tensorboardX
 # from data.luna16_crop_preprocess import LUNA16_CropRange_Builder
 # from data.asus_crop_preprocess import ASUS_CropRange_Builder
-from nodule_classification.data.data_loader import BaseCropClsDataset
+from nodule_classification.data.data_loader import BaseNoduleClsDataset, BaseMalignancyClsDataset
+from nodule_classification.data.build_crop_dataset import build_coco_path
 from utils.utils import build_size_figure
 
 from utils.configuration import load_config, get_device
@@ -63,7 +64,7 @@ class Evaluator():
         self.device = device
         self.activation_func = activation_func
         self.USE_TENSORBOARD = USE_TENSORBOARD
-        self.checkpoint_path = self.cfg.CHECKPOINT_PATH
+        # self.checkpoint_path = self.cfg.EVAL.CHECKPOINT_PATH
         
     def evaluate(self):
         self.model.eval()
@@ -102,7 +103,7 @@ class Evaluator():
               f'FP: {self.eval_tool.total_fp}',
               f'TN: {self.eval_tool.total_tn}',
               f'FN: {self.eval_tool.total_fn}')
-    
+        
 
 def main(config_reference):
     # Configuration
@@ -112,56 +113,34 @@ def main(config_reference):
     cfg.device = device
     pprint(cfg)
 
+    coco_list = build_coco_path(cfg.DATA.COCO_PATH[cfg.DATA.NAME], cfg.CV.FOLD, cfg.CV.ASSIGN, mode='eval')
+    for fold, test_coco in enumerate(coco_list):
+        checkpoint_path = os.path.join(cfg.EVAL.CHECKPOINT_ROOT, str(fold), cfg.EVAL.CHECKPOINT)
+        eval(cfg, test_coco, checkpoint_path)  
+
+
+def eval(cfg, test_coco, checkpoint_path):
     model = build_3d_resnet(model_depth=cfg.MODEL.DEPTH, n_classes=cfg.MODEL.NUM_CLASSES, conv1_t_size=7, conv1_t_stride=2)
-    state_key = torch.load(cfg.CHECKPOINT_PATH, map_location=cfg.device)
+    state_key = torch.load(checkpoint_path, map_location=cfg.device)
     model.load_state_dict(state_key['net'])
     model = model.to(cfg.device)
 
-    test_seriesuid = get_pids_from_coco(
-        os.path.join(cfg.DATA.COCO_PATH[cfg.DATA.NAME], 
-                    # cfg.TRAIN.TASK_NAME, f'cv-{cfg.CV.FOLD}', str(cfg.CV.ASSIGN), 
-                    'annotations_test.json'))
-    test_dataset = BaseCropClsDataset(cfg.DATA.DATA_PATH[cfg.DATA.NAME], cfg.DATA.CROP_RANGE, 
-                                      test_seriesuid, data_augmentation=False)
+    test_seriesuid = get_pids_from_coco(test_coco)
+    test_dataset = BaseMalignancyClsDataset(cfg.DATA.DATA_PATH[cfg.DATA.NAME], cfg.DATA.CROP_RANGE, 
+                                            test_seriesuid, data_augmentation=False)
+    # test_dataset = BaseNoduleClsDataset(cfg.DATA.DATA_PATH[cfg.DATA.NAME], cfg.DATA.CROP_RANGE, 
+    #                                   test_seriesuid, data_augmentation=False)
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
-
-    # test_datasets = []
-    # for dataset_name in cfg.DATA.NAME:
-        
-    #     if dataset_name == 'LUNA16':
-    #         file_name_key = LUNA16_CropRange_Builder.get_filename_key(cfg.DATA.CROP_RANGE, cfg.DATA.NPratio)
-    #         data_path = os.path.join(cfg.DATA.DATA_PATH[dataset_name], file_name_key)
-    #         test_dataset = Luna16CropDataset(data_path, cfg.DATA.CROP_RANGE, mode='test')
-    #     elif dataset_name in ['ASUS-B', 'ASUS-M']:
-    #         file_name_key = ASUS_CropRange_Builder.get_filename_key(cfg.DATA.CROP_RANGE, cfg.DATA.NPratio)
-    #         data_path = os.path.join(cfg.DATA.DATA_PATH[dataset_name], file_name_key)
-    #         test_dataset = ASUSCropDataset(
-    #             data_path, cfg.DATA.CROP_RANGE, negative_to_positive_ratio=cfg.DATA.NPratio_test, 
-    #             nodule_type=dataset_name, mode='test')
-
-    #     print(f'Dataset: {cfg.DATA.NAME} Test number: {len(test_dataset)}')
-    #     test_datasets.append(test_dataset)
-
-    # total_test_dataset = torch.utils.data.ConcatDataset(test_datasets)
-    # test_dataloader = DataLoader(total_test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
-
-    
-
-    # # test_dataset = Luna16CropDataset(cfg.DATA.DATA_PATH, cfg.DATA.CROP_RANGE, mode='test')
-    # # test_dataset = ASUSCropDataset(cfg.DATA.DATA_PATH, cfg.DATA.CROP_RANGE, nodule_type='ASUS-B', mode='test')
-    # test_dataset = ASUSCropDataset(cfg.DATA.DATA_PATH, cfg.DATA.CROP_RANGE, nodule_type='ASUS-M', mode='test')
-    # test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, pin_memory=True, num_workers=0)
 
     # Logger
     LOGGER.info("Start Evaluation!!")
     LOGGER.info("Batch size: {} Shuffling Data: {} Testing Samples: {}".
             format(cfg.DATA.BATCH_SIZE, cfg.DATA.SHUFFLE, len(test_dataloader.dataset)))
-    # config_logging(os.path.join(cfg.CHECKPOINT_PATH, 'logging.txt'), cfg, access_mode='w+')
+    # config_logging(os.path.join(cfg.EVAL.CHECKPOINT_PATH, 'logging.txt'), cfg, access_mode='w+')
 
     # Final activation
     activation_func = create_activation(cfg.MODEL.ACTIVATION)
 
-    # TODO: device change to captial
     eval_instance = Evaluator(cfg,
                               model,
                               test_dataloader,
@@ -175,27 +154,6 @@ def main(config_reference):
 
 
 if __name__ == '__main__':
-    # main(CONFIG_PATH)
-
-    
-    import matplotlib.pyplot as plt
-    from data.data_utils import get_files
-    root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
-    # root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\crop\32x64x64-10\positive\Image'
-    f_list = get_files(root, 'npy')
-
-    for idx, f in enumerate(f_list):
-        # if idx != 97: continue
-        print(idx)
-        # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
-        # f = os.path.join(f, rf'0011-TMH0011.npy')
-        mf = f.replace('Image', 'Mask')
-        x = np.load(f)
-        y = np.load(mf)
-        for x_, y_ in zip(x, y):
-            if np.sum(y_):
-                plt.imshow(x_, 'gray')
-                plt.imshow(y_, alpha=0.2)
-                plt.show()
+    main(CONFIG_PATH)
 
 

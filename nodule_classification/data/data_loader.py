@@ -11,10 +11,9 @@ from data.volume_generator import luna16_volume_generator
 from nodule_classification.data.tranaform_3d import image_3d_cls_transform
 
 
-# TODO: simple factory
 
 
-class BaseCropClsDataset(Dataset):
+class BaseNoduleClsDataset(Dataset):
     def __init__(self, data_path, crop_range, seriesuid, cls_balance=True, data_augmentation=False):
         self.data_path = data_path
         self.crop_range = crop_range
@@ -26,9 +25,6 @@ class BaseCropClsDataset(Dataset):
         if cls_balance:
             input_files = self.class_balance(input_files)
         self.input_files = input_files
-        # TODO: 
-        # input_files = pd.read_csv(rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\data_samples.csv')
-        # self.input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
 
     def __len__(self):
         return self.input_files.shape[0]
@@ -59,8 +55,102 @@ class BaseCropClsDataset(Dataset):
         input_files = pd.concat([positive_pd, negative_pd])
         return input_files
 
-    # def transform(self):
-    #     raise NotImplementedError
+    # def class_balance(self, input_files):
+    #     positive_pd = input_files[input_files.category == 'positive']
+    #     negative_pd = input_files[input_files.category == 'negative']
+    #     pid_seq = input_files.seriesuid.unique()
+    #     negative_list = []
+    #     for pid in pid_seq:
+    #         row_df = negative_pd[negative_pd.seriesuid == pid]
+    #         # TODO: why no negative exist in some cases?
+    #         if row_df.shape[0] > 0:
+    #             row_df = row_df.sample(n=1)
+    #             negative_list.append(row_df)
+    #     total_pd = [positive_pd] + negative_list
+    #     input_files = pd.concat(total_pd)
+    #     return input_files
+
+
+class BaseMalignancyClsDataset(BaseNoduleClsDataset):
+    def __init__(self, data_path, crop_range, seriesuid, cls_balance=True, data_augmentation=False):
+        super().__init__(data_path, crop_range, seriesuid, cls_balance, data_augmentation)
+    
+    def __getitem__(self, idx):
+        row_df = self.input_files.iloc[idx]
+        volume_data_path = row_df['path']
+        
+        raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
+        if self.data_augmentation:
+            raw_chunk = self.transform(raw_chunk)
+        raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
+
+        # if isinstance(row_df['malignancy'], float):
+        #     if np.isnan(row_df['malignancy']):
+        #         target = 0
+        if False:
+            pass
+        elif row_df['malignancy'] == 'benign':
+            target = 1
+        elif row_df['malignancy'] == 'malignant':
+            target = 2
+        else:
+            target = 0
+
+        target = np.array(target, dtype='float')[np.newaxis]
+        return {'input':raw_chunk, 'target': target}
+
+    def class_balance(self, input_files):
+        benign_pd = input_files[input_files.malignancy == 'benign']
+        malignancy_pd = input_files[input_files.malignancy == 'malignant']
+        negative_pd = input_files[input_files.malignancy.isnull()]
+        positive_pd = pd.concat([benign_pd, malignancy_pd])
+        negative_pd = negative_pd.sample(n=positive_pd.shape[0], random_state=1)
+        input_files = pd.concat([positive_pd, negative_pd])
+        return input_files
+
+
+class BaseNoduleClsDataset(Dataset):
+    def __init__(self, data_path, crop_range, seriesuid, cls_balance=True, data_augmentation=False):
+        self.data_path = data_path
+        self.crop_range = crop_range
+        self.seriesuid = seriesuid
+        self.data_augmentation = data_augmentation
+
+        input_files = pd.read_csv(os.path.join(self.data_path, 'data_samples.csv'))
+        input_files = input_files[input_files['seriesuid'].isin(self.seriesuid)]
+        if cls_balance:
+            input_files = self.class_balance(input_files)
+        self.input_files = input_files
+
+    def __len__(self):
+        return self.input_files.shape[0]
+    
+    def __getitem__(self, idx):
+        row_df = self.input_files.iloc[idx]
+        volume_data_path = row_df['path']
+
+        # volume_data_path = self.input_files['path'].iloc[idx]
+        
+        raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
+        if self.data_augmentation:
+            raw_chunk = self.transform(raw_chunk)
+        raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
+        # target = np.array([0, 1]) if row_df['category'] == 'positive' else np.array([1, 0])
+        target = 1 if row_df['category'] == 'positive' else 0
+        target = np.array(target, dtype='float')[np.newaxis]
+        malignancy = row_df['malignancy']
+        return {'input':raw_chunk, 'target': target, 'malignancy': malignancy}
+
+    def transform(self, img):
+        img, _ = image_3d_cls_transform(img)
+        return img
+
+    def class_balance(self, input_files):
+        positive_pd = input_files[input_files.category == 'positive']
+        negative_pd = input_files[input_files.category == 'negative']
+        negative_pd = negative_pd.sample(n=positive_pd.shape[0], random_state=1)
+        input_files = pd.concat([positive_pd, negative_pd])
+        return input_files
 
     # def class_balance(self, input_files):
     #     positive_pd = input_files[input_files.category == 'positive']

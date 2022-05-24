@@ -12,6 +12,7 @@ from dataset_conversion.TMH.tmh_data_conversion import get_cv_split
 from utils.train_utils import set_deterministic
 
 
+# TODO: cannot get malignancy because ge
 def main():
     preprocess_root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess'
     raw_vol_path = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data'

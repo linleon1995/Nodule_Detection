@@ -53,23 +53,6 @@ def main():
     input_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data']
     target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_mask']
     # target_roots = [rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\luna16_hu_mask']
-
-    # train_cases = [f'luna16-{idx:04d}' for idx in range(852)]
-    # valid_cases = [f'luna16-{idx:04d}' for idx in range(852, 963)]
-    # train_cases = [f'luna16-{idx:04d}' for idx in range(112)]
-    # valid_cases = [f'luna16-{idx:04d}' for idx in range(112, 240)]
-    # input_roots = [
-    #     rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\positive\Image',
-    #     rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\negative\Image',
-    #     # rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1000\positive\Image\subset1'
-    # ]
-    # target_roots = [
-    #    rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\positive\Mask',
-    #    rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1\negative\Mask',
-    # #    rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16-preprocess\crop\32x64x64-1000\positive\Mask\subset1'
-    # ]
-
-
     train_loader, valid_loader = build_3d_dataset.build_dataloader_mhd(
         input_roots, target_roots, train_cases, config.annot_path, valid_cases, train_batch_size=config.batch_size, 
         class_balance=config.class_balance, remove_empty_sample=config.remove_empty_sample)
@@ -108,20 +91,6 @@ def main():
     checkpoint_path = os.path.join(config.model_path, config.exp_name)
     run_path = create_training_path(checkpoint_path)
 
-    # trainer = Trainer(model,
-    #                   criterion=criterion,
-    #                   optimizer=optimizer,
-    #                   train_dataloader=train_loader,
-    #                   valid_dataloader=None,
-    #                   logger=logger,
-    #                   device=configuration.get_device(),
-    #                   n_class=config.nb_class,
-    #                   exp_path=exp_path,
-    #                   train_epoch=config.nb_epoch,
-    #                   batch_size=config.batch_size,
-    #                   valid_activation=valid_activation,
-    #                   history=checkpoint_path,
-    #                   checkpoint_saving_steps=checkpoint_saving_steps)
 
     # train the model
     print('Start training')
@@ -144,19 +113,6 @@ def main():
             pred = model(x)
             loss = criterion(y, pred)
 
-            # x_np, y_np, pred_np = x.cpu().detach().numpy(), y.cpu().detach().numpy(), pred.cpu().detach().numpy()
-            # pred_np = np.where(pred_np>0.5, 1, 0)
-            # if batch_ndx%1 == 0:
-            #     for n in range(6):
-            #         for s in range(0, 32):
-            #             if np.sum(y_np[n,0,...,s]) > 0:
-            #                 # print(np.sum(y_np[n,0,...,s]))
-            #                 plt.imshow(x_np[n,0,...,s], 'gray')
-            #                 # plt.imshow(y_np[n,0,...,s]+2*pred_np[n,0,...,s], alpha=0.2, vmin=0, vmax=3)
-            #                 plt.imshow(y_np[n,0,...,s], alpha=0.2, vmin=0, vmax=3)
-            #                 plt.title(f'n: {n} s: {s}')
-            #                 # plt.savefig(f'figures/plot/train-{epoch}-{batch_ndx}-{n}-{s}.png')
-            #                 plt.show()
 
             if batch_ndx%20 == 0:
                 print(f'Step {batch_ndx} Loss {loss}')
