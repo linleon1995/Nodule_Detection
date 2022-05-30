@@ -113,3 +113,14 @@ def train(cfg, train_coco, valid_coco, exp_path):
 
 if __name__ == '__main__':
     main(CONFIG_PATH)
+    # f = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess/1.3.6.1.4.1.14519.5.2.1.6279.6001.100621383016233746780170740405_bboxes.npy'
+    # print(np.sum(np.load(f)))
+    # print(np.sum(np.load(f.replace('bboxes', 'ebox_origin'))))
+    # print(np.sum(np.load(f.replace('bboxes', 'origin'))))
+    # print(np.sum(np.load(f.replace('bboxes', 'spacing'))))
+
+    # import nrrd
+    # print(np.sum(nrrd.read(f.replace('bboxes.npy', 'clean.nrrd'))[0]))
+    # print(np.sum(nrrd.read(f.replace('bboxes.npy', 'mask.nrrd'))[0]))
+    # # print(np.sum(np.load(f.replace('bboxes', 'spacing'))))
+    

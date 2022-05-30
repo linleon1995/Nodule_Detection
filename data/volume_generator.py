@@ -14,6 +14,28 @@ raw_cache = getCache('part2segment')
 
 logging.basicConfig(level=logging.INFO)
 from data import data_utils
+import abc
+
+class BaseNoduleVolume(abc.ABC):
+    @abc.abstractmethod
+    def get_generator(self):
+        return NotImplemented
+
+    @abc.abstractmethod
+    def get_data_by_pid(self):
+        return NotImplemented
+
+
+class LIDCNoduleVolume(BaseNoduleVolume):
+    def __init__(self):
+        pass
+
+    def get_generator(self):
+        return super().get_generator()
+
+    def get_data_by_pid(self):
+        return super().get_generator()
+
 
 # TODO: unify interface
 def get_data_by_pid_asus(data_path, pid):

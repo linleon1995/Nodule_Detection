@@ -35,12 +35,14 @@ def flip_3d(img, mask=None):
 
 
 def swap_3d(img, mask=None):
-    if img.shape[1]==img.shape[2] and img.shape[1]==img.shape[3]:
-        axisorder = np.random.permutation(3)
-        img = np.transpose(img, np.concatenate([[0],axisorder+1]))
-        coord = np.transpose(coord, np.concatenate([[0],axisorder+1]))
-        # target[:3] = target[:3][axisorder]
-        # bboxes[:,:3] = bboxes[:,:3][:,axisorder]
+    axisorder = np.random.permutation(2)
+    img = np.transpose(img, np.concatenate([[0, 1], axisorder+2]))
+    if mask is not None:
+        mask = np.transpose(mask, np.concatenate([[0, 1], axisorder+2]))
+    # if img.shape[1]==img.shape[2] and img.shape[1]==img.shape[3]:
+    #     axisorder = np.random.permutation(3)
+    #     img = np.transpose(img, np.concatenate([[0],axisorder+1]))
+    #     coord = np.transpose(coord, np.concatenate([[0],axisorder+1]))
     return img, mask
 
 
@@ -48,14 +50,15 @@ def rotate_3d(img, mask, angle_range=(-30, 30)):
     # angle = np.random.rand()*180
     angle = (np.random.rand()*2-1)*30
     # angle = np.random.uniform(*angle_range)
-    img = rotate(img, angle,axes=(2,3),reshape=False)
+    axes = tuple(np.random.choice(3, 2, replace=False))
+    # axes = (1, 2)
+    img = rotate(img, angle,axes=axes, reshape=False, mode='reflect')
     # TODO: Not gaunrantee rotate working on mask (need to check value, dimension for multi class semantic seg label)
     # TODO: Better implementation of angle range
     if mask is not None:
-        mask = rotate(mask, angle, axes=(1,2), reshape=False)
+        mask = rotate(mask, angle, axes=axes, reshape=False)
     # plt.imshow(img[10])
     # plt.show()
-    
     return img, mask
 
 

@@ -1,5 +1,6 @@
 from asyncio.log import logger
 import os
+from sklearn.metrics import accuracy_score
 import torch
 import numpy as np
 from tensorboardX import SummaryWriter
@@ -118,6 +119,7 @@ class Trainer(object):
         self.eval_tool = metrics.SegmentationMetrics(self.n_class, ['accuracy'])
         test_n_iter, total_test_loss = 0, 0
         valid_samples = len(self.valid_dataloader.dataset)
+        total_labels, total_preds = [], []
         for idx, data in enumerate(self.valid_dataloader):
             test_n_iter += 1
 
@@ -137,14 +139,17 @@ class Trainer(object):
 
             labels = labels.cpu().detach().numpy()
             prediction = prediction.cpu().detach().numpy()
+            total_labels.append(np.reshape(labels, labels.size))
+            total_preds.append(np.reshape(prediction, prediction.size))
+        #     evals = self.eval_tool(labels, prediction)
 
-            evals = self.eval_tool(labels, prediction)
-
-        self.avg_test_acc = metrics.accuracy(
-                np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp), np.sum(self.eval_tool.total_fn), np.sum(self.eval_tool.total_tn)).item()
-        # self.avg_test_acc = metrics.recall(
-        #         np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn)).item()
-        
+        # self.avg_test_acc = metrics.accuracy(
+        #         np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp), np.sum(self.eval_tool.total_fn), np.sum(self.eval_tool.total_tn)).item()
+        # # self.avg_test_acc = metrics.recall(
+        # #         np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn)).item()
+        total_labels = np.concatenate(total_labels)
+        total_preds = np.concatenate(total_preds)
+        self.avg_test_acc = accuracy_score(total_labels, total_preds)
         test_loss = total_test_loss/valid_samples
         self.logger.info(f'Testing loss {test_loss}')
         self.valid_writer.add_scalar('Accuracy/epoch', self.avg_test_acc, self.epoch)

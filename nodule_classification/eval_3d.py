@@ -17,6 +17,7 @@ from utils.configuration import load_config, get_device
 from utils import metrics
 from utils.train_utils import get_logger, DictAsMember, create_activation
 from data.data_utils import get_pids_from_coco
+from sklearn.metrics import precision_score
 
 CONFIG_PATH = 'config_file/test_config.yml'
 LOGGER = get_logger('test')
@@ -70,6 +71,7 @@ class Evaluator():
         self.model.eval()
         self.eval_tool = metrics.SegmentationMetrics(self.cfg.MODEL.NUM_CLASSES, ['accuracy'])
         valid_samples = len(self.test_dataloader.dataset)
+        total_labels, total_preds = [], []
         for idx, data in enumerate(self.test_dataloader):
             input_var, labels = data['input'], data['target']
             labels = labels.long()
@@ -89,20 +91,27 @@ class Evaluator():
             labels = labels.cpu().detach().numpy()
             prediction = prediction.cpu().detach().numpy()
             evals = self.eval_tool(labels, prediction)
+            total_labels.append(labels)
+            total_preds.append(prediction)
 
         self.avg_test_acc = metrics.accuracy(
                 np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp), np.sum(self.eval_tool.total_fn), np.sum(self.eval_tool.total_tn)).item()
-        precision = metrics.precision(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp))
-        recall = metrics.recall(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn))
-        specificity = metrics.specificity(np.sum(self.eval_tool.total_tn), np.sum(self.eval_tool.total_fp))
-        print(f'Precision: {precision*100:.02f}')
-        print(f'Recall: {recall*100:.02f}')
-        print(f'Specificity: {specificity*100:.02f}')
-        print('Acc', self.avg_test_acc)
-        print(f'TP: {self.eval_tool.total_tp}', 
-              f'FP: {self.eval_tool.total_fp}',
-              f'TN: {self.eval_tool.total_tn}',
-              f'FN: {self.eval_tool.total_fn}')
+        total_labels = np.concatenate(total_labels)
+        total_preds = np.concatenate(total_preds)
+        metrics.cls_metrics(total_labels, total_preds)
+
+        # precision = precision_score(total_labels, total_preds, average=None)
+        # precision = metrics.precision(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp))
+        # recall = metrics.recall(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn))
+        # specificity = metrics.specificity(np.sum(self.eval_tool.total_tn), np.sum(self.eval_tool.total_fp))
+        # print(f'Precision: {precision*100:.02f}')
+        # print(f'Recall: {recall*100:.02f}')
+        # print(f'Specificity: {specificity*100:.02f}')
+        # print('Acc', self.avg_test_acc)
+        # print(f'TP: {self.eval_tool.total_tp}', 
+        #       f'FP: {self.eval_tool.total_fp}',
+        #       f'TN: {self.eval_tool.total_tn}',
+        #       f'FN: {self.eval_tool.total_fn}')
         
 
 def main(config_reference):
@@ -154,6 +163,25 @@ def eval(cfg, test_coco, checkpoint_path):
 
 
 if __name__ == '__main__':
-    main(CONFIG_PATH)
+    # main(CONFIG_PATH)
 
+    
+    import matplotlib.pyplot as plt
+    from data.data_utils import get_files
+    root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
+    # root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\crop\32x64x64-10\positive\Image'
+    f_list = get_files(root, 'npy')
 
+    for idx, f in enumerate(f_list):
+        # if idx != 97: continue
+        print(idx)
+        # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
+        # f = os.path.join(f, rf'0011-TMH0011.npy')
+        mf = f.replace('Image', 'Mask')
+        x = np.load(f)
+        y = np.load(mf)
+        for x_, y_ in zip(x, y):
+            if np.sum(y_) and np.max(y_)==2:
+                plt.imshow(x_, 'gray')
+                plt.imshow(y_, alpha=0.2, vmin=0, vmax=2)
+                plt.show()

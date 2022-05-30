@@ -95,17 +95,23 @@ class BaseMalignancyClsDataset(BaseNoduleClsDataset):
             target = 2
         else:
             target = 0
+        target -= 1
 
         target = np.array(target, dtype='float')[np.newaxis]
+        # for i in range(32):
+        #     plt.imshow(raw_chunk[0,i])
+        #     plt.show()
         return {'input':raw_chunk, 'target': target}
 
     def class_balance(self, input_files):
         benign_pd = input_files[input_files.malignancy == 'benign']
         malignancy_pd = input_files[input_files.malignancy == 'malignant']
-        negative_pd = input_files[input_files.malignancy.isnull()]
         positive_pd = pd.concat([benign_pd, malignancy_pd])
-        negative_pd = negative_pd.sample(n=positive_pd.shape[0], random_state=1)
-        input_files = pd.concat([positive_pd, negative_pd])
+        # negative_pd = input_files[input_files.malignancy.isnull()]
+        # negative_pd = negative_pd.sample(n=positive_pd.shape[0], random_state=1)
+
+        # input_files = pd.concat([positive_pd, negative_pd])
+        input_files = positive_pd
         return input_files
 
 

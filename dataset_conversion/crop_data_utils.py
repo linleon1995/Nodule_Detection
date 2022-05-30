@@ -26,8 +26,8 @@ def build_crop_data(data_path,
     save_path = os.path.join(vol_data_path, f'{filename_key}')
     pos_csv_path = os.path.join(save_path, f'positive_IRC_{filename_key}.csv')
     neg_csv_pat = os.path.join(save_path, f'negative_IRC_{filename_key}.csv')
-    volume_generator = volume_generator_builder
-    # volume_generator = volume_generator_builder.build()
+    # volume_generator = volume_generator_builder
+    volume_generator = volume_generator_builder.build()
 
     # Get cropping samples
     annotations = pd.read_csv(annotation_path)
@@ -45,7 +45,9 @@ def build_crop_data(data_path,
     num_negative_sample = np.clip(num_negative_sample, 0, negative_crop_range.shape[0])
     negative_crop_range_subset = negative_crop_range.sample(n=num_negative_sample, random_state=df_random_seed)
     data_samples = pd.concat([positive_crop_range, negative_crop_range_subset], ignore_index=True)
-
+    data_samples = data_samples.sort_values(['seriesuid'])
+    # data_samples_for_data_save.to_csv(os.path.join(save_path, f'data_samples2.csv'))
+    
     # Make directory
     positive_raw_path = os.path.join(save_path, 'positive', 'Image')
     negative_raw_path = os.path.join(save_path, 'negative', 'Image')
@@ -57,6 +59,7 @@ def build_crop_data(data_path,
     drop_index = []
     num_sample = data_samples.shape[0]
     total_raw_path, total_malignancy = [], []
+    last_pid = ''
     for sample_idx, (index, data_info) in enumerate(data_samples.iterrows(), 1):
         # if sample_idx >= 10: break
         pid = data_info['seriesuid']
@@ -75,8 +78,11 @@ def build_crop_data(data_path,
         target_file = os.path.join(target_path, f'{file_name}.npy')
         if not os.path.isfile(raw_file) or not os.path.isfile(target_file):
             print(f'{sample_idx}/{num_sample} Saving TMH nodule volume {index:04d} with shape {crop_range}')
-            _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(data_path, short_pid)
-            # _, input_volume, target_volume, _ = volume_generator_builder.get_data_by_pid(pid)
+            if pid != last_pid:
+                # _, input_volume, target_volume, origin, spacing, direction = get_data_by_pid_asus(data_path, short_pid)
+                _, input_volume, target_volume, _ = volume_generator_builder.get_data_by_pid(pid)
+            
+            last_pid = pid
             crop_center = {'index': data_info['center_i'], 
                            'row': data_info['center_r'], 
                            'column': data_info['center_c']}
@@ -89,20 +95,19 @@ def build_crop_data(data_path,
 
             if is_rich:
                 if not os.path.isfile(raw_file):
-                    # np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk)
+                    np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk)
                     pass
 
                 if not os.path.isfile(target_file):
                     target_chunk = crop_volume(target_volume, crop_range, crop_center)
-                    # np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
+                    np.save(os.path.join(target_path, f'{file_name}.npy'), target_chunk)
             else:
                 print(f'-- Drop out index {index} context_rich {rich_ratio} category {data_info["category"]}\n')
                 drop_index.append(index)
         
-        total_raw_path.append(file_path)
-        malignancy = calculate_malignancy(target_chunk)
+        malignancy = calculate_malignancy2(target_chunk)
         total_malignancy.append(malignancy)
-
+        total_raw_path.append(file_path)
 
     data_samples['path'] = total_raw_path        
     data_samples['malignancy'] = total_malignancy        
@@ -182,11 +187,11 @@ def get_crop_info(volum_shape, crop_range, nodule_center_xyz, origin_xyz, spacin
     # nodule centers in voxel coord.
     # TODO: 
     # LIDC
-    # voxel_nodule_center_list = [
-    #     xyz2irc(nodule_center[::-1], origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
-    # TMH
     voxel_nodule_center_list = [
-        xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz)[::-1] for nodule_center in nodule_center_xyz]
+        xyz2irc(nodule_center[::-1], origin_xyz, spacing_xyz, direction_xyz) for nodule_center in nodule_center_xyz]
+    # TMH
+    # voxel_nodule_center_list = [
+        # xyz2irc(nodule_center, origin_xyz, spacing_xyz, direction_xyz)[::-1] for nodule_center in nodule_center_xyz]
 
     index_begin, row_begin, column_begin = crop_range['index']//2, crop_range['row']//2, crop_range['column']//2
     index_end, row_end, column_end =  depth-index_begin, height-row_begin, width-column_begin
@@ -316,6 +321,21 @@ def calculate_malignancy(data):
         status = 'malignant'
     elif max_label == 1:
         status = 'benign'
+    elif max_label == 0:
+        status = 'null'
+    else:
+        raise ValueError(f'Unknown target class {max_label}')
+    return status
+
+
+def calculate_malignancy2(data):
+    max_label = data.max()
+    if max_label > 3:
+        status = 'malignant'
+    elif max_label < 3 and max_label > 0:
+        status = 'benign'
+    elif max_label == 3:
+        status = 'ambiguos'
     elif max_label == 0:
         status = 'null'
     else:

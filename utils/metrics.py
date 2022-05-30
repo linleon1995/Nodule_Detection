@@ -1,9 +1,10 @@
 
 
+from pyrsistent import v
 from sqlalchemy import intersect
 import numpy as np
 import importlib
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
 
 
 
@@ -87,6 +88,27 @@ def specificity(tn, fp):
     return tn / denominator
 
 
+def cls_metrics(y_true, y_pred, n_class=None):
+    if n_class is None:
+        n_class = np.max(np.concatenate([y_true, y_pred])) + 1
+
+    # cm = confusion_matrix(y_true, y_pred, labels=np.arange(1, n_class))
+    cm = confusion_matrix(y_true, y_pred, labels=np.arange(0, n_class))
+    precision = precision_score(y_true, y_pred, average=None)
+    recall = recall_score(y_true, y_pred, average=None)
+    # TODO: check specificity coorectness
+    # specificity = recall_score(y_true, y_pred, pos_label=2, average=None)
+    accuracy = accuracy_score(y_true, y_pred)
+
+    print(f'Precision: {precision}')
+    print(f'mean Precision: {np.mean(precision)*100:.02f} %')
+    print(f'Recall: {recall}')
+    print(f'mean Recall: {np.mean(recall)*100:.02f} %')
+    # print(f'Specificity: {specificity}')
+    # print(f'mean Specificity: {np.mean(specificity)*100:.02f} %')
+    print('Accuracy', accuracy)
+    print(cm)
+
 # TODO: property for all avaiable metrics
 # TODO: should implement in @staticmethod
 
@@ -139,18 +161,20 @@ class SegmentationMetrics():
         cm = confusion_matrix(self.label, self.pred, labels=np.arange(0, num_class))
         return cm
     
+    # def cm_value(self):
+    #     cm = self.confusion_matrix()
+    #     tp = cm[1,1]
+    #     fp = cm[0,1]
+    #     fn = cm[1,0]
+    #     tn = cm[0,0]
+    #     return (tp, fp, fn, tn)
+
     def cm_value(self):
         cm = self.confusion_matrix()
-        tp = cm[1,1]
-        fp = cm[0,1]
-        fn = cm[1,0]
-        tn = cm[0,0]
-        return (tp, fp, fn, tn)
-        cm = self.confusion_matrix()
-        tp = cm[1,1]
-        fp = cm[0,1]
-        fn = cm[1,0]
-        tn = cm[0,0]
+        tp = np.diag(cm)
+        fp = np.sum(cm, axis=0) - tp
+        fn = np.sum(cm, axis=1) - tp
+        tn = np.array([np.sum(tp)]*(tp.size)) - tp
         return (tp, fp, fn, tn)
 
 

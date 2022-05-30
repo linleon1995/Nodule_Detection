@@ -10,10 +10,12 @@ from dataset_conversion.TMH import tmh_data_merge
 from dataset_conversion.data_analysis import get_nodule_diameter
 # from dataset_conversion.data_analysis import TMH_nodule_base_check
 from data.volume_generator import asus_nodule_volume_generator
-from data.data_utils import modify_array_in_itk, get_files
+from data.data_utils import modify_array_in_itk, get_files, load_itk
+from postprocessing.lung_mask_filtering import segment_lung
 from utils.train_utils import set_deterministic
 
 from utils.configuration import load_config
+import matplotlib.pyplot as plt
 # import warnings
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -243,12 +245,74 @@ def TMH_nodule_base_check(volume_generator, save_path=None):
 
 
 
+def convert_lung_mask():
+    img_path = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\merge'
+    save_dir = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet'
+    pid_list = get_files(img_path, get_dirs=True, return_fullpath=False, recursive=False)
+    f_list = get_files(img_path, 'mhd')
+
+    img_list = []
+    mask_list = []
+    for f in f_list:
+        if 'raw' in f:
+            img_list.append(f)
+        if 'mask' in f:
+            mask_list.append(f)
+    img_list.sort()
+    mask_list.sort()
+    pid_list.sort()
+
+    for idx, (img_path, pid) in enumerate(zip(img_list, pid_list)):
+        print(idx)
+        ct, _, _, _ = load_itk(img_path)
+        lung_mask_vol = np.zeros_like(ct)
+        case_dir = os.path.join(save_dir, pid)
+        case_img_dir = os.path.join(case_dir, 'img')
+        os.makedirs(case_img_dir, exist_ok=True)
+
+        for slice, img in enumerate(ct):
+            lung_mask = segment_lung(img)
+            lung_mask_vol[slice] = lung_mask
+            plt.imshow(img*lung_mask)
+            plt.savefig(os.path.join(case_img_dir, f'lung-{idx}-{slice}.png'))
+            plt.close()
+    
+        # seg_img = ct * lung_mask_vol
+        np.save(os.path.join(case_dir, f'{pid}.npy'), lung_mask_vol)
+
+            
+
+
+
 def main():
     data_preprocess(CONFIG_PATH)
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+
+
+    # convert_lung_mask()
+
+
+    # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet\TMH0002\TMH0002.npy'
+    # a = np.load(f)
+    # for idx, img in enumerate(a):
+    #     if np.sum(img):
+    #         plt.imshow(img)
+    #         plt.title(str(idx))
+    #         plt.show()
+
+
     # remove_1m0045_noise()
+
+
+    ff = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet_lung_mask'
+    f_list = get_files(ff, 'npy')
+    for f in f_list:
+        path, old_name = os.path.split(f)
+        new_name = old_name.replace('.mhd', '')
+        os.rename(f, os.path.join(path, new_name))
+        
     
         
