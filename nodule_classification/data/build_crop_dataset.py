@@ -34,7 +34,7 @@ def build_coco_path(coco_root, num_fold, assign_fold=None, mode='train'):
             valid_coco = os.path.join(coco_path, 'annotations_test.json')
             total_coco.append((train_coco, valid_coco))
         elif mode in ['test', 'eval']:
-            valid_coco = os.path.join(coco_path, 'annotations_test.json')
+            valid_coco = os.path.join(coco_path, 'annotations_train.json')
             total_coco.append(valid_coco)
 
     return total_coco

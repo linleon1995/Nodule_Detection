@@ -178,7 +178,6 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
         i = 0
         for result in results[1:]:
             nodule_seriesuid = result[header.index(seriesuid_label)]
-            
             if seriesuid == nodule_seriesuid:
                 nodule = getNodule(result, header)
                 nodule.candidateID = i
@@ -208,9 +207,14 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
         
         print('adding candidates: ' + seriesuid)
         allCandsCAD[seriesuid] = nodules
-        if seriesuid == '1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208':
-            break
-    
+        
+    sumallNodules = 0
+    for case in allNodules.values():
+        sumallNodules += len(case)
+    sumallCandsCAD = 0
+    for case in allCandsCAD.values():
+        sumallCandsCAD += len(case)
+
     # open output files
     nodNoCandFile = open(os.path.join(outputDir, "nodulesWithoutCandidate_%s.txt" % CADSystemName), 'w')
     
@@ -415,9 +419,21 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
         ax.yaxis.set_ticks(np.arange(0, 1.1, 0.1))
         plt.grid(b=True, which='both')
         plt.tight_layout()
-
         plt.savefig(os.path.join(outputDir, "froc_%s.png" % CADSystemName), bbox_inches=0, dpi=300)
-
+    
+    # TODO:
+    def find_nearest(array, value):
+        idx = np.where((fps - value) == (fps - value)[(fps - value) >= 0].min())[0][-1]
+        return idx
+    thres = [0.125,0.25,0.5,1,2,4]
+    # thres = [0.125,0.25,0.5,1,2,4,8]
+    sen = []
+    print('FROC at points: ', thres)
+    for th in thres:
+        print('fps: ', th, ', sensitivity: ', sens[find_nearest(fps, th)])
+        sen.append(sens[find_nearest(fps, th)])
+    sen.append(sen[-1])
+    print('=============================================\naverage FROC: ', np.mean(sen))
     return (fps, sens, thresholds, fps_bs_itp, sens_bs_mean, sens_bs_lb, sens_bs_up)
     
 def getNodule(annotation, header, state = ""):
@@ -457,15 +473,16 @@ def collectNoduleAnnotations(annotations, annotations_excluded, seriesUIDs):
                 nodule = getNodule(annotation, header, state = "Included")
                 nodules.append(nodule)
                 numberOfIncludedNodules += 1
-        
-        # add excluded findings
-        header = annotations_excluded[0]
-        for annotation in annotations_excluded[1:]:
-            nodule_seriesuid = annotation[header.index(seriesuid_label)]
+
+        # TODO:
+        # # add excluded findings
+        # header = annotations_excluded[0]
+        # for annotation in annotations_excluded[1:]:
+        #     nodule_seriesuid = annotation[header.index(seriesuid_label)]
             
-            if seriesuid == nodule_seriesuid:
-                nodule = getNodule(annotation, header, state = "Excluded")
-                nodules.append(nodule)
+        #     if seriesuid == nodule_seriesuid:
+        #         nodule = getNodule(annotation, header, state = "Excluded")
+        #         nodules.append(nodule)
             
         allNodules[seriesuid] = nodules
         noduleCount      += numberOfIncludedNodules
@@ -478,13 +495,19 @@ def collectNoduleAnnotations(annotations, annotations_excluded, seriesUIDs):
     
 def collect(annotations_filename,annotations_excluded_filename,seriesuids_filename):
     annotations          = csvTools.readCSV(annotations_filename)
-    annotations_excluded = csvTools.readCSV(annotations_excluded_filename)
+    # annotations_excluded = csvTools.readCSV(annotations_excluded_filename)
+    # TODO:
+    annotations_excluded = []
     seriesUIDs_csv = csvTools.readCSV(seriesuids_filename)
     
     seriesUIDs = []
     for seriesUID in seriesUIDs_csv:
         seriesUIDs.append(seriesUID[0])
 
+    # TODO:
+    seriesUIDs = [s[0] for s in annotations[1:]]
+    seriesUIDs = np.unique(seriesUIDs)
+    
     allNodules = collectNoduleAnnotations(annotations, annotations_excluded, seriesUIDs)
     
     return (allNodules, seriesUIDs)

@@ -106,7 +106,7 @@ def train(cfg, train_coco, valid_coco, exp_path):
                                     USE_TENSORBOARD=True,
                                     checkpoint_saving_steps=cfg.TRAIN.CHECKPOINT_SAVING_STEPS,
                                     # USE_CUDA=True,)
-                                    history=None)
+                                    history=cfg.TRAIN.INIT_CHECKPOINT)
 
     trainer_instance.fit()
 

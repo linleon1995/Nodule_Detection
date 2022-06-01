@@ -12,7 +12,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import logging
 from sklearn.metrics import confusion_matrix
 from evaluation.volume_eval import volumetric_data_eval
-from utils.utils import Nodule_data_recording, DataFrameTool, SubmissionDataFrame, irc2xyz, get_nodule_center
+from utils.utils import Nodule_data_recording, DataFrameTool, SubmissionDataFrame, get_nodule_center
 from visualization.vis import save_mask, visualize, save_mask_in_3d, plot_scatter, ScatterVisualizer
 # import liwei_eval
 from evaluationScript import noduleCADEvaluationLUNA16
@@ -217,18 +217,31 @@ def cross_valid_eval():
     malignant_rcorder.save_data_frame(save_path=os.path.join(cfg.SAVE_PATH, 'malignant.csv'))
 
 
+def froc():
+    from evaluationScript.noduleCADEvaluationLUNA16 import noduleCADEvaluation
+    annotation_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a2.csv'
+    # annotation_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\annotations.csv'
+    annotation_excluded_filename = ''
+    seriesuids_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\tmh_pid2.csv'
+    results_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a\submission_ensemble.csv'
+    output_dir = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a'
+    noduleCADEvaluation(
+        annotation_filename,
+        annotation_excluded_filename,
+        seriesuids_filename,
+        results_filename,
+        output_dir,
+    )
+
+
+
+
 def main():
-    cross_valid_eval()
+    # cross_valid_eval()
+    froc()
 
-    # from data.data_utils import load_itk
-    # f = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\seg-lungs-LUNA16\1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208.mhd'
-    # ct, _, _, _ = load_itk(f)
-    # for ii, i in enumerate(ct):
-    #     if np.sum(i):
-    #         plt.imshow(i)
-    #         plt.savefig(f'{ii}.png')
+
     
-
 if __name__ == '__main__':
     main()
 

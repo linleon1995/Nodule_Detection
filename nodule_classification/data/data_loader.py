@@ -74,7 +74,11 @@ class BaseNoduleClsDataset(Dataset):
 class BaseMalignancyClsDataset(BaseNoduleClsDataset):
     def __init__(self, data_path, crop_range, seriesuid, cls_balance=True, data_augmentation=False):
         super().__init__(data_path, crop_range, seriesuid, cls_balance, data_augmentation)
-    
+        self.malignancy_dict = {
+            'benign': 0,
+            'malignant': 1,
+        }
+
     def __getitem__(self, idx):
         row_df = self.input_files.iloc[idx]
         volume_data_path = row_df['path']
@@ -84,18 +88,17 @@ class BaseMalignancyClsDataset(BaseNoduleClsDataset):
             raw_chunk = self.transform(raw_chunk)
         raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
 
-        # if isinstance(row_df['malignancy'], float):
-        #     if np.isnan(row_df['malignancy']):
-        #         target = 0
-        if False:
-            pass
-        elif row_df['malignancy'] == 'benign':
-            target = 1
-        elif row_df['malignancy'] == 'malignant':
-            target = 2
-        else:
-            target = 0
-        target -= 1
+        # if False:
+        #     pass
+        # elif row_df['malignancy'] == 'benign':
+        #     target = 1
+        # elif row_df['malignancy'] == 'malignant':
+        #     target = 2
+        # else:
+        #     target = 0
+        # target -= 1
+
+        target = self.malignancy_dict[row_df['malignancy']]
 
         target = np.array(target, dtype='float')[np.newaxis]
         # for i in range(32):
@@ -105,13 +108,19 @@ class BaseMalignancyClsDataset(BaseNoduleClsDataset):
 
     def class_balance(self, input_files):
         benign_pd = input_files[input_files.malignancy == 'benign']
-        malignancy_pd = input_files[input_files.malignancy == 'malignant']
-        positive_pd = pd.concat([benign_pd, malignancy_pd])
+        malignant_pd = input_files[input_files.malignancy == 'malignant']
+        positive_pd = pd.concat([benign_pd, malignant_pd])
+        num_benign = benign_pd.shape[0]
+        num_malignant = malignant_pd.shape[0]
+        num_nodule = num_benign + num_malignant
+        
+        print(f'Benign {num_benign} ({num_benign/(num_nodule)*100:.2f} %) Malignant {num_malignant} ({num_malignant/(num_nodule)*100:.2f} %)')
         # negative_pd = input_files[input_files.malignancy.isnull()]
         # negative_pd = negative_pd.sample(n=positive_pd.shape[0], random_state=1)
 
         # input_files = pd.concat([positive_pd, negative_pd])
         input_files = positive_pd
+        print(input_files['seriesuid'].unique().shape[0])
         return input_files
 
 

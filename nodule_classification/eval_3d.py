@@ -163,25 +163,25 @@ def eval(cfg, test_coco, checkpoint_path):
 
 
 if __name__ == '__main__':
-    # main(CONFIG_PATH)
+    main(CONFIG_PATH)
 
     
-    import matplotlib.pyplot as plt
-    from data.data_utils import get_files
-    root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
-    # root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\crop\32x64x64-10\positive\Image'
-    f_list = get_files(root, 'npy')
+    # import matplotlib.pyplot as plt
+    # from data.data_utils import get_files
+    # root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
+    # # root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\crop\32x64x64-10\positive\Image'
+    # f_list = get_files(root, 'npy')
 
-    for idx, f in enumerate(f_list):
-        # if idx != 97: continue
-        print(idx)
-        # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
-        # f = os.path.join(f, rf'0011-TMH0011.npy')
-        mf = f.replace('Image', 'Mask')
-        x = np.load(f)
-        y = np.load(mf)
-        for x_, y_ in zip(x, y):
-            if np.sum(y_) and np.max(y_)==2:
-                plt.imshow(x_, 'gray')
-                plt.imshow(y_, alpha=0.2, vmin=0, vmax=2)
-                plt.show()
+    # for idx, f in enumerate(f_list):
+    #     # if idx != 97: continue
+    #     print(idx)
+    #     # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
+    #     # f = os.path.join(f, rf'0011-TMH0011.npy')
+    #     mf = f.replace('Image', 'Mask')
+    #     x = np.load(f)
+    #     y = np.load(mf)
+    #     for x_, y_ in zip(x, y):
+    #         if np.sum(y_) and np.max(y_)==2:
+    #             plt.imshow(x_, 'gray')
+    #             plt.imshow(y_, alpha=0.2, vmin=0, vmax=2)
+    #             plt.show()

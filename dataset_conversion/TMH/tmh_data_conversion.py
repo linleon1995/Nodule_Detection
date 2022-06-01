@@ -1,3 +1,4 @@
+from fileinput import filename
 import os
 import numpy as np
 import cc3d
@@ -15,12 +16,84 @@ from postprocessing.lung_mask_filtering import segment_lung
 from utils.train_utils import set_deterministic
 
 from utils.configuration import load_config
+from utils.utils import get_nodule_center, DataFrameTool
+from dataset_conversion.coord_transform import irc2xyz
 import matplotlib.pyplot as plt
+import scipy
 # import warnings
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # DATASET_NAME = 'TMH-Nodule'
 CONFIG_PATH = 'dataset_conversion/config/TMH-Nodule.yml'
+
+
+
+def resample(image, spacing, new_spacing=[1.0, 1.0, 1.0], order=1):
+    """
+    Resample image from the original spacing to new_spacing, e.g. 1x1x1
+    image: 3D numpy array of raw HU values from CT series in [z, y, x] order.
+    spacing: float * 3, raw CT spacing in [z, y, x] order.
+    new_spacing: float * 3, new spacing used for resample, typically 1x1x1,
+        which means standardizing the raw CT with different spacing all into
+        1x1x1 mm.
+    order: int, order for resample function scipy.ndimage.interpolation.zoom
+    return: 3D binary numpy array with the same shape of the image after,
+        resampling. The actual resampling spacing is also returned.
+    """
+    # shape can only be int, so has to be rounded.
+    new_shape = np.round(image.shape * spacing / new_spacing)
+
+    # the actual spacing to resample.
+    resample_spacing = spacing * image.shape / new_shape
+
+    resize_factor = new_shape / image.shape
+
+    image_new = scipy.ndimage.interpolation.zoom(image, resize_factor,
+                                                 mode='nearest', order=order)
+
+    return (image_new, resample_spacing)
+
+
+def get_nodule_center_from_volume(volume, connectivity, origin_xyz, vxSize_xyz, direction):
+    volume = cc3d.connected_components(volume, connectivity=connectivity)
+    categories = np.unique(volume)[1:]
+    total_nodule_center = []
+    for label in categories:
+        nodule = np.where(volume==label, 1, 0)
+        center_irc = get_nodule_center(nodule)
+        center_xyz = irc2xyz(center_irc, origin_xyz, vxSize_xyz, direction)
+        total_nodule_center.append(center_xyz)
+    return total_nodule_center
+
+
+def save_center_info(volume_generator, connectivity, save_path):
+    center_df = DataFrameTool(['seriesuid', 'coordX', 'coordY', 'coordZ', 'diameter_mm'])
+    for vol_idx, (_, raw_volume, target_volume, volume_info) in enumerate(volume_generator):
+        if vol_idx < 19: continue
+        print(f'Saving Annotation of Volume {vol_idx}')
+        origin_xyz, vxSize_xyz, direction = volume_info['origin'], volume_info['spacing'], volume_info['direction']
+        filename = volume_info['filename']
+        file_key = filename.split('.')[-2]
+        # if file_key == '11029688907433245392075633136616444':
+        #     print(3)
+        # else:
+        #     continue
+        # target_volume, _ = resample(target_volume, spacing=vxSize_xyz, order=3)
+        volume = cc3d.connected_components(target_volume, connectivity=connectivity)
+        categories = np.unique(volume)[1:]
+        for label in categories:
+            nodule_volume = np.int32(volume==label)
+            # print(np.max(nodule_volume), np.max(volume))
+            center_irc = get_nodule_center(nodule_volume)
+            center_xyz = irc2xyz(center_irc[::-1], origin_xyz, vxSize_xyz, direction)
+            diameter = get_nodule_diameter(nodule_volume, origin_xyz, vxSize_xyz, direction)
+            center_df.write_row([file_key] + list(center_xyz[::-1]) + [diameter])
+        # for nodule_center in total_nodule_center:
+        #     center_df.write_row([filename] + list(nodule_center) + [diameter])
+
+    save_dir = os.path.split(save_path)[0]
+    os.makedirs(save_dir, exist_ok=True)
+    center_df.save_data_frame(save_path)
 
 
 def data_preprocess(dataset_name):
@@ -44,14 +117,16 @@ def data_preprocess(dataset_name):
     for path in [merge_path, image_path, kc_image_path, stats_path]:
         os.makedirs(path, exist_ok=True)
     
-    # # TMH base check
-    # raw_paths = get_files(raw_path, recursive=False, get_dirs=True)
-    # volume_generator = asus_nodule_volume_generator(data_path=raw_paths, case_pids=case_pids)
+    # TMH base check
+    raw_paths = get_files(raw_path, recursive=False, get_dirs=True)
+    volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
     # TMH_nodule_base_check(volume_generator, save_path=stats_path)
+    
+    save_center_info(volume_generator, connectivity=26, save_path=os.path.join(stats_path, 'annotations.csv'))
 
-    # Merge mhd data
-    merge_mapping = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
-    tmh_data_merge.merge_data(merge_mapping, raw_path, merge_path, filekey='TMH')
+    # # Merge mhd data
+    # merge_mapping = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
+    # tmh_data_merge.merge_data(merge_mapping, raw_path, merge_path, filekey='TMH')
 
     # # Convert medical 3d volume data to image format
     # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
@@ -89,7 +164,8 @@ def build_parameters(config_path):
     num_fold = cfg.CROSS_VALID_FOLD
     shuffle = True
     case_pids = None
-    set_deterministic(cfg.SEED)
+    # TODO: do we need to set deterministic?
+    # set_deterministic(cfg.SEED, random, np, torch)
 
     stats_path = os.path.join(save_root, 'stats_path')
     merge_path = os.path.join(save_root, 'merge')
@@ -187,6 +263,8 @@ def TMH_nodule_base_check(volume_generator, save_path=None):
         cat_vol = cc3d.connected_components(mask_vol, connectivity=26) # category volume
         nodule_ids = np.unique(cat_vol)[1:]
         pid = infos['pid']
+        filename = infos['filename']
+        filename = filename.split('.')[-2]
         origin, spacing, direction = infos['origin'], infos['spacing'], infos['direction']
 
         for n_id in nodule_ids:
@@ -289,7 +367,7 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
 
 
     # convert_lung_mask()
@@ -307,12 +385,38 @@ if __name__ == '__main__':
     # remove_1m0045_noise()
 
 
-    ff = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet_lung_mask'
-    f_list = get_files(ff, 'npy')
-    for f in f_list:
-        path, old_name = os.path.split(f)
-        new_name = old_name.replace('.mhd', '')
-        os.rename(f, os.path.join(path, new_name))
+    # ff = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet_lung_mask'
+    # f_list = get_files(ff, 'npy')
+    # for f in f_list:
+    #     path, old_name = os.path.split(f)
+    #     new_name = old_name.replace('.mhd', '')
+    #     os.rename(f, os.path.join(path, new_name))
+
+
+    # import cc3d
+    # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset5\1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208.mhd'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset3\1.3.6.1.4.1.14519.5.2.1.6279.6001.100953483028192176989979435275.mhd'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset9\1.3.6.1.4.1.14519.5.2.1.6279.6001.102681962408431413578140925249.mhd'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset1\1.3.6.1.4.1.14519.5.2.1.6279.6001.104562737760173137525888934217.mhd'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset7\1.3.6.1.4.1.14519.5.2.1.6279.6001.105495028985881418176186711228.mhd'
+
+    # _, origin, spacing, direction = load_itk(ff)
+
+    # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208.npy'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.100953483028192176989979435275.npy'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.102681962408431413578140925249.npy'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.104562737760173137525888934217.npy'
+    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.105495028985881418176186711228.npy'
+
+    # ct = np.load(ff)
+    # ct_b = np.where(ct>0, 1, 0)
+    # ct_b = cc3d.connected_components(ct_b, 26)
+    # print(np.unique(ct_b))
+    
+    # d = get_nodule_diameter(ct_b, origin, spacing, direction)
+    # print(d)
+    # print(d)
+
         
     
         

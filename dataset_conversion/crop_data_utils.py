@@ -96,7 +96,7 @@ def build_crop_data(data_path,
             if is_rich:
                 if not os.path.isfile(raw_file):
                     np.save(os.path.join(raw_path, f'{file_name}.npy'), raw_chunk)
-                    pass
+                    # pass
 
                 if not os.path.isfile(target_file):
                     target_chunk = crop_volume(target_volume, crop_range, crop_center)
@@ -335,7 +335,7 @@ def calculate_malignancy2(data):
     elif max_label < 3 and max_label > 0:
         status = 'benign'
     elif max_label == 3:
-        status = 'ambiguos'
+        status = 'ambiguous'
     elif max_label == 0:
         status = 'null'
     else:

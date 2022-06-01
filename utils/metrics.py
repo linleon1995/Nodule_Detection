@@ -4,8 +4,8 @@ from pyrsistent import v
 from sqlalchemy import intersect
 import numpy as np
 import importlib
-from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
-
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score, ConfusionMatrixDisplay, plot_confusion_matrix
+import matplotlib.pyplot as plt
 
 
 def binary_dsc(target, pred):
@@ -94,8 +94,18 @@ def cls_metrics(y_true, y_pred, n_class=None):
 
     # cm = confusion_matrix(y_true, y_pred, labels=np.arange(1, n_class))
     cm = confusion_matrix(y_true, y_pred, labels=np.arange(0, n_class))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                #   display_labels=n_class
+                                  )
+    disp.plot()
+    plt.savefig('plot/cm.png')
     precision = precision_score(y_true, y_pred, average=None)
     recall = recall_score(y_true, y_pred, average=None)
+    tp = np.diag(cm)
+    tn = tp[::-1]
+    fp = np.sum(cm, axis=0) - tp
+    specificity = tn / (tn + fp)
+    
     # TODO: check specificity coorectness
     # specificity = recall_score(y_true, y_pred, pos_label=2, average=None)
     accuracy = accuracy_score(y_true, y_pred)
@@ -104,8 +114,8 @@ def cls_metrics(y_true, y_pred, n_class=None):
     print(f'mean Precision: {np.mean(precision)*100:.02f} %')
     print(f'Recall: {recall}')
     print(f'mean Recall: {np.mean(recall)*100:.02f} %')
-    # print(f'Specificity: {specificity}')
-    # print(f'mean Specificity: {np.mean(specificity)*100:.02f} %')
+    print(f'Specificity: {specificity}')
+    print(f'mean Specificity: {np.mean(specificity)*100:.02f} %')
     print('Accuracy', accuracy)
     print(cm)
 

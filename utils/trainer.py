@@ -42,7 +42,7 @@ class Trainer(object):
         self.history = history
         self.model = model
         if history is not None:
-            self.load_model_from_checkpoint(self.history)
+            self.load_model_from_checkpoint(self.history, model_state_key='net')
         self.valid_activation = valid_activation
         self.USE_TENSORBOARD = USE_TENSORBOARD
         self.exp_path = exp_path
@@ -52,6 +52,7 @@ class Trainer(object):
         if USE_CUDA:
             self.model.cuda()
         self.max_acc = 0
+        self.min_test_loss = 100
         train_samples = len(self.train_dataloader.dataset)
         self.display_step = self.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
         self.checkpoint_saving_steps = checkpoint_saving_steps
@@ -150,10 +151,10 @@ class Trainer(object):
         total_labels = np.concatenate(total_labels)
         total_preds = np.concatenate(total_preds)
         self.avg_test_acc = accuracy_score(total_labels, total_preds)
-        test_loss = total_test_loss/valid_samples
-        self.logger.info(f'Testing loss {test_loss}')
+        self.test_loss = total_test_loss/valid_samples
+        self.logger.info(f'Testing loss {self.test_loss}')
         self.valid_writer.add_scalar('Accuracy/epoch', self.avg_test_acc, self.epoch)
-        self.valid_writer.add_scalar('Loss/epoch', test_loss, self.epoch)
+        self.valid_writer.add_scalar('Loss/epoch', self.test_loss, self.epoch)
 
     def load_model_from_checkpoint(self, ckpt, model_state_key='model_state_dict'):
         state_key = torch.load(ckpt, map_location=self.device)
@@ -166,12 +167,18 @@ class Trainer(object):
             'optimizer': self.optimizer.state_dict(),
             "epoch": self.epoch
             }
-        if self.avg_test_acc > self.max_acc:
-            self.max_acc = self.avg_test_acc
-            self.logger.info(f"-- Saving best model with testing accuracy {self.max_acc:.3f} --")
+        # if self.avg_test_acc > self.max_acc:
+        #     self.max_acc = self.avg_test_acc
+        #     self.logger.info(f"-- Saving best model with testing accuracy {self.max_acc:.3f} --")
+        #     checkpoint_name = 'ckpt_best.pth'
+        #     torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
+
+        if self.test_loss < self.min_test_loss:
+            self.min_test_loss = self.test_loss
+            self.logger.info(f"-- Saving best model with testing loss {self.min_test_loss:.3f} --")
             checkpoint_name = 'ckpt_best.pth'
             torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
-
+            
         # if self.epoch%self.config.TRAIN.CHECKPOINT_SAVING_STEPS == 0:
         if self.epoch%self.checkpoint_saving_steps == 0:
             self.logger.info(f"Saving model with testing accuracy {self.avg_test_acc:.3f} in epoch {self.epoch} ")

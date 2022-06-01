@@ -48,6 +48,7 @@ def get_data_by_pid_asus(data_path, pid):
             mask_dir = _dir
 
     vol_raw_path = data_utils.get_files(raw_dir, 'mhd', recursive=False)[0]
+    filename = os.path.split(vol_raw_path)[1]
     vol, origin, spacing, direction = data_utils.load_itk(vol_raw_path)
     raw_vol = vol.copy()
     # raw_vol = raw_preprocess(raw_vol, output_dtype=np.int32, norm=False)
@@ -57,7 +58,7 @@ def get_data_by_pid_asus(data_path, pid):
     vol_mask_path = data_utils.get_files(mask_dir, 'mhd', recursive=False)[0]
     mask_vol, _, _, _ = data_utils.load_itk(vol_mask_path)
     mask_vol = mask_preprocess(mask_vol, ignore_malignancy=False)        
-    return raw_vol, vol, mask_vol, origin, spacing, direction    
+    return raw_vol, vol, mask_vol, origin, spacing, direction, filename
 
 
 def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
@@ -88,14 +89,18 @@ def asus_nodule_volume_generator(data_path, case_pids=None, case_indices=None):
            
         # TODO: a bad implementation -> should keep the input output simple
         if 'B' in pid:
-            raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path[0], pid)
+            raw_vol, vol, mask_vol, origin, spacing, direction, filename = get_data_by_pid_asus(data_path[0], pid)
         elif 'm' in pid:
-            raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path[1], pid)
+            raw_vol, vol, mask_vol, origin, spacing, direction, filename = get_data_by_pid_asus(data_path[1], pid)
         else:
-            raw_vol, vol, mask_vol, origin, spacing, direction = get_data_by_pid_asus(data_path, pid)
+            raw_vol, vol, mask_vol, origin, spacing, direction, filename = get_data_by_pid_asus(data_path, pid)
 
         # TODO: what is scan_idx
-        infos = {'pid': pid, 'scan_idx': scan_idx, 'subset': None, 'origin': origin, 'spacing': spacing, 'direction': direction}
+        infos = {
+            'pid': pid, 'scan_idx': scan_idx, 'subset': None, 
+            'origin': origin, 'spacing': spacing, 'direction': direction,
+            'filename': filename
+        }
         yield raw_vol, vol, mask_vol, infos
 
 

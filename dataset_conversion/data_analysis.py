@@ -1,4 +1,5 @@
 from dis import dis
+from this import d
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -7,7 +8,7 @@ import os
 import pandas as pd
 from py import process
 from visualization.vis import show_mask_base
-from dataset_conversion.coord_transform import xyz2irc
+from dataset_conversion.coord_transform import xyz2irc, irc2xyz
 from data.data_utils import get_files, load_itk
 
 
@@ -85,14 +86,16 @@ def get_nodule_diameter(nodule_vol, origin_zyx, spacing_zyx, direction_zyx):
     max_dist = max(total_dist)
     min_nodule = total_dist.index(min_dist)
     max_nodule = total_dist.index(max_dist)
-    min_point_zyx = np.array((xs[min_nodule], ys[min_nodule], zs[min_nodule]))
-    max_point_zyx = np.array((xs[max_nodule], ys[max_nodule], zs[max_nodule]))
-    # min_point_zyx = np.array((zs[min_nodule], ys[min_nodule], xs[min_nodule]))
-    # max_point_zyx = np.array((zs[max_nodule], ys[max_nodule], xs[max_nodule]))
-    min_point_irc = xyz2irc(min_point_zyx, origin_zyx, spacing_zyx, direction_zyx)
-    max_point_irc = xyz2irc(max_point_zyx, origin_zyx, spacing_zyx, direction_zyx)
+    min_point_irc = np.array((xs[min_nodule], ys[min_nodule], zs[min_nodule]))
+    max_point_irc = np.array((xs[max_nodule], ys[max_nodule], zs[max_nodule]))
+    # min_point_xyz = irc2xyz(min_point_irc, origin_zyx, spacing_zyx, direction_zyx)[::-1]
+    # max_point_xyz = irc2xyz(max_point_irc, origin_zyx, spacing_zyx, direction_zyx)[::-1]
+    # nodule_diameter = (np.sum((min_point_xyz - max_point_xyz)**2))**0.5
 
-    nodule_diameter = (np.sum((min_point_irc - max_point_irc)**2))**0.5
+    pixs = np.abs(max_point_irc[::-1]-min_point_irc[::-1], dtype=np.float64)
+    pixs *= spacing_zyx
+    nodule_diameter = np.sum(pixs**2)**0.5
+    # radius = nodule_diameter / 2
     return nodule_diameter
 
 
