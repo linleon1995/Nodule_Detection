@@ -7,8 +7,8 @@ DATA:
     TMH_Nodule: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10
     LIDC: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\crop\32x64x64-10
   COCO_PATH:
-    TMH_Nodule: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Nodule_Detection\cv-5\4
-    LIDC: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\coco\NoduleNet\cv-6\0
+    TMH_Nodule: C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Nodule_Detection
+    LIDC: C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\coco\NoduleNet
   CROP_RANGE:
     index: 32
     row: 64
@@ -31,7 +31,7 @@ MODEL:
 
 OPTIMIZER:
   optimizer: Adam
-  learning_rate: 1.0e-3
+  learning_rate: 5.0e-4
   weight_decay: 0
   momemtum: 0
   betas:
@@ -39,16 +39,21 @@ OPTIMIZER:
     - 0.99
 
 TRAIN:
-  EPOCH: 200
+  EPOCH: 100
   LOSS: CrossEntropy
   # SPLIT: 0.8
   CHECKPOINT_SAVING_STEPS: 50
-  PROJECT_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection
+  CHECKPOINT_PATH: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\nodule_classification\ckpt
   manual_seed: 1
-  TASK_NAME: Nodule_Detection
+  LR_SCHEDULER:
+    gamma: 0.8
+    decay_step: 20
+  INIT_CHECKPOINT: C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\nodule_classification\ckpt\run_033\0\ckpt_best.pth
+  INIT_CHECKPOINT: null
+  # TASK_NAME: Nodule_Detection
 
 OUTPUT: output
 
 CV:
-  FOLD: 6
-  ASSIGN: 0
+  FOLD: 5
+  ASSIGN: 4
