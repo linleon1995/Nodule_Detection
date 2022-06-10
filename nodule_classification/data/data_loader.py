@@ -84,9 +84,17 @@ class BaseMalignancyClsDataset(BaseNoduleClsDataset):
         volume_data_path = row_df['path']
         
         raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
+        # for i in [15, 16, 17]:
+        #     plt.imshow(raw_chunk[i])
+        #     plt.title('before')
+        #     plt.show()
         if self.data_augmentation:
             raw_chunk = self.transform(raw_chunk)
         raw_chunk = np.float32(np.tile(raw_chunk[np.newaxis], (3,1,1,1)))
+        # for i in [15, 16, 17]:
+        #     plt.imshow(raw_chunk[0,i])
+        #     plt.title('after')
+        #     plt.show()
         tmh_name = os.path.split(volume_data_path)[1].split('-')[-1][:-4]
 
         # if False:
@@ -102,9 +110,6 @@ class BaseMalignancyClsDataset(BaseNoduleClsDataset):
         target = self.malignancy_dict[row_df['malignancy']]
 
         target = np.array(target, dtype='float')[np.newaxis]
-        # for i in range(32):
-        #     plt.imshow(raw_chunk[0,i])
-        #     plt.show()
         return {'input':raw_chunk, 'target': target, 'tmh_name': tmh_name}
 
     def class_balance(self, input_files):

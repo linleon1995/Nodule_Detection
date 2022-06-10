@@ -219,12 +219,18 @@ def cross_valid_eval():
 
 def froc():
     from evaluationScript.noduleCADEvaluationLUNA16 import noduleCADEvaluation
-    annotation_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a2.csv'
+    annotation_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a5.csv'
     # annotation_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\annotations.csv'
+    # annotation_filename = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\stats_path\annotations.csv'
+    # import pandas as pd
+    # df = pd.read_csv(annotation_filename)
+    # print(df['seriesuid'].iloc[0])
+
+
     annotation_excluded_filename = ''
     seriesuids_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\tmh_pid2.csv'
     results_filename = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a\submission_ensemble.csv'
-    output_dir = rf'C:\Users\test\Desktop\Leon\Weekly\0530\a'
+    output_dir = rf'C:\Users\test\Desktop\Leon\Weekly\0530\b'
     noduleCADEvaluation(
         annotation_filename,
         annotation_excluded_filename,

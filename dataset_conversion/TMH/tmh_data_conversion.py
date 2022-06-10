@@ -69,16 +69,20 @@ def get_nodule_center_from_volume(volume, connectivity, origin_xyz, vxSize_xyz, 
 
 def save_center_info(volume_generator, connectivity, save_path):
     center_df = DataFrameTool(['seriesuid', 'coordX', 'coordY', 'coordZ', 'diameter_mm'])
+    break_control = False
     for vol_idx, (_, raw_volume, target_volume, volume_info) in enumerate(volume_generator):
-        if vol_idx < 19: continue
+        # if vol_idx > 16: break
         print(f'Saving Annotation of Volume {vol_idx}')
         origin_xyz, vxSize_xyz, direction = volume_info['origin'], volume_info['spacing'], volume_info['direction']
         filename = volume_info['filename']
         file_key = filename.split('.')[-2]
-        # if file_key == '11029688907433245392075633136616444':
-        #     print(3)
-        # else:
-        #     continue
+        if break_control:
+            break
+        if '2319683646' in file_key:
+            print(3)
+            break_control = True
+        else:
+            continue
         # target_volume, _ = resample(target_volume, spacing=vxSize_xyz, order=3)
         volume = cc3d.connected_components(target_volume, connectivity=connectivity)
         categories = np.unique(volume)[1:]
@@ -88,7 +92,8 @@ def save_center_info(volume_generator, connectivity, save_path):
             center_irc = get_nodule_center(nodule_volume)
             center_xyz = irc2xyz(center_irc[::-1], origin_xyz, vxSize_xyz, direction)
             diameter = get_nodule_diameter(nodule_volume, origin_xyz, vxSize_xyz, direction)
-            center_df.write_row([file_key] + list(center_xyz[::-1]) + [diameter])
+            content = np.array([file_key] + list(center_xyz[::-1]) + [diameter])
+            center_df.write_row(content)
         # for nodule_center in total_nodule_center:
         #     center_df.write_row([filename] + list(nodule_center) + [diameter])
 
@@ -169,22 +174,22 @@ def data_preprocess(dataset_name):
     # # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
     # # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
-    # Build up coco-structure
-    for task_name in cat_ids:
-        task_cat_ids = cat_ids[task_name]
-        task_coco_path = os.path.join(coco_path, task_name)
+    # # Build up coco-structure
+    # for task_name in cat_ids:
+    #     task_cat_ids = cat_ids[task_name]
+    #     task_coco_path = os.path.join(coco_path, task_name)
 
-        num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
-        cv_split_indices = get_cv_split(num_fold, num_case, shuffle, seed)
-        for fold in cv_split_indices:
-            coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
-            os.makedirs(coco_split_path, exist_ok=True)
+    #     num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
+    #     cv_split_indices = get_cv_split(num_fold, num_case, shuffle, seed)
+    #     for fold in cv_split_indices:
+    #         coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
+    #         os.makedirs(coco_split_path, exist_ok=True)
 
-            split_indices = cv_split_indices[fold]
-            build_tmh_nodule_coco(
-                data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
-                cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
-            )
+    #         split_indices = cv_split_indices[fold]
+    #         build_tmh_nodule_coco(
+    #             data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
+    #             cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
+    #         )
 
 
 def build_parameters(config_path):
