@@ -88,36 +88,79 @@ def specificity(tn, fp):
     return tn / denominator
 
 
-def cls_metrics(y_true, y_pred, n_class=None):
+class ClassificationMetrics():
+    # TODO: macro, micro average
+    # TODO: assemble to a higer API to do CV
+    def __init__(self, n_class):
+        self.eval_result = {}
+        self.n_class = n_class
+
+    def eval(self, y_true, y_pred):
+        if self.n_class is None:
+            self.n_class = np.max(np.concatenate([y_true, y_pred])) + 1
+        cm = confusion_matrix(y_true, y_pred, labels=np.arange(0, self.n_class))
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                    #   display_labels=n_class
+                                        )
+        disp.plot()
+        plt.savefig('plot/cm.png')
+        precision = precision_score(y_true, y_pred, average=None)
+        recall = recall_score(y_true, y_pred, average=None)
+        tp = np.diag(cm)
+        tn = tp[::-1]
+        fp = np.sum(cm, axis=0) - tp
+        specificity = tn / (tn + fp)
+
+        # TODO: check specificity coorectness
+        # specificity = recall_score(y_true, y_pred, pos_label=2, average=None)
+        accuracy = accuracy_score(y_true, y_pred)
+
+        print(f'Precision: {precision}')
+        print(f'mean Precision: {np.mean(precision)*100:.02f} %')
+        print(f'Recall: {recall}')
+        print(f'mean Recall: {np.mean(recall)*100:.02f} %')
+        print(f'Specificity: {specificity}')
+        print(f'mean Specificity: {np.mean(specificity)*100:.02f} %')
+        print('Accuracy', accuracy)
+        print(cm)
+
+
+def cls_metrics(y_true, y_pred, save_name='cm.png', n_class=None):
     if n_class is None:
         n_class = np.max(np.concatenate([y_true, y_pred])) + 1
 
-    # cm = confusion_matrix(y_true, y_pred, labels=np.arange(1, n_class))
     cm = confusion_matrix(y_true, y_pred, labels=np.arange(0, n_class))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm,
                                 #   display_labels=n_class
                                   )
     disp.plot()
-    plt.savefig('plot/cm.png')
+    plt.savefig(save_name)
+
     precision = precision_score(y_true, y_pred, average=None)
     recall = recall_score(y_true, y_pred, average=None)
     tp = np.diag(cm)
-    tn = tp[::-1]
+    tn = np.repeat(np.sum(tp), tp.size) - tp
     fp = np.sum(cm, axis=0) - tp
     specificity = tn / (tn + fp)
-    
-    # TODO: check specificity coorectness
-    # specificity = recall_score(y_true, y_pred, pos_label=2, average=None)
+    # TODO: change it because true_divide will trigger error
+    specificity = np.where(np.isnan(specificity), 0.0, specificity)
     accuracy = accuracy_score(y_true, y_pred)
 
+    mean_precision = np.mean(precision)
+    mean_recall = np.mean(recall)
+    mean_specificity = np.mean(specificity)
+
+    print(20*'=')
     print(f'Precision: {precision}')
-    print(f'mean Precision: {np.mean(precision)*100:.02f} %')
+    print(f'mean Precision: {mean_precision*100:.02f} %')
     print(f'Recall: {recall}')
-    print(f'mean Recall: {np.mean(recall)*100:.02f} %')
+    print(f'mean Recall: {mean_recall*100:.02f} %')
     print(f'Specificity: {specificity}')
-    print(f'mean Specificity: {np.mean(specificity)*100:.02f} %')
-    print('Accuracy', accuracy)
-    print(cm)
+    print(f'mean Specificity: {mean_specificity*100:.02f} %')
+    print(f'Accuracy {accuracy}')
+    print(f'Confuion matrix {cm}')
+    return mean_precision, mean_recall, mean_specificity, accuracy, cm
+
 
 # TODO: property for all avaiable metrics
 # TODO: should implement in @staticmethod

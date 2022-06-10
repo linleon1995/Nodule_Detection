@@ -14,11 +14,15 @@ def image_3d_cls_transform(img, mask=None):
     if input_dim == 3:
         img = img[None]
     # img, mask = scale_3d(img, mask)
+    img, mask = crop_and_scale_3d(img, mask)
     img, mask = rotate_3d(img, mask)
     img, mask = flip_3d(img, mask)
     img, mask = swap_3d(img, mask)
     if input_dim == 3:
         img = img[0]
+    # for i in range(0, img.shape[0], 2):
+    #     plt.imshow(img[i], 'gray')
+    #     plt.show()
     return img, mask
 
 
@@ -35,10 +39,10 @@ def flip_3d(img, mask=None):
 
 
 def swap_3d(img, mask=None):
-    axisorder = np.random.permutation(2)
-    img = np.transpose(img, np.concatenate([[0, 1], axisorder+2]))
+    axisorder = np.random.permutation(2) + 2
+    img = np.transpose(img, np.concatenate([[0, 1], axisorder]))
     if mask is not None:
-        mask = np.transpose(mask, np.concatenate([[0, 1], axisorder+2]))
+        mask = np.transpose(mask, np.concatenate([[0, 1], axisorder]))
     # if img.shape[1]==img.shape[2] and img.shape[1]==img.shape[3]:
     #     axisorder = np.random.permutation(3)
     #     img = np.transpose(img, np.concatenate([[0],axisorder+1]))
@@ -50,15 +54,14 @@ def rotate_3d(img, mask, angle_range=(-30, 30)):
     # angle = np.random.rand()*180
     angle = (np.random.rand()*2-1)*30
     # angle = np.random.uniform(*angle_range)
-    axes = tuple(np.random.choice(3, 2, replace=False))
+    axes = tuple(np.random.choice(3, 2, replace=False)+1)
+    # angle = 0.0
     # axes = (1, 2)
     img = rotate(img, angle,axes=axes, reshape=False, mode='reflect')
     # TODO: Not gaunrantee rotate working on mask (need to check value, dimension for multi class semantic seg label)
     # TODO: Better implementation of angle range
     if mask is not None:
         mask = rotate(mask, angle, axes=axes, reshape=False)
-    # plt.imshow(img[10])
-    # plt.show()
     return img, mask
 
 
@@ -80,6 +83,24 @@ def scale_3d(img, mask, crop_size, scale, pad_value):
     #     target[i] = target[i]*scale
     return img, mask
 
-def crop_3d():
-    pass
+def crop_and_scale_3d(img, mask=None, ratio=0.8):
+    # TODO: channel dimension issue, cropping operation should able to map in all the channel if exist
+    # e.g., [512, 512, 3] --> [64,64,3]
+    img_shape = img.shape
+    if img.ndim == 4:
+        img_shape = img_shape[1:]
 
+    new_img_shape = np.int32(np.array(img_shape, 'float')*ratio)
+    max_start_point = img_shape - new_img_shape
+    start_point = np.random.randint(max_start_point)
+    slice_bbox = [slice(start, start+new_img_shape[idx]) for idx, start in enumerate(start_point)]
+    img = img[:, slice_bbox[0], slice_bbox[1], slice_bbox[2]]
+    if mask is not None:
+        mask = mask[:, slice_bbox[0], slice_bbox[1], slice_bbox[2]]
+
+    zoom_factor = np.concatenate((np.ones(1), np.float32(img_shape/new_img_shape)))
+    img = zoom(img, zoom_factor)
+    # TODO: again, the correctness of zoom function use on mask is not promissing
+    if mask is not None:
+        mask = zoom(mask, zoom_factor)
+    return img, mask

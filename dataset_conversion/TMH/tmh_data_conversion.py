@@ -14,6 +14,7 @@ from data.volume_generator import asus_nodule_volume_generator
 from data.data_utils import modify_array_in_itk, get_files, load_itk
 from postprocessing.lung_mask_filtering import segment_lung
 from utils.train_utils import set_deterministic
+from data.data_utils import get_pids_from_coco
 
 from utils.configuration import load_config
 from utils.utils import get_nodule_center, DataFrameTool
@@ -96,6 +97,38 @@ def save_center_info(volume_generator, connectivity, save_path):
     center_df.save_data_frame(save_path)
 
 
+def convert_TMH_name_to_pid(coco_root, mhd_root, save_root):
+    coco_paths = get_files(coco_root, get_dirs=True)
+    mhd_paths = get_files(mhd_root, get_dirs=True, recursive=False)
+    for idx, coco_path in enumerate(coco_paths):
+        print(f'Split {idx}')
+        train_coco = os.path.join(coco_path, 'annotations_train.json')
+        valid_coco = os.path.join(coco_path, 'annotations_test.json')
+        train_tmh_names = get_pids_from_coco(train_coco)
+        valid_tmh_names = get_pids_from_coco(valid_coco)
+
+        train_pid, valid_pid = [], []
+        for mhd_path in mhd_paths:
+            tmh_name = os.path.split(mhd_path)[1]
+            if tmh_name in train_tmh_names:
+                pid = os.listdir(os.path.join(mhd_path, 'raw'))[0][:-4]
+                train_pid.append(pid)
+            elif tmh_name in valid_tmh_names:
+                pid = os.listdir(os.path.join(mhd_path, 'raw'))[0][:-4]
+                valid_pid.append(pid)
+
+        cv_save_path = os.path.join(save_root, str(idx))
+        os.makedirs(cv_save_path, exist_ok=True)
+        train_df = pd.DataFrame(train_pid)
+        train_df.to_csv(os.path.join(cv_save_path, f'{idx}_train.csv'), index=False, header=False)
+        valid_df = pd.DataFrame(valid_pid)
+        valid_df.to_csv(os.path.join(cv_save_path, f'{idx}_val.csv'), index=False, header=False)
+
+
+    
+
+
+
 def data_preprocess(dataset_name):
     dataset_parameter = build_parameters(dataset_name)
 
@@ -114,6 +147,7 @@ def data_preprocess(dataset_name):
     height = dataset_parameter['height']
     width = dataset_parameter['width']
     kc_image_path = image_path.replace('image', 'kc_image')
+    seed = dataset_parameter['seed']
     for path in [merge_path, image_path, kc_image_path, stats_path]:
         os.makedirs(path, exist_ok=True)
     
@@ -135,22 +169,22 @@ def data_preprocess(dataset_name):
     # # volume_generator = asus_nodule_volume_generator(data_path=merge_path)
     # # medical_to_img.volumetric_data_preprocess_KC(data_split, save_path=kc_image_path, volume_generator=volume_generator)
 
-    # # Build up coco-structure
-    # for task_name in cat_ids:
-    #     task_cat_ids = cat_ids[task_name]
-    #     task_coco_path = os.path.join(coco_path, task_name)
+    # Build up coco-structure
+    for task_name in cat_ids:
+        task_cat_ids = cat_ids[task_name]
+        task_coco_path = os.path.join(coco_path, task_name)
 
-    #     num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
-    #     cv_split_indices = get_cv_split(num_fold, num_case, shuffle)
-    #     for fold in cv_split_indices:
-    #         coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
-    #         os.makedirs(coco_split_path, exist_ok=True)
+        num_case = len(get_files(merge_path, recursive=False, get_dirs=True))
+        cv_split_indices = get_cv_split(num_fold, num_case, shuffle, seed)
+        for fold in cv_split_indices:
+            coco_split_path = os.path.join(task_coco_path, f'cv-{num_fold}', str(fold))
+            os.makedirs(coco_split_path, exist_ok=True)
 
-    #         split_indices = cv_split_indices[fold]
-    #         build_tmh_nodule_coco(
-    #             data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
-    #             cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
-    #         )
+            split_indices = cv_split_indices[fold]
+            build_tmh_nodule_coco(
+                data_path=image_path, save_path=coco_split_path, split_indices=split_indices, 
+                cat_ids=task_cat_ids, area_threshold=area_threshold, height=height, width=width
+            )
 
 
 def build_parameters(config_path):
@@ -198,6 +232,7 @@ def build_parameters(config_path):
         'n_class': cfg.N_CLASS,
         'height': cfg.HEIGHT,
         'width': cfg.WIDTH,
+        'seed': 0,
     }
     return data_parameters
 
@@ -228,9 +263,11 @@ def remove_1m0045_noise(data_path):
         print('-- 1m0045 has been modified')
 
 
-def get_cv_split(num_fold, num_sample, shuffle=False):
+def get_cv_split(num_fold, num_sample, shuffle=False, seed=None):
     assert num_fold > 0 and num_sample > 0, 'The fold number and sample number should both bigger than 0'
     assert num_sample > num_fold, 'The fold number should not bigger than sample number'
+    if seed is not None:
+        np.random.seed(seed)
     num_sample_in_fold = num_sample // num_fold
     remain = num_sample - num_fold * num_sample_in_fold
     base_num = [num_sample_in_fold+1  if i <= remain-1 else num_sample_in_fold for i in range(num_fold)]
@@ -364,59 +401,13 @@ def convert_lung_mask():
 
 def main():
     data_preprocess(CONFIG_PATH)
+    
+    # TODO:
+    # coco_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\coco\Malignancy\cv-5'
+    # mhd_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\merge'
+    # save_root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\pid'
+    # convert_TMH_name_to_pid(coco_root, mhd_root, save_root)
 
 
 if __name__ == '__main__':
     main()
-
-
-    # convert_lung_mask()
-
-
-    # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet\TMH0002\TMH0002.npy'
-    # a = np.load(f)
-    # for idx, img in enumerate(a):
-    #     if np.sum(img):
-    #         plt.imshow(img)
-    #         plt.title(str(idx))
-    #         plt.show()
-
-
-    # remove_1m0045_noise()
-
-
-    # ff = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\nodulenet_lung_mask'
-    # f_list = get_files(ff, 'npy')
-    # for f in f_list:
-    #     path, old_name = os.path.split(f)
-    #     new_name = old_name.replace('.mhd', '')
-    #     os.rename(f, os.path.join(path, new_name))
-
-
-    # import cc3d
-    # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset5\1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208.mhd'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset3\1.3.6.1.4.1.14519.5.2.1.6279.6001.100953483028192176989979435275.mhd'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset9\1.3.6.1.4.1.14519.5.2.1.6279.6001.102681962408431413578140925249.mhd'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset1\1.3.6.1.4.1.14519.5.2.1.6279.6001.104562737760173137525888934217.mhd'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LUNA16\data\subset7\1.3.6.1.4.1.14519.5.2.1.6279.6001.105495028985881418176186711228.mhd'
-
-    # _, origin, spacing, direction = load_itk(ff)
-
-    # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.100398138793540579077826395208.npy'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.100953483028192176989979435275.npy'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.102681962408431413578140925249.npy'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.104562737760173137525888934217.npy'
-    # # ff = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\masks_test\3\1.3.6.1.4.1.14519.5.2.1.6279.6001.105495028985881418176186711228.npy'
-
-    # ct = np.load(ff)
-    # ct_b = np.where(ct>0, 1, 0)
-    # ct_b = cc3d.connected_components(ct_b, 26)
-    # print(np.unique(ct_b))
-    
-    # d = get_nodule_diameter(ct_b, origin, spacing, direction)
-    # print(d)
-    # print(d)
-
-        
-    
-        

@@ -18,6 +18,8 @@ from utils import metrics
 from utils.train_utils import get_logger, DictAsMember, create_activation
 from data.data_utils import get_pids_from_coco
 from sklearn.metrics import precision_score
+import matplotlib.pyplot as plt
+import time
 
 CONFIG_PATH = 'config_file/test_config.yml'
 LOGGER = get_logger('test')
@@ -54,9 +56,10 @@ class Evaluator():
                 test_dataloader,
                 logger,
                 device,
+                save_path,
                 activation_func=None,
                 USE_TENSORBOARD=True,
-                USE_CUDA=True):
+                USE_CUDA=True,):
         self.cfg = cfg
         self.model = model
         self.test_dataloader = test_dataloader
@@ -65,6 +68,7 @@ class Evaluator():
         self.device = device
         self.activation_func = activation_func
         self.USE_TENSORBOARD = USE_TENSORBOARD
+        self.save_path = save_path
         # self.checkpoint_path = self.cfg.EVAL.CHECKPOINT_PATH
         
     def evaluate(self):
@@ -94,25 +98,34 @@ class Evaluator():
             total_labels.append(labels)
             total_preds.append(prediction)
 
+            input_var = input_var.cpu().detach().numpy()
+            start = time.time()
+            vis_for_img(
+                prob, labels, input_var[0,0], 
+                os.path.join(self.save_path, f'{data["tmh_name"][0]}', str(idx))
+            )
+            end = time.time()
+            print(f'{idx+1}/{valid_samples} {data["tmh_name"][0]} {end-start} sec')
+
         self.avg_test_acc = metrics.accuracy(
                 np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp), np.sum(self.eval_tool.total_fn), np.sum(self.eval_tool.total_tn)).item()
         total_labels = np.concatenate(total_labels)
         total_preds = np.concatenate(total_preds)
-        metrics.cls_metrics(total_labels, total_preds)
+        result = metrics.cls_metrics(total_labels, total_preds)
+        return result
 
-        # precision = precision_score(total_labels, total_preds, average=None)
-        # precision = metrics.precision(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fp))
-        # recall = metrics.recall(np.sum(self.eval_tool.total_tp), np.sum(self.eval_tool.total_fn))
-        # specificity = metrics.specificity(np.sum(self.eval_tool.total_tn), np.sum(self.eval_tool.total_fp))
-        # print(f'Precision: {precision*100:.02f}')
-        # print(f'Recall: {recall*100:.02f}')
-        # print(f'Specificity: {specificity*100:.02f}')
-        # print('Acc', self.avg_test_acc)
-        # print(f'TP: {self.eval_tool.total_tp}', 
-        #       f'FP: {self.eval_tool.total_fp}',
-        #       f'TN: {self.eval_tool.total_tn}',
-        #       f'FN: {self.eval_tool.total_fn}')
-        
+
+def vis_for_img(prob, labels, input_var, save_path):
+    os.makedirs(save_path, exist_ok=True)
+    fig, ax = plt.subplots(1,1)
+    for i in range(input_var.shape[0]):
+        # print(i)
+        ax.imshow(input_var[i], 'gray')
+        ax.set_title(f'class 1 prob {prob[0,1]}  label {labels[0]}')
+        fig.savefig(os.path.join(save_path, f'{i}.png'))
+        ax.cla()
+    plt.close()
+
 
 def main(config_reference):
     # Configuration
@@ -123,9 +136,26 @@ def main(config_reference):
     pprint(cfg)
 
     coco_list = build_coco_path(cfg.DATA.COCO_PATH[cfg.DATA.NAME], cfg.CV.FOLD, cfg.CV.ASSIGN, mode='eval')
+    cv_precision, cv_recall, cv_specificity, cv_accuracy = [], [], [], []
     for fold, test_coco in enumerate(coco_list):
         checkpoint_path = os.path.join(cfg.EVAL.CHECKPOINT_ROOT, str(fold), cfg.EVAL.CHECKPOINT)
-        eval(cfg, test_coco, checkpoint_path)  
+        print(50*'-', f'Fold {fold}', 50*'-')
+        fold_result = eval(cfg, test_coco, checkpoint_path)  
+        mean_precision, mean_recall, mean_specificity, accuracy, cm = fold_result
+        cv_precision.append(mean_precision)
+        cv_recall.append(mean_recall)
+        cv_specificity.append(mean_specificity)
+        cv_accuracy.append(accuracy)
+    mean_cv_precision = np.mean(cv_precision)
+    mean_cv_recall = np.mean(cv_recall)
+    mean_cv_specificity = np.mean(cv_specificity)
+    mean_cv_accuracy = np.mean(cv_accuracy)
+
+    print(50*'-', f'CV', 50*'-')
+    print(f'mean cv precision {mean_cv_precision}')
+    print(f'mean cv recall {mean_cv_recall}')
+    print(f'mean cv specificity {mean_cv_specificity}')
+    print(f'mean cv accuracy {mean_cv_accuracy}')
 
 
 def eval(cfg, test_coco, checkpoint_path):
@@ -155,33 +185,19 @@ def eval(cfg, test_coco, checkpoint_path):
                               test_dataloader,
                               logger=LOGGER,
                               device=cfg.device,
+                              save_path=os.path.join(cfg.EVAL.CHECKPOINT_ROOT, 'eval'),
                               activation_func=activation_func,
                               USE_TENSORBOARD=True,
                               USE_CUDA=True)
 
-    eval_instance.evaluate()
+    result = eval_instance.evaluate()
+    return result
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     main(CONFIG_PATH)
+    end_time = time.time()
+    print(end_time-start_time, (end_time-start_time)/60)
 
     
-    # import matplotlib.pyplot as plt
-    # from data.data_utils import get_files
-    # root = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
-    # # root = rf'C:\Users\test\Desktop\Leon\Datasets\LIDC-preprocess\crop\32x64x64-10\positive\Image'
-    # f_list = get_files(root, 'npy')
-
-    # for idx, f in enumerate(f_list):
-    #     # if idx != 97: continue
-    #     print(idx)
-    #     # f = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\crop\32x64x64-10\positive\Image'
-    #     # f = os.path.join(f, rf'0011-TMH0011.npy')
-    #     mf = f.replace('Image', 'Mask')
-    #     x = np.load(f)
-    #     y = np.load(mf)
-    #     for x_, y_ in zip(x, y):
-    #         if np.sum(y_) and np.max(y_)==2:
-    #             plt.imshow(x_, 'gray')
-    #             plt.imshow(y_, alpha=0.2, vmin=0, vmax=2)
-    #             plt.show()

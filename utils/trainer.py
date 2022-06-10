@@ -9,6 +9,8 @@ import sys
 from utils import metrics
 
 
+# TODO: training info
+# TODO: random clip of data (put here or data loader)
 class Trainer(object):
     def __init__(self,
                  model, 
@@ -27,7 +29,8 @@ class Trainer(object):
                  USE_TENSORBOARD=True,
                  USE_CUDA=True,
                  history=None,
-                 checkpoint_saving_steps=20
+                 checkpoint_saving_steps=20,
+                 patience=10,
                  ):
         self.n_class = n_class
         self.train_epoch = train_epoch
@@ -57,9 +60,11 @@ class Trainer(object):
         self.display_step = self.calculate_display_step(num_sample=train_samples, batch_size=self.batch_size)
         self.checkpoint_saving_steps = checkpoint_saving_steps
         self.lr_scheduler = lr_scheduler
+        self.patience = patience
 
     def fit(self):
         for self.epoch in range(1, self.train_epoch + 1):
+            self.train()
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
                 lr = self.lr_scheduler.get_last_lr()[0]
@@ -67,11 +72,13 @@ class Trainer(object):
                 if self.USE_TENSORBOARD:
                     self.train_writer.add_scalar('Learning_rate', lr, self.epoch)
                     self.valid_writer.add_scalar('Learning_rate', lr, self.epoch)
-            self.train()
             with torch.no_grad():
                 if self.valid_dataloader is not None:
                     self.validate()
+                    if self.early_stopping():
+                        break
                 self.save_model()
+        self.save_checkpoint('ckpt_final')
 
         if self.USE_TENSORBOARD:
             self.train_writer.close()
@@ -156,36 +163,42 @@ class Trainer(object):
         self.valid_writer.add_scalar('Accuracy/epoch', self.avg_test_acc, self.epoch)
         self.valid_writer.add_scalar('Loss/epoch', self.test_loss, self.epoch)
 
+    def early_stopping(self):
+        if self.test_loss > self.min_test_loss:
+            self.trigger += 1
+            if self.trigger > self.patience:
+                print(f'[Early stopping]  Epoch {self.epoch}')
+                return True
+        else:
+            self.trigger = 0
+            return False
+
     def load_model_from_checkpoint(self, ckpt, model_state_key='model_state_dict'):
         state_key = torch.load(ckpt, map_location=self.device)
         self.model.load_state_dict(state_key[model_state_key])
         self.model = self.model.to(self.device)
 
     def save_model(self):
-        checkpoint = {
-            "net": self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
-            "epoch": self.epoch
-            }
-        # if self.avg_test_acc > self.max_acc:
-        #     self.max_acc = self.avg_test_acc
-        #     self.logger.info(f"-- Saving best model with testing accuracy {self.max_acc:.3f} --")
-        #     checkpoint_name = 'ckpt_best.pth'
-        #     torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
-
         if self.test_loss < self.min_test_loss:
             self.min_test_loss = self.test_loss
             self.logger.info(f"-- Saving best model with testing loss {self.min_test_loss:.3f} --")
-            checkpoint_name = 'ckpt_best.pth'
-            torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
+            checkpoint_name = 'ckpt_best'
+            self.save_checkpoint(checkpoint_name)
             
         # if self.epoch%self.config.TRAIN.CHECKPOINT_SAVING_STEPS == 0:
         if self.epoch%self.checkpoint_saving_steps == 0:
             self.logger.info(f"Saving model with testing accuracy {self.avg_test_acc:.3f} in epoch {self.epoch} ")
-            checkpoint_name = 'ckpt_best_{:04d}.pth'.format(self.epoch)
-            torch.save(checkpoint, os.path.join(self.exp_path, checkpoint_name))
+            checkpoint_name = f'ckpt_best_{self.epoch:04d}'
+            self.save_checkpoint(checkpoint_name)
 
-
+    def save_checkpoint(self, checkpoint_name):
+        checkpoint = {
+            "net": self.model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+            "epoch": self.epoch
+        }
+        torch.save(checkpoint, os.path.join(self.exp_path, f'{checkpoint_name}.pth'))
+    
     def calculate_display_step(self, num_sample, batch_size, display_times=5):
         num_steps = max(num_sample//batch_size, 1)
         display_steps = max(num_steps//display_times, 1)

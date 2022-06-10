@@ -12,7 +12,7 @@ torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
 from model.ResNet_3d import build_3d_resnet
-import tensorboardX
+# import torch.utils.tensorboard
 from pprint import pprint
 
 from nodule_classification.data.build_crop_dataset import build_dataset, build_coco_path
@@ -63,10 +63,9 @@ def train(cfg, train_coco, valid_coco, exp_path):
 
     # Logger
     LOGGER.info("Start Training!!")
-    exp_info = f"Training epoch: {cfg.TRAIN.EPOCH} Batch size: {cfg.DATA.BATCH_SIZE} \
-               Shuffling Data: {cfg.DATA.SHUFFLE} Training Samples: {len(train_dataloader.dataset)} \
-               Valid Samples: {len(valid_dataloader.dataset)}"
-    LOGGER.info(exp_info)
+    LOGGER.info(f"Training epoch: {cfg.TRAIN.EPOCH} Batch size: {cfg.DATA.BATCH_SIZE}")
+    LOGGER.info(f"Shuffling Data: {cfg.DATA.SHUFFLE} Training Samples: {len(train_dataloader.dataset)}")
+    LOGGER.info(f"Valid Samples: {len(valid_dataloader.dataset)}")
     train_utils.config_logging(os.path.join(exp_path, 'logging.txt'), cfg, access_mode='w+')
 
     optimizer = train_utils.create_optimizer_temp(cfg.OPTIMIZER, model)
@@ -106,7 +105,8 @@ def train(cfg, train_coco, valid_coco, exp_path):
                                     USE_TENSORBOARD=True,
                                     checkpoint_saving_steps=cfg.TRAIN.CHECKPOINT_SAVING_STEPS,
                                     # USE_CUDA=True,)
-                                    history=cfg.TRAIN.INIT_CHECKPOINT)
+                                    history=cfg.TRAIN.INIT_CHECKPOINT,
+                                    patience=cfg.TRAIN.PATIENCE)
 
     trainer_instance.fit()
 
