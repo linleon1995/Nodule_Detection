@@ -47,15 +47,15 @@ def merge_data(merge_mapping, data_path, save_dir, filekey='case'):
             semantic_mask_vol[repeat_area==1] = repeat_area_malignancy
         semantic_mask_vol = np.uint8(semantic_mask_vol)
 
-        import cc3d
-        nodule_num = np.unique(cc3d.connected_components(semantic_mask_vol, connectivity=26)).size-1
-        total_nodule += nodule_num
+        # import cc3d
+        # nodule_num = np.unique(cc3d.connected_components(semantic_mask_vol, connectivity=26)).size-1
+        # total_nodule += nodule_num
 
-        # new_itkimage = modify_array_in_itk(mask_itkimage, semantic_mask_vol)
-        # sitk.WriteImage(new_itkimage, output_mask_filename)
+        new_itkimage = modify_array_in_itk(mask_itkimage, semantic_mask_vol)
+        sitk.WriteImage(new_itkimage, output_mask_filename)
 
-        # itkimage = sitk.ReadImage(raw_path)
-        # sitk.WriteImage(itkimage, output_image_filename)
+        itkimage = sitk.ReadImage(raw_path)
+        sitk.WriteImage(itkimage, output_image_filename)
     print('Merging process complete!\n')
 
 
@@ -120,12 +120,14 @@ def TMH_merging_check(data_path, save_path):
         row_df['output'] = filename
         for same_idx, pid in enumerate(same_list):
             row_df[f'merge_case_{same_idx:03d}'] = pid
+        row_df['pid'] = np.array(os.path.split(raw_path)[1].split('.')[-2])
         # df = df.append(row_df, ignore_index=True)
         row_df_list.append(pd.DataFrame(row_df, index=[0]))
         merge_idx += 1
     df = pd.concat(row_df_list)    
-    df.to_csv(os.path.join(save_path, 'merge_table.csv'), index=False)
-    return merge_mapping
+    merge_table_path = os.path.join(save_path, 'merge_table.csv')
+    df.to_csv(merge_table_path, index=False)
+    return merge_mapping, merge_table_path
 
 
 def check_same_volume(vol1_path, vol2_path):

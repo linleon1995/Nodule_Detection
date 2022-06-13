@@ -1,5 +1,6 @@
 from fileinput import filename
 import os
+from cv2 import merge
 import numpy as np
 import cc3d
 import SimpleITK as sitk
@@ -101,7 +102,6 @@ def save_center_info(volume_generator, connectivity, save_path):
     os.makedirs(save_dir, exist_ok=True)
     center_df.save_data_frame(save_path)
 
-
 def convert_TMH_name_to_pid(coco_root, mhd_root, save_root):
     coco_paths = get_files(coco_root, get_dirs=True)
     mhd_paths = get_files(mhd_root, get_dirs=True, recursive=False)
@@ -128,10 +128,6 @@ def convert_TMH_name_to_pid(coco_root, mhd_root, save_root):
         train_df.to_csv(os.path.join(cv_save_path, f'{idx}_train.csv'), index=False, header=False)
         valid_df = pd.DataFrame(valid_pid)
         valid_df.to_csv(os.path.join(cv_save_path, f'{idx}_val.csv'), index=False, header=False)
-
-
-    
-
 
 
 def data_preprocess(dataset_name):
@@ -161,11 +157,14 @@ def data_preprocess(dataset_name):
     volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
     # TMH_nodule_base_check(volume_generator, save_path=stats_path)
     
-    save_center_info(volume_generator, connectivity=26, save_path=os.path.join(stats_path, 'annotations.csv'))
+    # save_center_info(volume_generator, connectivity=26, save_path=os.path.join(stats_path, 'annotations.csv'))
 
     # # Merge mhd data
-    # merge_mapping = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
+    merge_mapping, merge_table_path = tmh_data_merge.TMH_merging_check(raw_path, merge_path)
     # tmh_data_merge.merge_data(merge_mapping, raw_path, merge_path, filekey='TMH')
+    
+    # Svae TMH pid
+    save_tmh_pid_in_csv(merge_table_path, stats_path)
 
     # # Convert medical 3d volume data to image format
     # volume_generator = asus_nodule_volume_generator(data_path=merge_path, case_pids=case_pids)
@@ -364,6 +363,13 @@ def TMH_nodule_base_check(volume_generator, save_path=None):
     print('\n')
 
 
+def save_tmh_pid_in_csv(merge_table_path, save_path):
+    merge_table_path = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\merge\merge_table.csv'
+    csv_path = os.path.join(save_path, 'tmh_pid.csv')
+    merge_table = pd.read_csv(merge_table_path)
+    pid = merge_table['pid']
+    pid.to_csv(csv_path, index=False, header=None)
+    
 
 def convert_lung_mask():
     img_path = rf'C:\Users\test\Desktop\Leon\Datasets\TMH_Nodule-preprocess\merge'
