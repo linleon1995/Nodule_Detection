@@ -414,12 +414,16 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
         return idx
     thres = [0.125,0.25,0.5,1,2,4,8]
     sen = []
-    print('FROC at points: ', thres)
+    nodOutputfile.write('\n')
+    nodOutputfile.write(f'FROC at points: {thres}\n')
     for th in thres:
-        print('fps: ', th, ', sensitivity: ', sens[find_nearest(fps, th)])
+        nodOutputfile.write(f'    fps: {th} sensitivity {sens[find_nearest(fps, th)]}\n')
         sen.append(sens[find_nearest(fps, th)])
     sen.append(sen[-1])
-    print('=============================================\naverage FROC: ', np.mean(sen))
+    cpm = np.mean(sen)
+
+    nodOutputfile.write('    =============================================\n')
+    nodOutputfile.write(f'    average FROC: {cpm}\n')
     return (fps, sens, thresholds, fps_bs_itp, sens_bs_mean, sens_bs_lb, sens_bs_up)
     
 def getNodule(annotation, header, state = ""):
