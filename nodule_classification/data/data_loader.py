@@ -149,7 +149,7 @@ class BaseNoduleClsDataset(Dataset):
     def __getitem__(self, idx):
         row_df = self.input_files.iloc[idx]
         volume_data_path = row_df['path']
-
+        tmh_name = os.path.split(volume_data_path)[1].split('-')[-1][:-4]
         # volume_data_path = self.input_files['path'].iloc[idx]
         
         raw_chunk = np.load(os.path.join(self.data_path, volume_data_path))
@@ -159,8 +159,8 @@ class BaseNoduleClsDataset(Dataset):
         # target = np.array([0, 1]) if row_df['category'] == 'positive' else np.array([1, 0])
         target = 1 if row_df['category'] == 'positive' else 0
         target = np.array(target, dtype='float')[np.newaxis]
-        malignancy = row_df['malignancy']
-        return {'input':raw_chunk, 'target': target, 'malignancy': malignancy}
+        # malignancy = row_df['malignancy']
+        return {'input':raw_chunk, 'target': target, 'tmh_name': tmh_name}
 
     def transform(self, img):
         img, _ = image_3d_cls_transform(img)

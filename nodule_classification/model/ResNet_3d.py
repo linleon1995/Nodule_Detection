@@ -112,7 +112,8 @@ class ResNet(nn.Module):
                  no_max_pool=False,
                  shortcut_type='B',
                  widen_factor=1.0,
-                 n_classes=400):
+                 n_classes=400,
+                 keep_last_layer=True):
         super().__init__()
 
         block_inplanes = [int(x * widen_factor) for x in block_inplanes]
@@ -156,7 +157,12 @@ class ResNet(nn.Module):
         # self.fc1 = nn.Linear(block_inplanes[3] * block.expansion, 256)
         self.fc1 = nn.Linear(4096, 256)
         self.fc2 = nn.Linear(256, 128)
-        self.fc3 = nn.Linear(128, n_classes)
+        
+        if keep_last_layer:
+            self.fc3 = nn.Linear(128, n_classes)
+        else:
+            self.fc3 = None
+            
         # self.fc = nn.Linear(block_inplanes[3] * block.expansion * 8, n_classes)
 
         # for m in self.modules():
@@ -224,7 +230,8 @@ class ResNet(nn.Module):
         # x = self.fc(x)
         x = self.fc1(x)
         x = self.fc2(x)
-        x = self.fc3(x)
+        if self.fc3 is not None:
+            x = self.fc3(x)
 
         return x
 

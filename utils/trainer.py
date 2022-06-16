@@ -128,6 +128,7 @@ class Trainer(object):
         test_n_iter, total_test_loss = 0, 0
         valid_samples = len(self.valid_dataloader.dataset)
         total_labels, total_preds = [], []
+        # TODO: separate the acc part
         for idx, data in enumerate(self.valid_dataloader):
             test_n_iter += 1
 

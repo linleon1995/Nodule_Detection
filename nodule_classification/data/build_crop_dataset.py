@@ -32,24 +32,25 @@ def build_coco_path(coco_root, num_fold, assign_fold=None, mode='train'):
         if mode == 'train':
             train_coco = os.path.join(coco_path, 'annotations_train.json')
             valid_coco = os.path.join(coco_path, 'annotations_test.json')
-            total_coco.append((train_coco, valid_coco))
+            total_coco.append((fold, train_coco, valid_coco))
         elif mode in ['test', 'eval']:
             valid_coco = os.path.join(coco_path, 'annotations_test.json')
-            total_coco.append(valid_coco)
+            total_coco.append((fold, valid_coco))
 
     return total_coco
 
 
-def build_dataset(data_path, crop_range, train_seriesuid, valid_seriesuid, transform, batch_size):
-    train_dataset = BaseMalignancyClsDataset(
-        data_path, crop_range, train_seriesuid, cls_balance=True, data_augmentation=transform)
-    valid_dataset = BaseMalignancyClsDataset(
-        data_path, crop_range, valid_seriesuid, cls_balance=True, data_augmentation=False)
-
-    # train_dataset = BaseNoduleClsDataset(
-    #     data_path, crop_range, train_seriesuid, cls_balance=False, data_augmentation=transform)
-    # valid_dataset = BaseNoduleClsDataset(
-    #     data_path, crop_range, valid_seriesuid, data_augmentation=False)
+def build_dataset(data_path, crop_range, train_seriesuid, valid_seriesuid, transform, batch_size, task):
+    if task == 'Nodule':
+        train_dataset = BaseNoduleClsDataset(
+            data_path, crop_range, train_seriesuid, cls_balance=True, data_augmentation=transform)
+        valid_dataset = BaseNoduleClsDataset(
+            data_path, crop_range, valid_seriesuid, cls_balance=True, data_augmentation=False)
+    elif task == 'Malignancy':
+        train_dataset = BaseMalignancyClsDataset(
+            data_path, crop_range, train_seriesuid, cls_balance=True, data_augmentation=transform)
+        valid_dataset = BaseMalignancyClsDataset(
+            data_path, crop_range, valid_seriesuid, cls_balance=True, data_augmentation=False)
 
     train_dataloader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=0, 

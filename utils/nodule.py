@@ -2,16 +2,6 @@
 import numpy as np
 
 
-
-# class EvalofLungNodule():
-#     def __init__(self, study_id):
-#         self.study_id = study_id
-#         self.target_nodules = {}
-#         self.pred_nodules = {}
-
-#     def record(self, pred_nodule, pred_s):
-#         self.pred_nodules[]
-
 class LungNoduleStudy():
     def __init__(self, study_id, category_volume, raw_volume=None):
         self.study_id = study_id

@@ -618,3 +618,4 @@ def nodule_visualize(save_path, pid, vol, mask_vol, pred_vol, target_vol_categor
                             save_path1=os.path.join(_3d_save_path, f'{pid}-raw-pred.png'),
                             save_path2=os.path.join(_3d_save_path, f'{pid}-preprocess-pred.png'),
                             crop_range=crop_range)
+

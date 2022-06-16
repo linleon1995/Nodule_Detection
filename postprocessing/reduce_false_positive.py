@@ -1,10 +1,11 @@
 import numpy as np
 import torch
-from nodule_classification.data.luna16_crop_preprocess import LUNA16_CropRange_Builder
+
 from nodule_classification.model.ResNet_3d import build_3d_resnet
 
 # TODO: torch, numpy problem
 # TODO: class design
+
 class NoduleClassifier():
     def __init__(self, crop_range, checkpint_path, model_depth=50, num_class=2, prob_threshold=0.5):
         self.crop_range = crop_range
@@ -15,7 +16,7 @@ class NoduleClassifier():
     def nodule_classify(self, raw_volume, pred_study, target_volume):
         pred_study, pred_nodules = self.reduce_false_positive(raw_volume, pred_study)
         for nodule_id in pred_nodules:
-            crop_target_volume = LUNA16_CropRange_Builder.crop_volume(target_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
+            crop_target_volume = crop_volume(target_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
             target_class = np.where(np.sum(crop_target_volume)>0, 1, 0)
             pred_class = pred_nodules[nodule_id]['Nodule_pred_class']
             result = self.eval(target_class, pred_class)
@@ -28,7 +29,7 @@ class NoduleClassifier():
         pred_nodules = self.get_nodule_center(pred_volume_category)
         remove_nodule_ids = []
         for nodule_id in list(pred_nodules):
-            crop_raw_volume = LUNA16_CropRange_Builder.crop_volume(raw_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
+            crop_raw_volume = crop_volume(raw_volume, self.crop_range, pred_nodules[nodule_id]['Center'])
             crop_raw_volume = np.swapaxes(np.expand_dims(crop_raw_volume, (0, 1)), 1, 5)[...,0]
             crop_raw_volume = torch.from_numpy(crop_raw_volume).float().to(self.device)
 
@@ -82,6 +83,24 @@ class NoduleClassifier():
             return 'tp'
         
 
+def crop_volume(volume, crop_range, crop_center):
+    def get_interval(crop_range_dim, center, size_dim):
+        begin = center - crop_range_dim//2
+        end = center + crop_range_dim//2
+        if begin < 0:
+            begin, end = 0, end-begin
+        elif end > size_dim:
+            modify_distance = end - size_dim + 1
+            begin, end = begin-modify_distance, size_dim-1
+        # print(crop_range_dim, center, size_dim, begin, end)
+        assert end-begin == crop_range_dim, f'Actual cropping range {end-begin} not fit the required cropping range {crop_range_dim}'
+        return (begin, end)
 
+    index_interval = get_interval(crop_range['index'], crop_center['index'], volume.shape[0])
+    row_interval = get_interval(crop_range['row'], crop_center['row'], volume.shape[1])
+    column_interval = get_interval(crop_range['column'], crop_center['column'], volume.shape[2])
 
+    return volume[index_interval[0]:index_interval[1], 
+                    row_interval[0]:row_interval[1], 
+                    column_interval[0]:column_interval[1]]
 
