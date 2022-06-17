@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 from dataset_conversion.crop_data_utils import get_filename_key
-from nodule_classification.data.data_loader import BaseNoduleClsDataset, BaseMalignancyClsDataset, ASUSCropDataset, Luna16CropDataset
+from nodule_classification.data.data_loader import BaseNoduleClsDataset, BaseMalignancyClsDataset, BaseMalignancyClsDataset2
 
 
 def seed_worker(worker_id):
@@ -47,9 +47,9 @@ def build_dataset(data_path, crop_range, train_seriesuid, valid_seriesuid, trans
         valid_dataset = BaseNoduleClsDataset(
             data_path, crop_range, valid_seriesuid, cls_balance=True, data_augmentation=False)
     elif task == 'Malignancy':
-        train_dataset = BaseMalignancyClsDataset(
+        train_dataset = BaseMalignancyClsDataset2(
             data_path, crop_range, train_seriesuid, cls_balance=True, data_augmentation=transform)
-        valid_dataset = BaseMalignancyClsDataset(
+        valid_dataset = BaseMalignancyClsDataset2(
             data_path, crop_range, valid_seriesuid, cls_balance=True, data_augmentation=False)
 
     train_dataloader = DataLoader(

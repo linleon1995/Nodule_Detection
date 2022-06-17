@@ -73,8 +73,8 @@ def train(cfg, train_coco, valid_coco, exp_path):
     train_dataloader, valid_dataloader = build_dataset(
         cfg.DATA.DATA_PATH[cfg.DATA.NAME], cfg.DATA.CROP_RANGE, train_seriesuid, valid_seriesuid,
         cfg.DATA.IS_DATA_AUGMENTATION, cfg.DATA.BATCH_SIZE, task=cfg.DATA.TASK)
-    if cfg.MODEL.NAME == 'MatchingNet':
-        support_set_x, support_set_y = build_support_set(n=64, n_class=cfg.MODEL.NUM_CLASSES)
+    # if cfg.MODEL.NAME == 'MatchingNet':
+    #     support_set_x, support_set_y = build_support_set(n=4, n_class=cfg.MODEL.NUM_CLASSES)
 
     # Logger
     LOGGER.info("Start Training!!")
@@ -114,8 +114,8 @@ def train(cfg, train_coco, valid_coco, exp_path):
                                         train_dataloader, 
                                         valid_dataloader,
                                         LOGGER,
-                                        support_set_x=support_set_x,
-                                        support_set_y=support_set_y,
+                                        # support_set_x=support_set_x,
+                                        # support_set_y=support_set_y,
                                         device=cfg.device,
                                         n_class=cfg.MODEL.NUM_CLASSES,
                                         exp_path=exp_path,

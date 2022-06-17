@@ -236,8 +236,8 @@ def froc():
 
 
 def main():
-    # cross_valid_eval()
-    froc()
+    cross_valid_eval()
+    # froc()
 
 
 if __name__ == '__main__':

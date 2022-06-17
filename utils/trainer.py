@@ -31,6 +31,7 @@ class Trainer(object):
                  history=None,
                  checkpoint_saving_steps=20,
                  patience=10,
+                 strict=False,
                  ):
         self.n_class = n_class
         self.train_epoch = train_epoch
@@ -44,6 +45,7 @@ class Trainer(object):
         self.device = device
         self.history = history
         self.model = model
+        self.strict = strict
         if history is not None:
             self.load_model_from_checkpoint(self.history, model_state_key='net')
         self.valid_activation = valid_activation
@@ -176,7 +178,7 @@ class Trainer(object):
 
     def load_model_from_checkpoint(self, ckpt, model_state_key='model_state_dict'):
         state_key = torch.load(ckpt, map_location=self.device)
-        self.model.load_state_dict(state_key[model_state_key])
+        self.model.load_state_dict(state_key[model_state_key], strict=self.strict)
         self.model = self.model.to(self.device)
 
     def save_model(self):

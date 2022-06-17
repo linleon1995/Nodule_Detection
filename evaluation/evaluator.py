@@ -12,83 +12,9 @@ from utils.utils import DataFrameTool
 from visualization.vis import plot_image_truth_prediction, visualize, save_mask_in_3d
 from data.crop_utils import crops_to_volume
 from utils.metrics import binary_dsc
+from utils.nodule_to_nrrd import save_nodule_in_nrrd
+from data.data_utils import get_files
 
-# TODO:
-###
-import logging
-
-
-def save_in_nrrd(vol, mask_vol, direction, origin, spacing, save_dir, filename):
-    from utils.slicer_utils import seg_nrrd_write, raw_nrrd_write
-    vol = vol[...,0]
-    vol = np.transpose(vol, (1, 2, 0))
-    mask_vol = np.transpose(mask_vol, (1, 2, 0))
-    spacing = np.array([spacing[1], spacing[2], spacing[0]])
-    direction = direction * np.tile(spacing[:,np.newaxis], (1, 3))
-    origin = np.array([origin[1], origin[2], origin[0]])
-
-    # To fit the coordinate
-    vol = np.rot90(vol, k=1)
-    mask_vol = np.rot90(mask_vol, k=1)
-    
-    # plt.imshow(vol[...,10])
-    # plt.show()
-    raw_path = os.path.join(save_dir, f'{filename}.nrrd')
-    seg_path = os.path.join(save_dir, f'{filename}.seg.nrrd')
-    raw_nrrd_write(raw_path, vol, direction, origin, spacing)
-    seg_nrrd_write(seg_path, mask_vol, direction, origin, spacing)
-
-
-def get_files(path, keys=[], return_fullpath=True, sort=True, sorting_key=None, recursive=True, get_dirs=False, ignore_suffix=False):
-    """Get all the file name under the given path with assigned keys
-    Args:
-        path: (str)
-        keys: (list, str)
-        return_fullpath: (bool)
-        sort: (bool)
-        sorting_key: (func)
-        recursive: The flag for searching path recursively or not(bool)
-    Return:
-        file_list: (list)
-    """
-    file_list = []
-    assert isinstance(keys, (list, str))
-    if isinstance(keys, str): keys = [keys]
-    # Rmove repeated keys
-    keys = list(set(keys))
-
-    def push_back_filelist(root, f, file_list, is_fullpath):
-        f = f[:-4] if ignore_suffix else f
-        if is_fullpath:
-            file_list.append(os.path.join(root, f))
-        else:
-            file_list.append(f)
-
-    for i, (root, dirs, files) in enumerate(os.walk(path)):
-        # print(root, dirs, files)
-        if not recursive:
-            if i > 0: break
-
-        if get_dirs:
-            files = dirs
-            
-        for j, f in enumerate(files):
-            if keys:
-                for key in keys:
-                    if key in f:
-                        push_back_filelist(root, f, file_list, return_fullpath)
-            else:
-                push_back_filelist(root, f, file_list, return_fullpath)
-
-    if file_list:
-        if sort: file_list.sort(key=sorting_key)
-    else:
-        f = 'dir' if get_dirs else 'file'
-        if keys: 
-            logging.warning(f'No {f} exist with key {keys}.') 
-        else: 
-            logging.warning(f'No {f} exist.') 
-    return file_list
 
 
 def get_samples(roots, cases):
@@ -229,6 +155,8 @@ class NoudleSegEvaluator():
 
             # Model Inference
             pid, scan_idx = infos['pid'], infos['scan_idx']
+            short_pid = pid.split('.')[-1]
+            direction, origin, spacing = infos['direction'], infos['origin'], infos['spacing']
             print(f'\n Volume {vol_idx} Patient {pid} Scan {scan_idx}')
             
             inference_start = time.time()
@@ -238,7 +166,7 @@ class NoudleSegEvaluator():
             print(f'Inference time {inference_time:.2f}')
 
             if self.quick_test:
-                pred_vol *= mask_vol
+                pred_vol *= mask_vol.astype(pred_vol.dtype)
 
             # Data post-processing
             pred_vol_category = self.post_processer(pred_vol)
@@ -255,12 +183,10 @@ class NoudleSegEvaluator():
             print(f'Eval time {eval_time:.2f}')
             total_eval_time += eval_time
 
-
             print(f'Predict Nodules (raw) {num_pred_nodule}')
 
-            # nrrd_path = os.path.join(self.save_path, 'images', pid, 'nrrd')
-            # os.makedirs(nrrd_path, exist_ok=True)
-            # save_in_nrrd(vol, pred_vol_category, direction, origin, spacing, nrrd_path, pid)
+            nrrd_path = os.path.join(self.save_path, 'images', short_pid, 'nrrd')
+            save_nodule_in_nrrd(raw_vol, pred_vol_category, direction, origin, spacing, nrrd_path, short_pid)
 
             pred_nodule_info = None
             if self.fp_reducer is not None or self.nodule_classifier is not None:

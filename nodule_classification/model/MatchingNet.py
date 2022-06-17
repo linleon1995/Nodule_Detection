@@ -243,6 +243,12 @@ class MatchingNetwork_3d(MatchingNetwork):
         #     gen_encode = self.g(support_set_images[:, i])
         #     # gen_encode = self.g(support_set_images[:, i, :, :])
         #     encoded_images.append(gen_encode)
+
+        # a.view(1, -1, *(a.size()[2:]))
+        # new_shape = torch.cat(
+        #     [support_set_images.shape[:2].numel(), support_set_images.shape[2:]])
+        support_set_images = support_set_images.view(-1, *(support_set_images.size()[2:]))
+        support_set_y_one_hot = support_set_y_one_hot.view(-1, *(support_set_y_one_hot.size()[2:]))
         encoded_images = [self.g(support_set_images)]
 
         # produce embeddings for target images
@@ -250,6 +256,7 @@ class MatchingNetwork_3d(MatchingNetwork):
         encoded_images.append(gen_encode)
         output = encoded_images
         # output = torch.stack(encoded_images)
+        support_set_y_one_hot = torch.squeeze(support_set_y_one_hot, dim=1)
 
 
         # use fce?
@@ -259,16 +266,23 @@ class MatchingNetwork_3d(MatchingNetwork):
         # get similarities between support set embeddings and target
         eps = 1e-10
         support_image, input_image = output[0], output[1]
-        sum_support = torch.sum(torch.pow(support_image, 2), 1)
+        # b = input_image.shape[0]
+        # input_image = support_image[:b]
+        # target_y = torch.argmax(support_set_y_one_hot[:b], dim=1)
+
+        sum_support = torch.sum(torch.pow(support_image, 2), 1, keepdim=True)
         support_manitude = sum_support.clamp(eps, float("inf")).rsqrt()
+        sum_target = torch.sum(torch.pow(input_image, 2), 1, keepdim=True)
+        target_manitude = sum_target.clamp(eps, float("inf")).rsqrt()
+        norm = torch.matmul(target_manitude, torch.t(support_manitude))
+
         dot_product = torch.matmul(input_image, torch.t(support_image))
-        similarities = dot_product * torch.unsqueeze(support_manitude, dim=0)
+        similarities = dot_product * norm
         # similarities = self.dn(support_set=output[:-1], input_image=output[-1])
 
         # produce predictions for target probabilities
         softmax = nn.Softmax(dim=1)
         softmax_similarities = softmax(similarities)
-        support_set_y_one_hot = torch.squeeze(support_set_y_one_hot, dim=1)
         preds = torch.matmul(softmax_similarities, support_set_y_one_hot)
         # preds = self.classify(similarites, support_set_y=support_set_y_one_hot)
 

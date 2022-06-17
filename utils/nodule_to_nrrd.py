@@ -1,48 +1,58 @@
-import slicerio
-# from slicer
 import nrrd
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 
 
-def seg_nrrd_write(filename, voxels, direction, origin, spacing):
-    seg_header = build_nrrd_seg_header(voxels, direction, origin, spacing)
+def save_nodule_in_nrrd(vol, mask_vol, direction, origin, spacing, save_dir, filename):
+    os.makedirs(save_dir, exist_ok=True)
+
+    vol = np.transpose(vol, (2, 1, 0))
+    mask_vol = np.transpose(mask_vol, (2, 1, 0))
+    spacing = np.array([spacing[1], spacing[2], spacing[0]])
+    direction = direction * np.tile(spacing[:,np.newaxis], (1, 3))
+    origin = np.array([origin[1], origin[2], origin[0]])
+    
+    raw_path = os.path.join(save_dir, f'{filename}.nrrd')
+    seg_path = os.path.join(save_dir, f'{filename}.seg.nrrd')
+    raw_nrrd_write(raw_path, vol, direction, origin)
+    seg_nrrd_write(seg_path, mask_vol, direction, origin)
+
+    
+def seg_nrrd_write(filename, voxels, direction, origin):
+    seg_header = build_nrrd_seg_header(voxels, direction, origin)
     nrrd.write(filename, voxels, seg_header)
     print('Seg nrrd data conversion completed.')
 
 
-def raw_nrrd_write(filename, voxels, direction, origin, spacing):
-    nrrd_header = build_nrrd_header(voxels, direction, origin, spacing)
+def raw_nrrd_write(filename, voxels, direction, origin):
+    nrrd_header = build_nrrd_header(voxels, direction, origin)
     nrrd.write(filename, voxels, nrrd_header)
     print('RAW nrrd data conversion completed.')
 
 
-def build_nrrd_header(arr, direction, origin, spacing, space='left-posterior-superior'):
-    # spacing = spacing.tolist()
+def build_nrrd_header(arr, direction, origin, space='left-posterior-superior'):
     header = {
         'type': 'unsigned char',
         'dimension': arr.ndim,
         'space': space,
         'sizes': arr.shape,
         'space directions': direction,
-        # 'spacings': spacing,
         'kinds': ['domain', 'domain', 'domain'],
         'endian': 'little',
         'encoding': 'gzip',
         'space origin': origin
     }
 
-    # TODO: endian
+    # TODO: not sure what is endian for
     return header
 
 
-def build_nrrd_seg_header(arr, direction, origin, spacing, cmap=None, space='left-posterior-superior'):
-    # TODO:
+def build_nrrd_seg_header(arr, direction, origin, cmap=None, space='left-posterior-superior'):
+    # TODO: slicer can decide color automatically
     if cmap is None:
         cmap = [(0.5, 0.7, 0), (0.7, 0.5, 0)]
 
-    header = build_nrrd_header(arr, direction, origin, spacing, space)
+    header = build_nrrd_header(arr, direction, origin, space)
     header.update(build_common_custom_field())
     
     nodule_ids = np.unique(arr)[1:]
@@ -123,8 +133,8 @@ def main():
     # save_path = rf'C:\Users\test\Desktop\Leon\Projects\ModelsGenesis\pretrained_weights\Unet3D-genesis_chest_ct\run_002\1120-maskrcnn-run_002-ckpt-best-0.1\ASUS-Malignant\test\images\1m0038\nrrd'
             
     # filename = os.path.join(save_path, 'test001.seg.nrrd')
-    # direction, origin, spacing = seg_header['space directions'], seg_header['space origin'], None
-    # seg_nrrd_write(filename, seg_data, direction, origin, spacing)
+    # direction, origin = seg_header['space directions'], seg_header['space origin'], None
+    # seg_nrrd_write(filename, seg_data, direction, origin)
 
     path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\plot\nrrd\Segmentation2.seg.nrrd'
     path = rf'C:\Users\test\Desktop\Leon\Projects\Nodule_Detection\plot\nrrd\Segmentation_multi.seg.nrrd'

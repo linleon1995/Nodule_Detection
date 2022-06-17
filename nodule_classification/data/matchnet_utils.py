@@ -53,8 +53,8 @@ class matchingnet_trainer(trainer.Trainer):
                  device,
                  n_class,
                  exp_path,
-                 support_set_x,
-                 support_set_y,
+                #  support_set_x,
+                #  support_set_y,
                  train_epoch=10,
                  batch_size=1,
                  lr_scheduler=None,
@@ -64,6 +64,7 @@ class matchingnet_trainer(trainer.Trainer):
                  history=None,
                  checkpoint_saving_steps=20,
                  patience=10,
+                 strict=False
                  ):
         super().__init__(model, 
                         criterion, 
@@ -82,10 +83,11 @@ class matchingnet_trainer(trainer.Trainer):
                         USE_CUDA,
                         history,
                         checkpoint_saving_steps,
-                        patience)
-        self.support_set_x = torch.from_numpy(support_set_x).to(self.device)
-        self.support_set_y = torch.from_numpy(support_set_y).to(self.device)
-        self.suppoer_set_size = self.support_set_x.shape[0]
+                        patience,
+                        strict=strict)
+        # self.support_set_x = torch.from_numpy(support_set_x).to(self.device)
+        # self.support_set_y = torch.from_numpy(support_set_y).to(self.device)
+        # self.suppoer_set_size = self.support_set_x.shape[0]
     
     def train(self):
         self.model.train()
@@ -98,8 +100,11 @@ class matchingnet_trainer(trainer.Trainer):
             input_var, target_var = input_var.float(), target_var.float()
             input_var, target_var = input_var.to(self.device), target_var.to(self.device)
 
+            support_set_x, support_set_y = data['sup_x'], data['sup_y']
+            support_set_x, support_set_y = support_set_x.to(self.device), support_set_y.to(self.device)
+
             self.optimizer.zero_grad()
-            accuracy, loss, _ = self.predict(input_var, target_var)
+            accuracy, loss, _ = self.predict(input_var, target_var, support_set_x, support_set_y)
             
             # loss = self.criterion(batch_output, target_var)
             loss.backward()
@@ -131,8 +136,11 @@ class matchingnet_trainer(trainer.Trainer):
             input_var, labels = data['input'], data['target']
             input_var, labels = input_var.float(), labels.float()
             input_var, labels = input_var.to(self.device), labels.to(self.device)
-            
-            _, loss, pred = self.predict(input_var, labels)
+
+            support_set_x, support_set_y = data['sup_x'], data['sup_y']
+            support_set_x, support_set_y = support_set_x.to(self.device), support_set_y.to(self.device)
+
+            _, loss, pred = self.predict(input_var, labels, support_set_x, support_set_y)
             total_labels.append(labels.squeeze().item())
             total_preds.append(pred.item())
 
@@ -147,20 +155,17 @@ class matchingnet_trainer(trainer.Trainer):
         self.valid_writer.add_scalar('Accuracy/epoch', self.avg_test_acc, self.epoch)
         self.valid_writer.add_scalar('Loss/epoch', self.test_loss, self.epoch)
 
-    def predict(self, target_image, target_y):
-        # rand_indices = torch.randint(self.suppoer_set_size, (self.batch_size,))
-        # support_set_images = self.support_set_x[rand_indices]
-        # support_set_y_one_hot = self.support_set_y[rand_indices]
+    def predict(self, target_image, target_y, support_set_images, support_set_y_one_hot):
+        # support_set_images = torch.tile(
+        #     torch.unsqueeze(self.support_set_x, dim=1), (1, 3, 1, 1, 1))
+        # support_set_images = support_set_images.to(torch.float)
+        # support_set_y_one_hot = torch.unsqueeze(self.support_set_y, dim=1)
 
-        # TODO: ugly
-        # b = target_image.shape[0]
-        # support_set_images = torch.unsqueeze(self.support_set_x, dim=0)
-        # support_set_y_one_hot = torch.unsqueeze(self.support_set_y, dim=0)
-        support_set_images = torch.tile(
-            torch.unsqueeze(self.support_set_x, dim=1), (1, 3, 1, 1, 1))
-        support_set_y_one_hot = torch.unsqueeze(self.support_set_y, dim=1)
-
-        support_set_images = support_set_images.to(torch.float)
         accuracy, crossentropy_loss, prob, pred = self.model(
             support_set_images, support_set_y_one_hot, target_image, target_y)
         return accuracy, crossentropy_loss, pred
+
+    def load_model_from_checkpoint(self, ckpt, model_state_key='model_state_dict'):
+        state_key = torch.load(ckpt, map_location=self.device)
+        self.model.g.load_state_dict(state_key[model_state_key], strict=self.strict)
+        self.model = self.model.to(self.device)
